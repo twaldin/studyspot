@@ -47,9 +47,9 @@ const items = [
 
 export function AppSidebar() {
   return (
-    <Sidebar>
-      <SidebarHeader className="border-b border-sidebar-border flex flex-col gap-4 p-4">
-        <div className="flex items-center justify-start gap-4">
+    <Sidebar collapsible="icon">
+      <SidebarHeader className="flex flex-col gap-4 border-b border-sidebar-border p-4">
+        <div className="flex items-center justify-start gap-4 group-data-[collapsible=icon]:justify-center">
           <Image
             src="/uw-madison-logo.png"
             alt="UW Madison Logo"
@@ -57,25 +57,41 @@ export function AppSidebar() {
             height={40}
             className="h-12 w-auto"
           />
-          <Separator orientation="vertical" className="h-8" />
-          <StudySpotLogo className="h-10 w-auto" />
+          <Separator
+            orientation="vertical"
+            className="h-8 group-data-[collapsible=icon]:hidden"
+          />
+          <StudySpotLogo className="h-10 w-auto group-data-[collapsible=icon]:hidden" />
         </div>
-        <Button className="w-full justify-start gap-2" variant="default">
+        <Button
+          className="w-full justify-start gap-2 group-data-[collapsible=icon]:w-fit group-data-[collapsible=icon]:self-center group-data-[collapsible=icon]:justify-center"
+          variant="outline"
+        >
           <Plus className="h-4 w-4" />
-          New Chat
+          <span className="group-data-[collapsible=icon]:hidden">New Chat</span>
         </Button>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Past chats</SidebarGroupLabel>
+          <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">
+            Past chats
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
+                <SidebarMenuItem
+                  key={item.title}
+                  className="group-data-[collapsible=icon]:hidden"
+                >
+                  <SidebarMenuButton
+                    asChild
+                    className="group-data-[collapsible=icon]:justify-center"
+                  >
                     <a href={item.url}>
-                      <item.icon />
-                      <span>{item.title}</span>
+                      <item.icon className="h-4 w-4 shrink-0" />
+                      <span className="group-data-[collapsible=icon]:hidden">
+                        {item.title}
+                      </span>
                     </a>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

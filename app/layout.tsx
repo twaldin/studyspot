@@ -30,7 +30,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>
+      <body className="flex">
         <SidebarProvider>
           <AppSidebar />
           <SidebarInset>
@@ -40,8 +40,8 @@ export default function RootLayout({
                 orientation="vertical"
                 className="mr-2 data-[orientation=vertical]:h-4"
               />
-              <Breadcrumb>
-                <BreadcrumbList>
+              <Breadcrumb className="min-w-0 flex-1">
+                <BreadcrumbList className="flex-nowrap break-normal">
                   <BreadcrumbItem className="hidden md:block">
                     <BreadcrumbLink href="#" className="flex items-center gap-2">
                       <Home className="h-4 w-4" />
@@ -49,18 +49,18 @@ export default function RootLayout({
                     </BreadcrumbLink>
                   </BreadcrumbItem>
                   <BreadcrumbSeparator className="hidden md:block" />
-                  <BreadcrumbItem>
-                    <BreadcrumbPage>Reaction Mechanisms & Synthesis Problems</BreadcrumbPage>
+                  <BreadcrumbItem className="min-w-0">
+                    <BreadcrumbPage className="truncate">
+                      Reaction Mechanisms & Synthesis Problems
+                    </BreadcrumbPage>
                   </BreadcrumbItem>
                 </BreadcrumbList>
               </Breadcrumb>
             </header>
-            <main>
-              {children}
-            </main>
+            <main>{children}</main>
           </SidebarInset>
-          <AppRightSidebar />
         </SidebarProvider>
+        <AppRightSidebar />
       </body>
     </html>
   );

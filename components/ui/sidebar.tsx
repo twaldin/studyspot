@@ -207,7 +207,8 @@ function Sidebar({
 
   return (
     <div
-      className="group peer text-sidebar-foreground hidden md:block"
+      // className="group peer text-sidebar-foreground hidden md:block"
+      className="group peer text-sidebar-foreground hidden lg:block"
       data-state={state}
       data-collapsible={state === "collapsed" ? collapsible : ""}
       data-variant={variant}
@@ -698,6 +699,20 @@ function SidebarMenuSubButton({
   )
 }
 
+const sidebarVariants = cva(
+  "fixed top-0 z-30 h-screen shrink-0 border-sidebar-border transition-all duration-300",
+  {
+    variants: {
+      side: {
+        left: "left-0 border-r",
+      },
+    },
+    defaultVariants: {
+      side: "left",
+    },
+  }
+)
+
 export {
   Sidebar,
   SidebarContent,
@@ -723,4 +738,5 @@ export {
   SidebarSeparator,
   SidebarTrigger,
   useSidebar,
+  sidebarVariants,
 }
