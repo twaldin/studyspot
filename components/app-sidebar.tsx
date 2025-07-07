@@ -50,13 +50,15 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader className="flex flex-col gap-4 border-b border-sidebar-border p-4">
         <div className="flex items-center justify-start gap-4 group-data-[collapsible=icon]:justify-center">
-          <Image
-            src="/uw-madison-logo.png"
-            alt="UW Madison Logo"
-            width={40}
-            height={40}
-            className="h-12 w-auto"
-          />
+          <div className="relative h-12 w-auto shrink-0">
+            <Image
+              src="/uw-madison-logo.png"
+              alt="UW Madison Logo"
+              width={48}
+              height={48}
+              className="h-12 w-auto object-contain"
+            />
+          </div>
           <Separator
             orientation="vertical"
             className="h-8 group-data-[collapsible=icon]:hidden"
