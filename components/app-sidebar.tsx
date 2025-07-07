@@ -76,7 +76,7 @@ export function AppSidebar() {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">
-            Past chats
+            Past Chats
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
