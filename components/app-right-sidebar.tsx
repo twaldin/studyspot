@@ -8,7 +8,7 @@ export function AppRightSidebar() {
   return (
     <div className="hidden lg:flex flex-col w-72 border-l border-sidebar-border">
       <div className="border-b border-sidebar-border flex flex-col gap-4 p-4">
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex items-center justify-end gap-4">
           <Button variant="outline" size="icon">
             <Settings className="h-4 w-4" />
           </Button>

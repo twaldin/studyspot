@@ -43,7 +43,7 @@ export default function RootLayout({
             <CommandPalette />
             <AppSidebar />
             <SidebarInset>
-              <header className="flex h-16 shrink-0 items-center gap-4 px-6">
+              <header className="flex h-16 items-center gap-4 px-6">
                 <SidebarTrigger className="-ml-1" />
                 <Separator
                   orientation="vertical"
@@ -52,7 +52,7 @@ export default function RootLayout({
                 <Breadcrumb className="min-w-0 flex-1">
                   <BreadcrumbList className="flex-nowrap break-normal">
                     <BreadcrumbItem className="hidden md:block">
-                      <BreadcrumbLink href="#" className="flex items-center gap-2">
+                      <BreadcrumbLink href="#" className="flex items-center gap-2 whitespace-nowrap">
                         <Home className="h-4 w-4" />
                         CHEM 103
                       </BreadcrumbLink>
@@ -65,7 +65,7 @@ export default function RootLayout({
                     </BreadcrumbItem>
                   </BreadcrumbList>
                 </Breadcrumb>
-                <p className="text-sm text-muted-foreground">
+                <p className="hidden text-sm text-muted-foreground md:block">
                   <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
                     <span className="text-xs">⌘</span>K
                   </kbd>
