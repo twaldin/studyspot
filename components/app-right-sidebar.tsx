@@ -125,7 +125,7 @@ export function AppRightSidebar() {
         </div>
         <div className="p-4 space-y-4">
           <div>
-            <h4 className="mb-2 px-2 text-xs font-medium text-muted-foreground tracking-wider text-right">
+            <h4 className="mb-2 px-2 text-xs font-medium text-muted-foreground text-right">
               My Courses
             </h4>
             <div className="flex flex-col gap-1 items-end">
@@ -140,13 +140,11 @@ export function AppRightSidebar() {
                   {course.name}
                 </Button>
               ))}
+              <Button variant="ghost" className="gap-2">
+                <PlusCircle className="h-4 w-4" />
+                Add More
+              </Button>
             </div>
-          </div>
-          <div className="flex justify-end">
-            <Button variant="outline" className="gap-2">
-              <PlusCircle className="h-4 w-4" />
-              Add More
-            </Button>
           </div>
         </div>
         <div className="flex-1">

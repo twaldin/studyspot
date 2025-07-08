@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Crimson_Text } from "next/font/google";
 import "./globals.css";
 import { Home } from "lucide-react"
 import { AppSidebar } from "@/components/app-sidebar"
@@ -19,6 +20,13 @@ import {
 } from "@/components/ui/sidebar"
 import { CommandPalette } from "@/components/command-palette";
 import { ThemeProvider } from "@/components/theme-provider";
+import { cn } from "@/lib/utils";
+
+const crimsonText = Crimson_Text({
+  weight: ["400", "600", "700"],
+  variable: "--font-crimson-text",
+  subsets: ["latin"],
+});
 
 export const metadata: Metadata = {
   title: "StudySpot UI",
@@ -32,7 +40,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="flex">
+      <body className={cn("flex", crimsonText.variable)}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -71,7 +79,7 @@ export default function RootLayout({
                   </kbd>
                 </p>
               </header>
-              <main>{children}</main>
+              <main className="h-[calc(100vh-4rem)]">{children}</main>
             </SidebarInset>
           </SidebarProvider>
           <AppRightSidebar />
