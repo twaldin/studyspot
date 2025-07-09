@@ -28,9 +28,9 @@ export default clerkMiddleware(async (auth, req) => {
     // For unauthenticated users, let them see the landing page
     return NextResponse.next();
   }
-
+  
   // Check if this is a protected route
-  if (isProtectedRoute(req)) {
+  if (isProtectedRoute(req) || !isProtectedRoute(req)) {
     const { userId } = await auth();
 
     // If not authenticated, redirect to sign-in
