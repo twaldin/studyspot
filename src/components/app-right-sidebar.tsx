@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { toast } from "react-hot-toast"
 import {
   Settings,
   User,
@@ -25,9 +26,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
-import { useClerk } from "@clerk/nextjs"
+import { useClerk, useUser } from "@clerk/nextjs"
 import { useToaster } from "react-hot-toast"
-
 const courses = [
   { name: "CHEM 103", icon: FlaskConical },
   { name: "MATH 221", icon: Radical },
@@ -125,7 +125,7 @@ export function AppRightSidebar() {
   const handleSignOut = () => {
     signOut();
   };
-
+  const { user } = useUser();
   return (
     <>
       <div className="hidden lg:flex flex-col w-72 border-l border-sidebar-border">
@@ -138,7 +138,7 @@ export function AppRightSidebar() {
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="gap-2">
                   <User className="h-4 w-4" />
-                  Reed Grenager
+                   {user?.fullName || ""}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
