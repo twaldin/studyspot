@@ -6,6 +6,7 @@ import logger from '@/lib/logger';
 
 const isProtectedRoute = createRouteMatcher([
   '/app(.*)',
+  '/',
 ]);
 
 const isOnboardingRoute = createRouteMatcher([
@@ -75,7 +76,7 @@ export default clerkMiddleware(async (auth, req) => {
       // If user has already completed onboarding, redirect to dashboard
       const onboardingStatus = await getUserOnboardingStatus(userId);
       if (onboardingStatus.hasCompletedOnboarding) {
-        const dashboardUrl = new URL('/app/dashboard', req.url);
+        const dashboardUrl = new URL('/', req.url);
         return NextResponse.redirect(dashboardUrl);
       }
     }
@@ -89,12 +90,3 @@ export default clerkMiddleware(async (auth, req) => {
     return NextResponse.next();
   }
 });
-
-export const config = {
-  matcher: [
-    // Skip Next.js internals and all static files, unless found in search params
-    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
-    // Always run for API routes
-    '/(api|trpc)(.*)',
-  ],
-};
