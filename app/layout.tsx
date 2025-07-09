@@ -59,13 +59,13 @@ export default function RootLayout({
                 />
                 <Breadcrumb className="min-w-0 flex-1">
                   <BreadcrumbList className="flex-nowrap break-normal">
-                    <BreadcrumbItem className="hidden md:block">
+                    <BreadcrumbItem className="hidden lg:block">
                       <BreadcrumbLink href="#" className="flex items-center gap-2 whitespace-nowrap">
                         <Home className="h-4 w-4" />
                         CHEM 103
                       </BreadcrumbLink>
                     </BreadcrumbItem>
-                    <BreadcrumbSeparator className="hidden md:block" />
+                    <BreadcrumbSeparator className="hidden lg:block" />
                     <BreadcrumbItem className="min-w-0">
                       <BreadcrumbPage className="truncate">
                         Reaction Mechanisms & Synthesis Problems
@@ -73,7 +73,7 @@ export default function RootLayout({
                     </BreadcrumbItem>
                   </BreadcrumbList>
                 </Breadcrumb>
-                <p className="hidden text-sm text-muted-foreground md:block">
+                <p className="hidden text-sm text-muted-foreground lg:block">
                   <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
                     <span className="text-xs">⌘</span>K
                   </kbd>

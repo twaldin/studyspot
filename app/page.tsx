@@ -7,8 +7,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
-import { Zap, ArrowRight, ChevronRight } from "lucide-react";
+import { Zap, ArrowRight, MoveRight, Upload, MessagesSquare } from "lucide-react";
 
 const suggestions = [
   "How do we use moles to solve stoichiometry problems?",
@@ -48,7 +49,7 @@ const cardData = [
 
 export default function Home() {
   return (
-    <div className="mx-auto w-full max-w-3xl h-full flex flex-col justify-center p-6 gap-4">
+    <div className="mx-auto w-full max-w-3xl h-full flex flex-col justify-center p-6 gap-4 @container">
       <h2 className="text-3xl font-crimson-text leading-none">
         What needs practice?
       </h2>
@@ -66,32 +67,51 @@ export default function Home() {
           ))}
         </div>
       </div>
-      <Textarea
-        placeholder="Can you help me with..."
-        className="resize-none max-h-24"
-        rows={3}
-      />
-      <div className="@container">
-        <div className="hidden gap-4 @md:grid @md:grid-cols-2 @lg:grid-cols-3">
-          {cardData.map((card, i) => (
-            <Card key={i}>
-              <CardHeader>
-                <CardTitle>{card.title}</CardTitle>
-                <CardDescription>{card.description}</CardDescription>
-              </CardHeader>
-              {card.badge && (
-                <CardContent>
-                  <Badge variant={card.badge.variant}>
-                    {card.badge.text}
-                  </Badge>
-                </CardContent>
-              )}
-            </Card>
-          ))}
-        </div>
+      <div className="relative">
+        <Textarea
+          placeholder="Can you help me with..."
+          className="min-h-20 resize-none max-h-24 pr-12 rounded-2xl [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']"
+        />
+        <Button
+          type="submit"
+          variant="default"
+          size="sm"
+          className="absolute bottom-2 right-2"
+        >
+          <MoveRight className="size-6" />
+          <span className="sr-only">Submit</span>
+        </Button>
       </div>
-      <div className="flex justify-end">
-        <Button variant="ghost">
+      <div className="hidden gap-4 @md:grid @md:grid-cols-2 @lg:grid-cols-3">
+        {cardData.map((card, i) => (
+          <Card key={i}>
+            <CardHeader>
+              <CardTitle>{card.title}</CardTitle>
+              <CardDescription>{card.description}</CardDescription>
+            </CardHeader>
+            {card.badge && (
+              <CardContent>
+                <Badge variant={card.badge.variant}>
+                  {card.badge.text}
+                </Badge>
+              </CardContent>
+            )}
+          </Card>
+        ))}
+      </div>
+      <div className="flex justify-between items-center">
+        <div className="flex items-center">
+          <Button variant="ghost">
+            <Upload className="w-4 h-4" />
+            Upload File
+          </Button>
+          <Separator orientation="vertical" className="data-[orientation=vertical]:h-4" />
+          <Button variant="ghost">
+            <MessagesSquare className="w-4 h-4" />
+            New Discussion
+          </Button>
+        </div>
+        <Button variant="outline">
           See More
           <ArrowRight className="w-4 h-4" />
         </Button>
