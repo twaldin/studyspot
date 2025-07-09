@@ -6,31 +6,32 @@ import logger from '@/lib/logger';
 
 const isProtectedRoute = createRouteMatcher([
   '/app(.*)',
+  '/',
 ]);
 
 const isOnboardingRoute = createRouteMatcher([
   '/onboarding(.*)',
 ]);
 
-const isLandingPage = createRouteMatcher([
-  '/',
-]);
+// const isLandingPage = createRouteMatcher([
+//   '/',
+// ]);
 
 export default clerkMiddleware(async (auth, req) => {
   // Handle root path redirects for authenticated users
-  if (isLandingPage(req)) {
-    const { userId } = await auth();
-    if (userId) {
-      // User is authenticated, redirect to app
-      const appUrl = new URL('/app', req.url);
-      return NextResponse.redirect(appUrl);
-    }
-    // For unauthenticated users, let them see the landing page
-    return NextResponse.next();
-  }
+  // if (isLandingPage(req)) {
+  //   const { userId } = await auth();
+  //   if (userId) {
+  //     // User is authenticated, redirect to app
+  //     const appUrl = new URL('/app', req.url);
+  //     return NextResponse.redirect(appUrl);
+  //   }
+  //   // For unauthenticated users, let them see the landing page
+  //   return NextResponse.next();
+  // }
   
   // Check if this is a protected route
-  if (isProtectedRoute(req) || !isProtectedRoute(req)) {
+  if (isProtectedRoute(req)) {
     const { userId } = await auth();
 
     // If not authenticated, redirect to sign-in
