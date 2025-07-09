@@ -1,3 +1,5 @@
+"use client";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,6 +12,8 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Zap, ArrowRight, MoveRight, Upload, MessagesSquare } from "lucide-react";
+import { useState } from "react";
+import { FileUploadDialog } from "@/components/file-upload-dialog";
 
 const suggestions = [
   "How do we use moles to solve stoichiometry problems?",
@@ -48,6 +52,8 @@ const cardData = [
 ];
 
 export default function Home() {
+  const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
+
   return (
     <div className="mx-auto w-full max-w-3xl h-full flex flex-col justify-center p-6 gap-4 @container">
       <h2 className="text-3xl font-crimson-text leading-none">
@@ -101,7 +107,7 @@ export default function Home() {
       </div>
       <div className="flex justify-between items-center">
         <div className="flex items-center">
-          <Button variant="ghost">
+          <Button variant="ghost" onClick={() => setIsUploadDialogOpen(true)}>
             <Upload className="w-4 h-4" />
             Upload File
           </Button>
@@ -116,6 +122,7 @@ export default function Home() {
           <ArrowRight className="w-4 h-4" />
         </Button>
       </div>
+      <FileUploadDialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen} />
     </div>
   );
 }
