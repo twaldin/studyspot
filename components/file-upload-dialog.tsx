@@ -93,9 +93,18 @@ export function FileUploadDialog({ open, onOpenChange }: FileUploadDialogProps) 
               </SelectContent>
             </Select>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center gap-3">
             <Checkbox id="terms" defaultChecked />
             <Label htmlFor="terms">Make files publicly viewable</Label>
+          </div>
+          <div className="flex items-start gap-3">
+            <Checkbox id="anonymous" />
+            <div className="grid gap-2">
+              <Label htmlFor="anonymous">Anonymous Upload</Label>
+              <p className="text-muted-foreground text-sm">
+                By clicking this checkbox, users will not be able to see who uploaded the file.
+              </p>
+            </div>
           </div>
         </div>
         <DialogFooter>

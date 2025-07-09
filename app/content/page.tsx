@@ -147,8 +147,11 @@ export default function ContentPage() {
 
   return (
     <div className="mx-auto w-full max-w-3xl h-full flex flex-col p-6 gap-4">
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1">
+      <h2 className="text-3xl font-crimson-text leading-none">
+        Search for course content
+      </h2>
+      <div className="flex flex-wrap items-center gap-4">
+        <div className="relative flex-1 min-w-[250px]">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             type="search"
@@ -156,44 +159,46 @@ export default function ContentPage() {
             className="w-full rounded-lg bg-background pl-8"
           />
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="font-normal">
-              <Funnel className="w-4 h-4" />
-              Content Type
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-56" align="start">
-            <DropdownMenuCheckboxItem
-              checked={showDocuments}
-              onCheckedChange={setShowDocuments}
-            >
-              Documents
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              checked={showQuizzes}
-              onCheckedChange={setShowQuizzes}
-            >
-              Practice Quizzes
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              checked={showFlashcards}
-              onCheckedChange={setShowFlashcards}
-            >
-              Flashcards
-            </DropdownMenuCheckboxItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <Select defaultValue="popularity">
-          <SelectTrigger className="[&>svg:last-child]:hidden">
-            <ArrowDownNarrowWide className="w-4 h-4" />
-            <SelectValue placeholder="Sort by" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="popularity">Popularity</SelectItem>
-            <SelectItem value="recently-added">Recently Added</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="font-normal">
+                <Funnel className="w-4 h-4" />
+                Content Type
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56" align="start">
+              <DropdownMenuCheckboxItem
+                checked={showDocuments}
+                onCheckedChange={setShowDocuments}
+              >
+                Documents
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={showQuizzes}
+                onCheckedChange={setShowQuizzes}
+              >
+                Practice Quizzes
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={showFlashcards}
+                onCheckedChange={setShowFlashcards}
+              >
+                Flashcards
+              </DropdownMenuCheckboxItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Select defaultValue="popularity">
+            <SelectTrigger className="[&>svg:last-child]:hidden">
+              <ArrowDownNarrowWide className="w-4 h-4" />
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="popularity">Popularity</SelectItem>
+              <SelectItem value="recently-added">Recently Added</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
       <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

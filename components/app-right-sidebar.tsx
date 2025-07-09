@@ -14,10 +14,12 @@ import {
   LoaderCircle,
   Info,
   X,
+  PartyPopper,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import toast, { useToaster } from "react-hot-toast"
+import Link from "next/link"
 
 const courses = [
   { name: "CHEM 103", icon: FlaskConical },
@@ -50,6 +52,7 @@ function CustomToaster() {
         }
 
         const getIcon = () => {
+          if (t.icon) return t.icon
           switch (t.type) {
             case "success":
               return <CheckCircle className="h-4 w-4" />
@@ -84,7 +87,7 @@ function CustomToaster() {
           >
             <Alert variant={getVariant()} className="pr-12">
               {getIcon()}
-              <AlertTitle>{t.type === "loading" ? "Loading..." : "Notification"}</AlertTitle>
+              <AlertTitle>{(t as any).title || (t.type === "loading" ? "Loading..." : "Notification")}</AlertTitle>
               <AlertDescription>
                 {typeof t.message === "string" ? t.message : "Notification"}
               </AlertDescription>
@@ -108,6 +111,15 @@ function CustomToaster() {
 
 export function AppRightSidebar() {
   const [activeCourse, setActiveCourse] = React.useState(courses[0].name)
+
+  React.useEffect(() => {
+    toast("We've just rolled out some exciting updates.", {
+      id: "welcome-toast",
+      title: "StudySpot v0.1.0",
+      duration: Infinity,
+      icon: <PartyPopper className="h-4 w-4" />,
+    } as any)
+  }, [])
 
   return (
     <>
@@ -140,9 +152,11 @@ export function AppRightSidebar() {
                   {course.name}
                 </Button>
               ))}
-              <Button variant="ghost" className="gap-2">
-                <PlusCircle className="h-4 w-4" />
-                Add More
+              <Button asChild variant="ghost" className="gap-2">
+                <Link href="/courses">
+                  <PlusCircle className="h-4 w-4" />
+                  Add More
+                </Link>
               </Button>
             </div>
           </div>

@@ -116,12 +116,12 @@ export function AppSidebar() {
                   asChild
                   className="group-data-[collapsible=icon]:justify-center"
                 >
-                  <a href="#" className="flex items-center gap-2">
+                  <Link href="/courses" className="flex items-center gap-2">
                     <PlusCircle className="h-4 w-4 shrink-0" />
                     <span className="group-data-[collapsible=icon]:hidden">
                       Add More
                     </span>
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
