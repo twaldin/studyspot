@@ -45,7 +45,7 @@ export function FileUploadDialog({ open, onOpenChange }: FileUploadDialogProps) 
         <DialogHeader>
           <DialogTitle>Upload Files</DialogTitle>
           <DialogDescription>
-            Upload files to your study session. You can select a course to associate them with.
+            Upload files to your course. These will improve the assistant's ability to answer questions.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-6">
@@ -63,7 +63,6 @@ export function FileUploadDialog({ open, onOpenChange }: FileUploadDialogProps) 
             </label>
           </div>
           <div className="grid gap-3">
-            <h3 className="text-sm font-medium">Uploaded Files</h3>
             <div className="space-y-2">
               {fileData.map((file, i) => (
                   <div key={i} className="flex items-center justify-between p-2 border rounded-md">
@@ -80,7 +79,7 @@ export function FileUploadDialog({ open, onOpenChange }: FileUploadDialogProps) 
             </div>
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="course">Select Course (Optional)</Label>
+            <Label htmlFor="course">Select Course</Label>
             <Select>
               <SelectTrigger id="course">
                 <SelectValue placeholder="Select a course" />

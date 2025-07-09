@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Zap, ArrowRight, MoveRight, Upload, MessagesSquare } from "lucide-react";
 import { useState } from "react";
 import { FileUploadDialog } from "@/components/file-upload-dialog";
+import Link from "next/link";
 
 const suggestions = [
   "How do we use moles to solve stoichiometry problems?",
@@ -57,7 +58,7 @@ export default function Home() {
   return (
     <div className="mx-auto w-full max-w-3xl h-full flex flex-col justify-center p-6 gap-4 @container">
       <h2 className="text-3xl font-crimson-text leading-none">
-        What needs practice?
+        What are we learning today?
       </h2>
       <div className="w-full overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
         <div className="flex gap-2">
@@ -65,7 +66,7 @@ export default function Home() {
             <Button
               key={suggestion}
               variant="outline"
-              className="whitespace-nowrap"
+              className="whitespace-nowrap rounded-full"
             >
               <Zap className="w-4 h-4" />
               {suggestion}
@@ -76,7 +77,7 @@ export default function Home() {
       <div className="relative">
         <Textarea
           placeholder="Can you help me with..."
-          className="min-h-20 resize-none max-h-24 pr-12 rounded-2xl [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']"
+          className="min-h-20 resize-none max-h-24 pr-12 rounded-xl [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']"
         />
         <Button
           type="submit"
@@ -114,13 +115,15 @@ export default function Home() {
           <Separator orientation="vertical" className="data-[orientation=vertical]:h-4" />
           <Button variant="ghost">
             <MessagesSquare className="w-4 h-4" />
-            New Discussion
+            New Post
           </Button>
         </div>
-        <Button variant="outline">
-          See More
-          <ArrowRight className="w-4 h-4" />
-        </Button>
+        <Link href="/content">
+          <Button variant="outline">
+            All Materials
+            <ArrowRight className="w-4 h-4" />
+          </Button>
+        </Link>
       </div>
       <FileUploadDialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen} />
     </div>

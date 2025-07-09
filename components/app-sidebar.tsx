@@ -1,6 +1,7 @@
 import { FlaskConical, Radical, Pencil, Music, Plus, PlusCircle, Box, Settings, User } from "lucide-react"
 import StudySpotLogo from "@/components/branding/studyspot-logo"
 import Image from "next/image"
+import Link from "next/link";
 
 import {
   Sidebar,
@@ -74,13 +75,15 @@ export function AppSidebar() {
           />
           <StudySpotLogo className="h-10 w-auto group-data-[collapsible=icon]:hidden" />
         </div>
-        <Button
-          className="w-full justify-start gap-2 group-data-[collapsible=icon]:w-fit group-data-[collapsible=icon]:self-center group-data-[collapsible=icon]:justify-center"
-          variant="outline"
-        >
-          <Plus className="h-4 w-4" />
-          <span className="group-data-[collapsible=icon]:hidden">New Chat</span>
-        </Button>
+        <Link href="/">
+          <Button
+            className="w-full justify-start gap-2 group-data-[collapsible=icon]:w-fit group-data-[collapsible=icon]:self-center group-data-[collapsible=icon]:justify-center"
+            variant="outline"
+          >
+            <Plus className="h-4 w-4" />
+            <span className="group-data-[collapsible=icon]:hidden">New Chat</span>
+          </Button>
+        </Link>
       </SidebarHeader>
       <SidebarContent>
         {/* My Courses section - only show when right sidebar is collapsed (on screens smaller than lg) */}

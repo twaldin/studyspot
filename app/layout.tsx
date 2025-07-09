@@ -60,7 +60,7 @@ export default function RootLayout({
                 <Breadcrumb className="min-w-0 flex-1">
                   <BreadcrumbList className="flex-nowrap break-normal">
                     <BreadcrumbItem className="hidden lg:block">
-                      <BreadcrumbLink href="#" className="flex items-center gap-2 whitespace-nowrap">
+                      <BreadcrumbLink href="/" className="flex items-center gap-2 whitespace-nowrap">
                         <Home className="h-4 w-4" />
                         CHEM 103
                       </BreadcrumbLink>
