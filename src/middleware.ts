@@ -6,7 +6,6 @@ import logger from '@/lib/logger';
 
 const isProtectedRoute = createRouteMatcher([
   '/app(.*)',
-  '/',
 ]);
 
 const isOnboardingRoute = createRouteMatcher([
@@ -20,7 +19,6 @@ export default clerkMiddleware(async (auth, req) => {
     if (isProtectedRoute(req)) {
       
       const { userId } = await auth();
-      console.log('User ID:', userId);
 
       // If not authenticated, redirect to sign-in
       if (!userId) {
