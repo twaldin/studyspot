@@ -15,9 +15,18 @@ import {
   Info,
   X,
 } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import toast, { useToaster } from "react-hot-toast"
+
+import { useClerk } from "@clerk/nextjs"
+import { useToaster } from "react-hot-toast"
 
 const courses = [
   { name: "CHEM 103", icon: FlaskConical },
@@ -106,8 +115,16 @@ function CustomToaster() {
   )
 }
 
+
 export function AppRightSidebar() {
   const [activeCourse, setActiveCourse] = React.useState(courses[0].name)
+  const { openUserProfile, signOut } = useClerk();
+  const handleManageAccount = () => {
+    openUserProfile();
+  };
+  const handleSignOut = () => {
+    signOut();
+  };
 
   return (
     <>
@@ -117,10 +134,26 @@ export function AppRightSidebar() {
             <Button variant="outline" size="icon">
               <Settings className="h-4 w-4" />
             </Button>
-            <Button variant="outline" className="gap-2">
-              <User className="h-4 w-4" />
-              Reed Grenager
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <User className="h-4 w-4" />
+                  Reed Grenager
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={handleManageAccount}>
+                  Manage Account
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  Change Schools
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleSignOut}>
+                  Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
         <div className="p-4 space-y-4">
@@ -154,4 +187,4 @@ export function AppRightSidebar() {
       <CustomToaster />
     </>
   )
-} 
+}
