@@ -1,4 +1,4 @@
-import { FlaskConical, Radical, Pencil, Music, Plus } from "lucide-react"
+import { FlaskConical, Radical, Pencil, Music, Plus, PlusCircle, Box, Settings, User } from "lucide-react"
 import StudySpotLogo from "@/components/branding/studyspot-logo"
 import Image from "next/image"
 
@@ -12,6 +12,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarHeader,
+  SidebarFooter,
 } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -45,6 +46,14 @@ const items = [
   },
 ]
 
+// Courses data (shared with right sidebar)
+const courses = [
+  { name: "CHEM 103", icon: FlaskConical },
+  { name: "MATH 221", icon: Radical },
+  { name: "M E 231", icon: Box },
+  { name: "MUSIC 102", icon: Music },
+]
+
 export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
@@ -74,6 +83,48 @@ export function AppSidebar() {
         </Button>
       </SidebarHeader>
       <SidebarContent>
+        {/* My Courses section - only show when right sidebar is collapsed (on screens smaller than lg) */}
+        <SidebarGroup className="lg:hidden">
+          <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">
+            My Courses
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {courses.map((course) => (
+                <SidebarMenuItem
+                  key={course.name}
+                  className="group-data-[collapsible=icon]:hidden"
+                >
+                  <SidebarMenuButton
+                    asChild
+                    className="group-data-[collapsible=icon]:justify-center"
+                  >
+                    <a href="#" className="flex items-center gap-2">
+                      <course.icon className="h-4 w-4 shrink-0" />
+                      <span className="group-data-[collapsible=icon]:hidden">
+                        {course.name}
+                      </span>
+                    </a>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+              <SidebarMenuItem className="group-data-[collapsible=icon]:hidden">
+                <SidebarMenuButton
+                  asChild
+                  className="group-data-[collapsible=icon]:justify-center"
+                >
+                  <a href="#" className="flex items-center gap-2">
+                    <PlusCircle className="h-4 w-4 shrink-0" />
+                    <span className="group-data-[collapsible=icon]:hidden">
+                      Add More
+                    </span>
+                  </a>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        
         <SidebarGroup>
           <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">
             Past Chats
@@ -102,6 +153,34 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      
+      {/* Footer with settings and user options - only show when right sidebar is collapsed */}
+      <SidebarFooter className="border-t border-sidebar-border p-2 lg:hidden">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              asChild
+              className="group-data-[collapsible=icon]:justify-center"
+            >
+              <a href="#" className="flex items-center gap-2">
+                <Settings className="h-4 w-4 shrink-0" />
+                <span className="group-data-[collapsible=icon]:hidden">Settings</span>
+              </a>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              asChild
+              className="group-data-[collapsible=icon]:justify-center"
+            >
+              <a href="#" className="flex items-center gap-2">
+                <User className="h-4 w-4 shrink-0" />
+                <span className="group-data-[collapsible=icon]:hidden">Reed Grenager</span>
+              </a>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
     </Sidebar>
   )
 }
