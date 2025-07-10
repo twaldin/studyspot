@@ -93,7 +93,7 @@ export default function CoursesPage() {
 
   const handleOnboardingSuccessDialogChange = (open: boolean) => {
     if (!open && isOnboardingSuccessDialogOpen) {
-      toast("Get started by adding your courses and asking a question.", {
+      toast("Get started by adding your courses, creating a chat, and asking a question.", {
         title: "Welcome to StudySpot!",
         icon: <Pencil className="h-4 w-4" />,
         duration: Infinity,

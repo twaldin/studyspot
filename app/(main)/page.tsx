@@ -15,6 +15,7 @@ import { Zap, ArrowRight, MoveRight, Upload, MessagesSquare } from "lucide-react
 import { useState } from "react";
 import { FileUploadDialog } from "@/components/file-upload-dialog";
 import Link from "next/link";
+import { NewPostDialog } from "@/components/new-post-dialog";
 
 const suggestions = [
   "How do we use moles to solve stoichiometry problems?",
@@ -54,6 +55,7 @@ const cardData = [
 
 export default function Home() {
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
+  const [isNewPostDialogOpen, setIsNewPostDialogOpen] = useState(false);
 
   return (
     <div className="mx-auto w-full max-w-3xl h-full flex flex-col justify-center p-6 gap-4 @container">
@@ -110,22 +112,23 @@ export default function Home() {
         <div className="flex items-center">
           <Button variant="ghost" onClick={() => setIsUploadDialogOpen(true)}>
             <Upload className="w-4 h-4" />
-            Upload File
+            Upload Files
           </Button>
           <Separator orientation="vertical" className="data-[orientation=vertical]:h-4" />
-          <Button variant="ghost">
+          <Button variant="ghost" onClick={() => setIsNewPostDialogOpen(true)}>
             <MessagesSquare className="w-4 h-4" />
             New Post
           </Button>
         </div>
         <Link href="/content">
           <Button variant="outline">
-            All Materials
+            All Course Content
             <ArrowRight className="w-4 h-4" />
           </Button>
         </Link>
       </div>
       <FileUploadDialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen} />
+      <NewPostDialog open={isNewPostDialogOpen} onOpenChange={setIsNewPostDialogOpen} />
     </div>
   );
 }

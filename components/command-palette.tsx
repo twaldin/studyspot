@@ -17,6 +17,7 @@ import {
   BookOpen,
   PlusCircle,
   Compass,
+  MessagesSquare,
 } from "lucide-react"
 import { useTheme } from "next-themes"
 import toast from "react-hot-toast"
@@ -33,6 +34,7 @@ import {
 import { useSidebar } from "@/components/ui/sidebar"
 import { FileUploadDialog } from "@/components/file-upload-dialog"
 import { CreateCourseDialog } from "@/components/create-course-dialog"
+import { NewPostDialog } from "./new-post-dialog";
 
 type CommandInfo = {
   id: string
@@ -47,6 +49,7 @@ export function CommandPalette() {
   const [fileUploadDialogOpen, setFileUploadDialogOpen] = React.useState(false)
   const [createCourseDialogOpen, setCreateCourseDialogOpen] =
     React.useState(false)
+  const [newPostDialogOpen, setNewPostDialogOpen] = React.useState(false)
   const { toggleSidebar } = useSidebar()
   const { theme, setTheme } = useTheme()
   const router = useRouter()
@@ -62,6 +65,10 @@ export function CommandPalette() {
 
   const openCreateCourseDialog = React.useCallback(() => {
     setCreateCourseDialogOpen(true)
+  }, [])
+
+  const openNewPostDialog = React.useCallback(() => {
+    setNewPostDialogOpen(true)
   }, [])
 
   const spawnToast = React.useCallback(
@@ -143,6 +150,13 @@ export function CommandPalette() {
         group: "Suggestions",
       },
       {
+        id: "new-post",
+        label: "New Post",
+        icon: MessagesSquare,
+        action: openNewPostDialog,
+        group: "Suggestions",
+      },
+      {
         id: "go-to-onboarding",
         label: "Go to Onboarding",
         icon: Compass,
@@ -196,7 +210,7 @@ export function CommandPalette() {
         group: "Settings",
       },
     ],
-    [router, openFileUploadDialog, spawnToast, toggleSidebar, toggleTheme, openCreateCourseDialog],
+    [router, openFileUploadDialog, spawnToast, toggleSidebar, toggleTheme, openCreateCourseDialog, openNewPostDialog],
   )
 
   React.useEffect(() => {
@@ -301,6 +315,10 @@ export function CommandPalette() {
       <CreateCourseDialog
         open={createCourseDialogOpen}
         onOpenChange={setCreateCourseDialogOpen}
+      />
+      <NewPostDialog
+        open={newPostDialogOpen}
+        onOpenChange={setNewPostDialogOpen}
       />
     </>
   )

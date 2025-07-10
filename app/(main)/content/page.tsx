@@ -148,7 +148,7 @@ export default function ContentPage() {
   return (
     <div className="mx-auto w-full max-w-3xl h-full flex flex-col p-6 gap-4">
       <h2 className="text-3xl font-crimson-text leading-none">
-        Search for course content
+        Search course content
       </h2>
       <div className="flex flex-wrap items-center gap-4">
         <div className="relative flex-1 min-w-[250px]">
