@@ -45,12 +45,11 @@
 :root {
   --radius: 0.625rem;
   --background: oklch(1 0 0);
-  /* --background: oklch(0.9653 0.0054 117.92); */
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
+  --popover-foreground: oklch(0.145 0.0111 123.47);
   /* --primary: oklch(0.205 0 0); Testing primary blue */
   --primary: oklch(0.4341 0.2824 257.6);
   --primary-foreground: oklch(0.985 0 0);
