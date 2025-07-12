@@ -126,10 +126,10 @@ export function AppRightSidebar() {
       <div className="hidden lg:flex flex-col w-72 border-l border-sidebar-border">
         <div className="border-b border-sidebar-border flex flex-col gap-4 p-4">
           <div className="flex items-center justify-end gap-2">
-            <Button variant="outline" size="icon">
+            <Button variant="secondary" size="icon">
               <Settings className="h-4 w-4" />
             </Button>
-            <Button variant="outline" className="gap-2">
+            <Button variant="secondary" className="gap-2">
               <User className="h-4 w-4" />
               Reed Grenager
             </Button>
@@ -144,7 +144,7 @@ export function AppRightSidebar() {
               {courses.map((course) => (
                 <Button
                   key={course.name}
-                  variant={activeCourse === course.name ? "secondary" : "ghost"}
+                  variant={activeCourse === course.name ? "flat" : "ghost"}
                   onClick={() => setActiveCourse(course.name)}
                   className="gap-2"
                 >

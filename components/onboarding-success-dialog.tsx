@@ -39,7 +39,7 @@ export function OnboardingSuccessDialog({
             You're all set!
           </DialogTitle>
           <DialogDescription className="text-center">
-            You're about to accelerate your studying.
+            You're about to accelerate your learning.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-6 py-4">
@@ -69,7 +69,7 @@ export function OnboardingSuccessDialog({
           </div>
         </div>
         <DialogFooter>
-          <Button onClick={handleContinue} className="w-full">
+          <Button variant="primary" onClick={handleContinue} className="w-full">
             Let's Go
           </Button>
         </DialogFooter>

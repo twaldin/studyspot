@@ -123,7 +123,7 @@ export default function CoursesPage() {
             </p>
             <Button
               className="gap-2"
-              variant="outline"
+              variant="secondary"
               onClick={() => setCreateCourseDialogOpen(true)}
             >
               <PlusCircle className="h-4 w-4" />
@@ -148,7 +148,7 @@ export default function CoursesPage() {
                   {course.isAdded ? (
                     <div className="flex gap-2 w-full">
                       <Link href="/" className="flex-1">
-                        <Button variant="outline" className="w-full">
+                        <Button variant="secondary" className="w-full">
                           Enter Course
                         </Button>
                       </Link>
@@ -173,7 +173,7 @@ export default function CoursesPage() {
                       </AlertDialog>
                     </div>
                   ) : (
-                    <Button className="w-full gap-2">
+                    <Button variant="primary" className="w-full gap-2">
                       <PlusCircle className="h-4 w-4" />
                       Add Course
                     </Button>

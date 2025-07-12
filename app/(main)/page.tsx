@@ -121,7 +121,7 @@ export default function Home() {
           </Button>
         </div>
         <Link href="/content">
-          <Button variant="outline">
+          <Button variant="secondary">
             All Course Content
             <ArrowRight className="w-4 h-4" />
           </Button>

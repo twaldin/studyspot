@@ -105,9 +105,9 @@ export function CreateCourseDialog({
         </div>
         <DialogFooter>
           <DialogClose asChild>
-            <Button variant="outline">Cancel</Button>
+            <Button variant="secondary">Cancel</Button>
           </DialogClose>
-          <Button type="submit">Add Course</Button>
+          <Button type="submit" variant="primary">Add Course</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

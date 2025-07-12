@@ -169,6 +169,7 @@ export default function OnboardingPage() {
           </CardContent>
           <CardFooter>
             <Button
+              variant="primary"
               className="w-full"
               disabled={!selectedSchoolId}
               onClick={handleContinue}

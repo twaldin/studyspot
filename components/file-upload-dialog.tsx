@@ -109,9 +109,9 @@ export function FileUploadDialog({ open, onOpenChange }: FileUploadDialogProps) 
         </div>
         <DialogFooter>
           <DialogClose asChild>
-            <Button variant="outline">Cancel</Button>
+            <Button variant="secondary">Cancel</Button>
           </DialogClose>
-          <Button type="submit">Upload</Button>
+          <Button type="submit" variant="primary">Upload</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

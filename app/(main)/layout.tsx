@@ -1,4 +1,5 @@
 import { Home } from "lucide-react"
+import Link from "next/link"
 import { AppSidebar } from "@/components/app-sidebar"
 import { AppRightSidebar } from "@/components/app-right-sidebar"
 import {
@@ -37,9 +38,14 @@ export default function RootLayout({
             <Breadcrumb className="min-w-0 flex-1">
               <BreadcrumbList className="flex-nowrap break-normal">
                 <BreadcrumbItem className="hidden lg:block">
-                  <BreadcrumbLink href="/" className="flex items-center gap-2 whitespace-nowrap">
-                    <Home className="h-4 w-4" />
-                    CHEM 103
+                  <BreadcrumbLink asChild>
+                    <Link
+                      href="/"
+                      className="flex items-center gap-2 whitespace-nowrap"
+                    >
+                      <Home className="h-4 w-4" />
+                      CHEM 103
+                    </Link>
                   </BreadcrumbLink>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator className="hidden lg:block" />

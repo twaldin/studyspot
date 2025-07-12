@@ -43,6 +43,14 @@
 }
 
 :root {
+  --primary-button-bg: oklch(0.4341 0.2824 257.6);
+  --primary-button-border-top: oklch(0.4181 0.197 262.24);
+  --primary-button-border-bottom: oklch(0.3688 0.170498 261.995);
+
+  --secondary-button-bg: oklch(1 0 0);
+  --secondary-button-border-top: oklch(0.9137 0 0);
+  --secondary-button-border-bottom: oklch(0.8127 0 0);
+
   --radius: 0.625rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);

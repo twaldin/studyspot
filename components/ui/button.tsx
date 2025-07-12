@@ -3,19 +3,28 @@ import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
+import { GradientBorder } from "./gradient-border"
 
 const buttonVariants = cva(
   "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
   {
     variants: {
       variant: {
+        /* My Styles */
+        primary:
+          // "bg-primary text-primary-foreground shadow-xs hover:bg-primary/90",
+          "bg-[var(--primary-button-bg)] text-primary-foreground shadow-xs hover:bg-[var(--primary-button-bg)]/90",
+        secondary:
+          "bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50",
+        /* Shadcn Styles */
         default:
           "bg-primary text-primary-foreground shadow-xs hover:bg-primary/90",
         destructive:
           "bg-destructive text-white shadow-xs hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
         outline:
           "border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50",
-        secondary:
+        /* secondary: */
+        flat:
           "bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80",
         ghost:
           "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
@@ -47,13 +56,45 @@ function Button({
   }) {
   const Comp = asChild ? Slot : "button"
 
-  return (
+  const isGradient = variant === "primary" || variant === "secondary"
+
+  const buttonElement = (
     <Comp
       data-slot="button"
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
     />
   )
+
+  // Apply gradient border for primary and secondary variants
+  if (isGradient) {
+    const gradientBorderElement = (
+      <GradientBorder
+        variant={variant as "primary" | "secondary"}
+        className={cn(
+          {
+            "shadow-[0_3px_0_0_var(--secondary-button-border-bottom),0_1px_2px_0_rgb(0_0_0/0.1)]":
+              variant === "secondary",
+            "shadow-[0_3px_0_0_var(--primary-button-border-bottom),0_1px_2px_0_rgb(0_0_0/0.1)]":
+              variant === "primary",
+          },
+          !props.disabled &&
+            "transition-all duration-150 ease-in-out has-[[data-slot=button]]:active:translate-y-[3px] has-[[data-slot=button]]:active:shadow-none"
+        )}
+      >
+        {buttonElement}
+      </GradientBorder>
+    )
+
+    // Add layout wrapper that affects DOM layout with 3px bottom space
+    return (
+      <div className={cn("pb-[3px]", className?.includes("w-full") && "w-full")}>
+        {gradientBorderElement}
+      </div>
+    )
+  }
+
+  return buttonElement
 }
 
 export { Button, buttonVariants }

@@ -78,7 +78,7 @@ export function AppSidebar() {
         <Link href="/" className="group-data-[collapsible=icon]:self-center">
           <Button
             className="w-full justify-start gap-2 group-data-[collapsible=icon]:w-fit group-data-[collapsible=icon]:justify-center"
-            variant="outline"
+            variant="secondary"
           >
             <Plus className="h-4 w-4" />
             <span className="group-data-[collapsible=icon]:hidden">New Chat</span>

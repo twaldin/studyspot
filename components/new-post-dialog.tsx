@@ -78,9 +78,9 @@ export function NewPostDialog({ open, onOpenChange }: NewPostDialogProps) {
         </div>
         <DialogFooter>
           <DialogClose asChild>
-            <Button variant="outline">Cancel</Button>
+            <Button variant="secondary">Cancel</Button>
           </DialogClose>
-          <Button type="submit">Post</Button>
+          <Button type="submit" variant="primary">Post</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
