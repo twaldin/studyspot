@@ -10,12 +10,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
-import { Zap, ArrowRight, MoveRight, Upload, MessagesSquare } from "lucide-react";
+import { Zap, ArrowRight, Upload, MessagesSquare } from "lucide-react";
 import { useState } from "react";
 import { FileUploadDialog } from "@/components/file-upload-dialog";
 import Link from "next/link";
 import { NewPostDialog } from "@/components/new-post-dialog";
+import { ChatInputBar } from "@/components/chat-input-bar";
+import { useRouter } from "next/navigation";
 
 const suggestions = [
   "How do we use moles to solve stoichiometry problems?",
@@ -56,6 +57,11 @@ const cardData = [
 export default function Home() {
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [isNewPostDialogOpen, setIsNewPostDialogOpen] = useState(false);
+  const router = useRouter();
+
+  const handleFormSubmit = (values: { message: string }) => {
+    router.push(`/chat?message=${encodeURIComponent(values.message)}`);
+  };
 
   return (
     <div className="mx-auto w-full max-w-3xl h-full flex flex-col justify-center p-6 gap-4 @container">
@@ -76,21 +82,7 @@ export default function Home() {
           ))}
         </div>
       </div>
-      <div className="relative">
-        <Textarea
-          placeholder="Can you help me with..."
-          className="min-h-20 resize-none max-h-24 pr-12 rounded-xl [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']"
-        />
-        <Button
-          type="submit"
-          variant="default"
-          size="sm"
-          className="absolute bottom-2 right-2"
-        >
-          <MoveRight className="size-6" />
-          <span className="sr-only">Submit</span>
-        </Button>
-      </div>
+      <ChatInputBar onSubmit={handleFormSubmit} />
       <div className="hidden gap-4 @md:grid @md:grid-cols-2 @lg:grid-cols-3">
         {cardData.map((card, i) => (
           <Card key={i}>
