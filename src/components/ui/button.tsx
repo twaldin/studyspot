@@ -2,7 +2,7 @@ import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
 
-import { cn } from "@/lib/utils"
+import { cn } from "@//lib/utils"
 import { GradientBorder } from "./gradient-border"
 
 const buttonVariants = cva(
@@ -88,7 +88,7 @@ function Button({
 
     // Add layout wrapper that affects DOM layout with 3px bottom space
     return (
-      <div className={cn("pb-[3px]", className?.includes("w-full") && "w-full")}>
+      <div className={cn("pb-[3px] grid", className?.includes("w-full") && "w-full")}>
         {gradientBorderElement}
       </div>
     )

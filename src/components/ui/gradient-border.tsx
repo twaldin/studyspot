@@ -1,6 +1,6 @@
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
-import { cn } from "@/lib/utils"
+import { cn } from "@//lib/utils"
 
 const gradientBorderVariants = cva(
   // Base styles that are always applied
@@ -32,7 +32,7 @@ export function GradientBorder({ children, className, variant }: GradientBorderP
       )}
     >
       {/* Inner container that covers the gradient, leaving only the border visible */}
-      <div className="bg-background rounded-[0.5rem] h-full w-full">
+      <div className="bg-background rounded-[0.5rem] h-full w-full grid">
         {children}
       </div>
     </div>
