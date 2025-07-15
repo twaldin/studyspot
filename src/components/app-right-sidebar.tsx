@@ -23,6 +23,13 @@ import { useClerk, useUser } from "@clerk/nextjs";
 import Link from "next/link";
 import { useRemoveSchool } from "@/hooks/api";
 import {
+  useCourses,
+  useJoinedCourses,
+  useSelectedCourse,
+  useSetSelectedCourse,
+} from "@/hooks/api/courses";
+import { ICourse } from "@/features/courses/course.model";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -32,12 +39,15 @@ import {
 import logger from "@/lib/logger";
 import { useRouter } from "next/navigation";
 
-const courses = [
-  { name: "CHEM 103", icon: FlaskConical },
-  { name: "MATH 221", icon: Radical },
-  { name: "M E 231", icon: Box },
-  { name: "MUSIC 102", icon: Music },
-];
+// Default icons for courses (will be used if no specific icon is provided)
+const defaultCourseIcons = [FlaskConical, Radical, Box, Music, PartyPopper];
+
+// Helper function to get icon for course
+const getCourseIcon = (courseCode: string, index: number) => {
+  // You can add logic here to determine icons based on course code
+  // For now, we'll cycle through default icons
+  return defaultCourseIcons[index % defaultCourseIcons.length];
+};
 
 function CustomToaster() {
   const { toasts, handlers } = useToaster();
@@ -124,10 +134,20 @@ function CustomToaster() {
 }
 
 export function AppRightSidebar() {
-  const [activeCourse, setActiveCourse] = React.useState(courses[0].name);
   const { openUserProfile, signOut } = useClerk();
   const removeSchoolMutation = useRemoveSchool();
   const router = useRouter();
+
+  // React Query hooks for course data
+  const { data: allCourses = [] } = useCourses();
+  const { data: joinedCourseIds = [] } = useJoinedCourses();
+  const { data: selectedCourse } = useSelectedCourse();
+  const setSelectedCourseMutation = useSetSelectedCourse();
+
+  // Filter courses to only show joined ones
+  const joinedCourses = allCourses.filter((course) =>
+    joinedCourseIds.includes(course.id)
+  );
 
   const handleSignOut = () => {
     signOut();
@@ -135,6 +155,14 @@ export function AppRightSidebar() {
 
   const handleManageAccount = () => {
     openUserProfile();
+  };
+
+  const handleCourseSelect = (course: ICourse) => {
+    setSelectedCourseMutation.mutate(course, {
+      onError: (error: any) => {
+        toast.error(error.message || "Failed to select course");
+      },
+    });
   };
   const { user } = useUser();
   React.useEffect(() => {
@@ -212,23 +240,44 @@ export function AppRightSidebar() {
               My Courses
             </h4>
             <div className="flex flex-col gap-1 items-end">
-              {courses.map((course) => (
-                <Button
-                  key={course.name}
-                  variant={activeCourse === course.name ? "flat" : "ghost"}
-                  onClick={() => setActiveCourse(course.name)}
-                  className="gap-2"
-                >
-                  <course.icon className="h-4 w-4" />
-                  {course.name}
-                </Button>
-              ))}
-              <Button asChild variant="ghost" className="gap-2">
-                <Link href="/courses">
-                  <PlusCircle className="h-4 w-4" />
-                  Add More
-                </Link>
-              </Button>
+              {joinedCourses.length === 0
+                ? (
+                  <div className="text-center text-muted-foreground py-4">
+                    <p className="text-sm mb-2">No courses joined yet</p>
+                    <Button asChild variant="ghost" className="gap-2">
+                      <Link href="/courses">
+                        <PlusCircle className="h-4 w-4" />
+                        Join Courses
+                      </Link>
+                    </Button>
+                  </div>
+                )
+                : (
+                  <>
+                    {joinedCourses.map((course, index) => {
+                      const IconComponent = getCourseIcon(course.code, index);
+                      const isSelected = selectedCourse?.id === course.id;
+
+                      return (
+                        <Button
+                          key={course.id}
+                          variant={isSelected ? "flat" : "ghost"}
+                          onClick={() => handleCourseSelect(course)}
+                          className="gap-2"
+                        >
+                          <IconComponent className="h-4 w-4" />
+                          <span className="truncate">{course.code}</span>
+                        </Button>
+                      );
+                    })}
+                    <Button asChild variant="ghost" className="gap-2">
+                      <Link href="/courses">
+                        <PlusCircle className="h-4 w-4" />
+                        Add More
+                      </Link>
+                    </Button>
+                  </>
+                )}
             </div>
           </div>
         </div>

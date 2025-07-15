@@ -68,6 +68,7 @@ export function useAuthenticatedUser() {
     userId: user?.id,
     schoolId: user?.publicMetadata?.selectedSchool as string | undefined,
     schoolName: user?.publicMetadata?.selectedSchoolName as string | undefined,
+    joinedCourses: (user?.publicMetadata?.joinedCourses as string[]) || [],
   };
 }
 
@@ -78,6 +79,7 @@ export const queryKeys = {
     all: ['user'] as const,
     profile: () => [...queryKeys.user.all, 'profile'] as const,
     selectedCourse: () => [...queryKeys.user.all, 'selectedCourse'] as const,
+    joinedCourses: () => [...queryKeys.user.all, 'joinedCourses'] as const,
     school: () => [...queryKeys.user.all, 'school'] as const,
     onboardingStatus: () => [...queryKeys.user.all, 'onboardingStatus'] as const,
   },
@@ -123,6 +125,8 @@ export const mutationKeys = {
   user: {
     setSelectedCourse: ['user', 'setSelectedCourse'] as const,
     clearSelectedCourse: ['user', 'clearSelectedCourse'] as const,
+    joinCourse: ['user', 'joinCourse'] as const,
+    leaveCourse: ['user', 'leaveCourse'] as const,
     updateOnboarding: ['user', 'updateOnboarding'] as const,
     removeSchool: ['user', 'removeSchool'] as const,
   },

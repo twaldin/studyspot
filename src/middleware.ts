@@ -47,7 +47,7 @@ export default clerkMiddleware(async (auth, req) => {
           ) {
             if (!selectedCourseId) {
               return NextResponse.redirect(
-                new URL("/app/select-course", req.url),
+                new URL("/courses", req.url),
               );
             } else {
               const dashboardUrl = new URL("/app/dashboard", req.url);
@@ -61,7 +61,7 @@ export default clerkMiddleware(async (auth, req) => {
             !req.nextUrl.pathname.includes("/create-course")
           ) {
             return NextResponse.redirect(
-              new URL("/app/select-course", req.url),
+              new URL("/courses", req.url),
             );
           }
         } catch (error) {
@@ -75,23 +75,6 @@ export default clerkMiddleware(async (auth, req) => {
       }
     }
 
-    // Allow access to onboarding routes for authenticated users
-    if (isOnboardingRoute(req)) {
-      const { userId } = await auth();
-      if (!userId) {
-        const signInUrl = new URL("/sign-in", req.url);
-        signInUrl.searchParams.set("redirectUrl", req.url);
-        return NextResponse.redirect(signInUrl);
-      }
-
-      // If user has already completed onboarding, redirect to dashboard
-      const onboardingStatus = await getUserOnboardingStatus(userId);
-      if (onboardingStatus.hasCompletedOnboarding) {
-        const dashboardUrl = new URL("/", req.url);
-        return NextResponse.redirect(dashboardUrl);
-      }
-    }
-
     return NextResponse.next();
   } catch (error) {
     console.error("Middleware execution error:", error);
@@ -100,4 +83,3 @@ export default clerkMiddleware(async (auth, req) => {
     return NextResponse.next();
   }
 });
-

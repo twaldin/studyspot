@@ -683,10 +683,15 @@ export const supabaseService = SupabaseService.getInstance();
  * @deprecated Use `supabaseService.createAuthenticatedClient()` instead.
  * @returns An authenticated Supabase client instance.
  */
-export async function createServerClerkSupabaseClient(): Promise<
-  SupabaseClient<Database>
-> {
-  return supabaseService.createAuthenticatedClient();
-}
 
-// Types are exported inline above
+export function createServiceRoleClient() {
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    logger.error("SUPABASE_SERVICE_ROLE_KEY is not set");
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY is not set");
+  }
+
+  return createClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  );
+}

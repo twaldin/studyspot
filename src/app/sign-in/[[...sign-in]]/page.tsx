@@ -7,7 +7,7 @@ export default function Page() {
     <div className="flex justify-center items-center min-h-screen">
       <SignIn
         path="/sign-in"
-        forceRedirectUrl="/onboarding"
+        forceRedirectUrl="/"
       />
     </div>
   );
