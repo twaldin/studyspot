@@ -9,7 +9,7 @@ const UserMessage = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "bg-card text-card-foreground rounded-xl border px-3 py-2 shadow-sm text-base md:text-sm",
+      "bg-card text-card-foreground rounded-xl border px-3 py-2 shadow-sm text-base md:text-sm whitespace-pre-wrap break-words",
       className
     )}
     {...props}

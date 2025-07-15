@@ -59,11 +59,11 @@ export function ChatPageContent() {
           {messages.map((message, i) =>
             message.role === "user" ? (
               <UserMessage key={i} className="w-fit max-w-2xl self-end">
-                <p>{message.content}</p>
+                {message.content}
               </UserMessage>
             ) : (
               <AssistantMessage key={i} className="w-fit max-w-2xl self-start">
-                <p>{message.content}</p>
+                {message.content}
               </AssistantMessage>
             )
           )}
