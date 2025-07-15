@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { Crimson_Text } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import { ClerkProvider } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
+import { QueryProvider } from "@/lib/providers/query-provider";
 
 const crimsonText = Crimson_Text({
   weight: ["400", "600", "700"],
@@ -23,15 +25,19 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={cn(crimsonText.variable)}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          {children}
-        </ThemeProvider>
+        <ClerkProvider>
+          <QueryProvider>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+            >
+              {children}
+            </ThemeProvider>
+          </QueryProvider>
+        </ClerkProvider>
       </body>
     </html>
   );
-} 
+}
