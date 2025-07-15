@@ -255,7 +255,7 @@ export function AppRightSidebar() {
                 : (
                   <>
                     {joinedCourses.map((course, index) => {
-                      const IconComponent = getCourseIcon(course.code, index);
+                      const IconComponent = getCourseIcon(course.code || "", index);
                       const isSelected = selectedCourse?.id === course.id;
 
                       return (
@@ -266,7 +266,7 @@ export function AppRightSidebar() {
                           className="gap-2"
                         >
                           <IconComponent className="h-4 w-4" />
-                          <span className="truncate">{course.code}</span>
+                          <span className="truncate">{course.code || "Unknown"}</span>
                         </Button>
                       );
                     })}
