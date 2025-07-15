@@ -8,7 +8,7 @@ const AssistantMessage = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("text-card-foreground text-base md:text-sm", className)}
+    className={cn("text-card-foreground text-base md:text-sm whitespace-pre-wrap break-words", className)}
     {...props}
   />
 ))
