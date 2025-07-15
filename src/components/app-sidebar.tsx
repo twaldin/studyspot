@@ -1,22 +1,43 @@
-import { FlaskConical, Radical, Pencil, Music, Plus, PlusCircle, Box, Settings, User } from "lucide-react"
-import StudySpotLogo from "@/components/branding/studyspot-logo"
-import Image from "next/image"
+"use client";
+
+import {
+  Box,
+  FlaskConical,
+  Music,
+  Pencil,
+  Plus,
+  PlusCircle,
+  Radical,
+  Settings,
+  User,
+} from "lucide-react";
+import StudySpotLogo from "@/components/branding/studyspot-logo";
+import Image from "next/image";
 import Link from "next/link";
+import {
+  useCourses,
+  useJoinedCourses,
+  useSelectedCourse,
+  useSetSelectedCourse,
+} from "@/hooks/api/courses";
+import { ICourse } from "@/features/courses/course.model";
+import { JoinedCourseList } from "@/features/courses/components/joined-course-list";
+import toast from "react-hot-toast";
 
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
+  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarHeader,
-  SidebarFooter,
-} from "@/components/ui/sidebar"
-import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
+} from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 
 // Menu items.
 const items = [
@@ -45,17 +66,27 @@ const items = [
     url: "#",
     icon: Music,
   },
-]
-
-// Courses data (shared with right sidebar)
-const courses = [
-  { name: "CHEM 103", icon: FlaskConical },
-  { name: "MATH 221", icon: Radical },
-  { name: "M E 231", icon: Box },
-  { name: "MUSIC 102", icon: Music },
-]
+];
 
 export function AppSidebar() {
+  // React Query hooks for course data
+  const { data: allCourses = [] } = useCourses();
+  const { data: joinedCourseIds = [] } = useJoinedCourses();
+  const { data: selectedCourse } = useSelectedCourse();
+  const setSelectedCourseMutation = useSetSelectedCourse();
+
+  // Filter courses to only show joined ones
+  const joinedCourses = allCourses.filter((course) =>
+    joinedCourseIds.includes(course.id)
+  );
+
+  const handleCourseSelect = (course: ICourse) => {
+    setSelectedCourseMutation.mutate(course, {
+      onError: (error: any) => {
+        toast.error(error.message || "Failed to select course");
+      },
+    });
+  };
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="flex flex-col gap-4 border-b border-sidebar-border p-4">
@@ -81,7 +112,9 @@ export function AppSidebar() {
             variant="secondary"
           >
             <Plus className="h-4 w-4" />
-            <span className="group-data-[collapsible=icon]:hidden">New Chat</span>
+            <span className="group-data-[collapsible=icon]:hidden">
+              New Chat
+            </span>
           </Button>
         </Link>
       </SidebarHeader>
@@ -92,42 +125,17 @@ export function AppSidebar() {
             My Courses
           </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
-              {courses.map((course) => (
-                <SidebarMenuItem
-                  key={course.name}
-                  className="group-data-[collapsible=icon]:hidden"
-                >
-                  <SidebarMenuButton
-                    asChild
-                    className="group-data-[collapsible=icon]:justify-center"
-                  >
-                    <a href="#" className="flex items-center gap-2">
-                      <course.icon className="h-4 w-4 shrink-0" />
-                      <span className="group-data-[collapsible=icon]:hidden">
-                        {course.name}
-                      </span>
-                    </a>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-              <SidebarMenuItem className="group-data-[collapsible=icon]:hidden">
-                <SidebarMenuButton
-                  asChild
-                  className="group-data-[collapsible=icon]:justify-center"
-                >
-                  <Link href="/courses" className="flex items-center gap-2">
-                    <PlusCircle className="h-4 w-4 shrink-0" />
-                    <span className="group-data-[collapsible=icon]:hidden">
-                      Add More
-                    </span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
+            <div className="flex flex-col gap-1 items-start">
+              <JoinedCourseList
+                courses={joinedCourses}
+                selectedCourseId={selectedCourse?.id}
+                onCourseSelect={handleCourseSelect}
+                isLoading={setSelectedCourseMutation.isPending}
+              />
+            </div>
           </SidebarGroupContent>
         </SidebarGroup>
-        
+
         <SidebarGroup>
           <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">
             Past Chats
@@ -156,7 +164,7 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      
+
       {/* Footer with settings and user options - only show when right sidebar is collapsed */}
       <SidebarFooter className="border-t border-sidebar-border p-2 lg:hidden">
         <SidebarMenu>
@@ -167,7 +175,9 @@ export function AppSidebar() {
             >
               <a href="#" className="flex items-center gap-2">
                 <Settings className="h-4 w-4 shrink-0" />
-                <span className="group-data-[collapsible=icon]:hidden">Settings</span>
+                <span className="group-data-[collapsible=icon]:hidden">
+                  Settings
+                </span>
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -178,12 +188,15 @@ export function AppSidebar() {
             >
               <a href="#" className="flex items-center gap-2">
                 <User className="h-4 w-4 shrink-0" />
-                <span className="group-data-[collapsible=icon]:hidden">Reed Grenager</span>
+                <span className="group-data-[collapsible=icon]:hidden">
+                  Reed Grenager
+                </span>
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
-  )
+  );
 }
+

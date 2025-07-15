@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import {
   AlertDialog,
@@ -10,86 +10,53 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
 import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
-  CardFooter,
-} from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
-  Search,
-  FlaskConical,
-  Radical,
   Box,
+  FlaskConical,
   Music,
+  PartyPopper,
   Pencil,
   PlusCircle,
+  Radical,
+  Search,
   X,
-  PartyPopper,
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import React from "react"
-import { CreateCourseDialog } from "@/components/create-course-dialog"
-import { useSearchParams } from "next/navigation"
-import { OnboardingSuccessDialog } from "@/components/onboarding-success-dialog"
-import Link from "next/link"
-import toast from "react-hot-toast"
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import React from "react";
+import { CreateCourseDialog } from "@/components/create-course-dialog";
+import { useSearchParams } from "next/navigation";
+import { OnboardingSuccessDialog } from "@/components/onboarding-success-dialog";
+import Link from "next/link";
+import toast from "react-hot-toast";
+import { useCourses, useJoinCourse, useLeaveCourse, useJoinedCourses } from "@/hooks/api/courses";
 
-const coursesData = [
-  {
-    title: "CHEM 103",
-    description: "General Chemistry I",
-    icon: FlaskConical,
-    isAdded: true,
-  },
-  {
-    title: "MATH 221",
-    description: "Calculus and Analytic Geometry I",
-    icon: Radical,
-    isAdded: true,
-  },
-  {
-    title: "M E 231",
-    description: "Geometric Modeling for Design and Manufacturing",
-    icon: Box,
-    isAdded: true,
-  },
-  {
-    title: "MUSIC 102",
-    description: "History of Jazz in America",
-    icon: Music,
-    isAdded: true,
-  },
-  {
-    title: "ENGL 101",
-    description: "Freshman Composition",
-    icon: Pencil,
-    isAdded: false,
-  },
-  {
-    title: "PHYS 201",
-    description: "General Physics I",
-    icon: Radical, // Using Radical for Physics too as there's no specific physics icon imported
-    isAdded: false,
-  },
-]
 
 export function CoursesPageContent() {
-  const [isCreateCourseDialogOpen, setCreateCourseDialogOpen] =
-    React.useState(false)
-  const [isOnboardingSuccessDialogOpen, setOnboardingSuccessDialogOpen] =
-    React.useState(false)
-  const searchParams = useSearchParams()
-
+  const [isCreateCourseDialogOpen, setCreateCourseDialogOpen] = React.useState(
+    false,
+  );
+  const [isOnboardingSuccessDialogOpen, setOnboardingSuccessDialogOpen] = React
+    .useState(false);
+  const searchParams = useSearchParams();
+  const { data: courses, isLoading, error } = useCourses();
+  const { data: joinedCourses = [], isLoading: isJoinedCoursesLoading } = useJoinedCourses();
+  const joinCourseMutation = useJoinCourse();
+  const leaveCourseMutation = useLeaveCourse();
   React.useEffect(() => {
     if (searchParams.get("onboarding") === "success") {
-      setOnboardingSuccessDialogOpen(true)
+      setOnboardingSuccessDialogOpen(true);
     }
-  }, [searchParams])
+  }, [courses, searchParams]);
 
   const handleOnboardingSuccessDialogChange = (open: boolean) => {
     if (!open && isOnboardingSuccessDialogOpen) {
@@ -99,11 +66,33 @@ export function CoursesPageContent() {
           title: "Welcome to StudySpot!",
           icon: <Pencil className="h-4 w-4" />,
           duration: Infinity,
-        } as any
-      )
+        } as any,
+      );
     }
-    setOnboardingSuccessDialogOpen(open)
-  }
+    setOnboardingSuccessDialogOpen(open);
+  };
+
+  const handleJoinCourse = (courseId: string) => {
+    joinCourseMutation.mutate(courseId, {
+      onSuccess: () => {
+        toast.success("Successfully joined course!");
+      },
+      onError: (error: any) => {
+        toast.error(error.message || "Failed to join course");
+      },
+    });
+  };
+
+  const handleLeaveCourse = (courseId: string) => {
+    leaveCourseMutation.mutate(courseId, {
+      onSuccess: () => {
+        toast.success("Successfully left course");
+      },
+      onError: (error: any) => {
+        toast.error(error.message || "Failed to leave course");
+      },
+    });
+  };
 
   return (
     <>
@@ -135,58 +124,90 @@ export function CoursesPageContent() {
           </div>
         </div>
         <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {coursesData.map((course, i) => (
+          {isLoading ? (
+            <div className="flex items-center justify-center h-32">
+              <p className="text-muted-foreground">Loading courses...</p>
+            </div>
+          ) : error ? (
+            <div className="flex items-center justify-center h-32">
+              <p className="text-red-600">Error loading courses. Please try again.</p>
+            </div>
+          ) : courses?.length === 0 ? (
+            <div className="flex items-center justify-center h-32">
+              <p className="text-muted-foreground">No courses found. Create your first course!</p>
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {courses?.map((course, i) => {
+                const isJoined = !isJoinedCoursesLoading && joinedCourses.includes(course.id);
+                const isJoinedLoading = isJoinedCoursesLoading;
+                return (
               <Card key={i} className="flex flex-col">
                 <CardHeader className="flex-1">
                   <div className="flex items-start gap-4">
-                    <course.icon className="h-6 w-6 text-muted-foreground mt-1" />
+                    {/*<course.icon className="h-6 w-6 text-muted-foreground mt-1" />*/}
                     <div className="flex-1">
-                      <CardTitle>{course.title}</CardTitle>
+                      <CardTitle>{course.code}</CardTitle>
                       <CardDescription className="mt-1">
-                        {course.description}
+                        {course.title}
                       </CardDescription>
                     </div>
                   </div>
                 </CardHeader>
                 <CardFooter>
-                  {course.isAdded ? (
-                    <div className="flex gap-2 w-full">
-                      <Link href="/" className="flex-1">
-                        <Button variant="secondary" className="w-full">
-                          Enter Course
-                        </Button>
-                      </Link>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Leave course?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              You can always rejoin this course later.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction>Continue</AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  ) : (
-                    <Button variant="primary" className="w-full gap-2">
-                      <PlusCircle className="h-4 w-4" />
-                      Add Course
+                  {isJoinedLoading ? (
+                    <Button variant="secondary" className="w-full" disabled>
+                      Loading...
                     </Button>
-                  )}
+                  ) : isJoined ? (
+                      <div className="flex gap-2 w-full">
+                        <Link href="/" className="flex-1">
+                          <Button variant="secondary" className="w-full">
+                            Enter Course
+                          </Button>
+                        </Link>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Leave course?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                You can always rejoin this course later.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleLeaveCourse(course.id)}
+                                disabled={leaveCourseMutation.isPending && leaveCourseMutation.variables === course.id}
+                              >
+                                {leaveCourseMutation.isPending && leaveCourseMutation.variables === course.id ? "Leaving..." : "Continue"}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    ) : (
+                      <Button 
+                        variant="default" 
+                        className="w-full gap-2"
+                        onClick={() => handleJoinCourse(course.id)}
+                        disabled={joinCourseMutation.isPending && joinCourseMutation.variables === course.id}
+                      >
+                        <PlusCircle className="h-4 w-4" />
+                        {joinCourseMutation.isPending && joinCourseMutation.variables === course.id ? "Joining..." : "Join Course"}
+                      </Button>
+                    )}
                 </CardFooter>
               </Card>
-            ))}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
         <CreateCourseDialog
           open={isCreateCourseDialogOpen}
@@ -198,5 +219,6 @@ export function CoursesPageContent() {
         />
       </div>
     </>
-  )
-} 
+  );
+}
+
