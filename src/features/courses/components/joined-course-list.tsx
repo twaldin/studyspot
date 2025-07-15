@@ -62,7 +62,6 @@ export function JoinedCourseList({
             variant={isSelected ? "flat" : "ghost"}
             onClick={() => onCourseSelect(course)}
             className="gap-2 transition-none active:bg-inherit active:text-inherit hover:bg-inherit hover:text-inherit"
-            disabled={isLoading}
           >
             <IconComponent className="h-4 w-4" />
             <span className="truncate">{course.code || "Unknown"}</span>
