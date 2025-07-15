@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   Card,
-  CardContent,
   CardDescription,
   CardFooter,
   CardHeader,
@@ -21,13 +20,8 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
-  Box,
-  FlaskConical,
-  Music,
-  PartyPopper,
   Pencil,
   PlusCircle,
-  Radical,
   Search,
   X,
 } from "lucide-react";
@@ -193,7 +187,7 @@ export function CoursesPageContent() {
                       </div>
                     ) : (
                       <Button 
-                        variant="default" 
+                        variant="primary" 
                         className="w-full gap-2"
                         onClick={() => handleJoinCourse(course.id)}
                         disabled={joinCourseMutation.isPending && joinCourseMutation.variables === course.id}
