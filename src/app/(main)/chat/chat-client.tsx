@@ -3,29 +3,41 @@
 import { useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { ChatInputBar } from "@/components/chat-input-bar"
-import { Card, CardContent } from "@/components/ui/card"
+import { UserMessage } from "@/components/user-message"
+import { AssistantMessage } from "@/components/assistant-message"
+
+type Message = {
+  role: "user" | "assistant"
+  content: string
+}
 
 export function ChatPageContent() {
   const searchParams = useSearchParams()
   const initialMessage = searchParams.get("message")
 
-  const [messages, setMessages] = useState(
-    initialMessage
-      ? [
-          {
-            role: "user",
-            content: initialMessage,
-          },
-        ]
-      : []
-  )
+  const [messages, setMessages] = useState<Message[]>(() => {
+    const initialMessages: Message[] = []
+    if (initialMessage) {
+      initialMessages.push({
+        role: "user",
+        content: initialMessage,
+      })
+      initialMessages.push({
+        role: "assistant",
+        content: "This is a sample response.",
+      })
+    } else {
+      initialMessages.push({
+        role: "assistant",
+        content: "Hello! How can I help you today?",
+      })
+    }
+    return initialMessages
+  })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleNewMessage = (newMessage: {
-    role: "user"
-    content: string
-  }) => {
+  const handleNewMessage = (newMessage: Message) => {
     setMessages(prevMessages => [...prevMessages, newMessage])
   }
 
@@ -44,13 +56,17 @@ export function ChatPageContent() {
     <div className="mx-auto w-full max-w-3xl h-full flex flex-col p-6 gap-4">
       <div className="flex-1 overflow-y-auto">
         <div className="flex flex-col gap-4">
-          {messages.map((message, i) => (
-            <Card key={i} className="w-fit max-w-2xl self-end py-0">
-              <CardContent className="p-4">
+          {messages.map((message, i) =>
+            message.role === "user" ? (
+              <UserMessage key={i} className="w-fit max-w-2xl self-end">
                 <p>{message.content}</p>
-              </CardContent>
-            </Card>
-          ))}
+              </UserMessage>
+            ) : (
+              <AssistantMessage key={i} className="w-fit max-w-2xl self-start">
+                <p>{message.content}</p>
+              </AssistantMessage>
+            )
+          )}
         </div>
       </div>
       <div>
