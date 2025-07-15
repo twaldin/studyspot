@@ -29,6 +29,7 @@ import {
   useSetSelectedCourse,
 } from "@/hooks/api/courses";
 import { ICourse } from "@/features/courses/course.model";
+import { JoinedCourseList } from "@/features/courses/components/joined-course-list";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,15 +40,6 @@ import {
 import logger from "@/lib/logger";
 import { useRouter } from "next/navigation";
 
-// Default icons for courses (will be used if no specific icon is provided)
-const defaultCourseIcons = [FlaskConical, Radical, Box, Music, PartyPopper];
-
-// Helper function to get icon for course
-const getCourseIcon = (courseCode: string, index: number) => {
-  // You can add logic here to determine icons based on course code
-  // For now, we'll cycle through default icons
-  return defaultCourseIcons[index % defaultCourseIcons.length];
-};
 
 function CustomToaster() {
   const { toasts, handlers } = useToaster();
@@ -240,44 +232,12 @@ export function AppRightSidebar() {
               My Courses
             </h4>
             <div className="flex flex-col gap-1 items-end">
-              {joinedCourses.length === 0
-                ? (
-                  <div className="text-center text-muted-foreground py-4">
-                    <p className="text-sm mb-2">No courses joined yet</p>
-                    <Button asChild variant="ghost" className="gap-2">
-                      <Link href="/courses">
-                        <PlusCircle className="h-4 w-4" />
-                        Join Courses
-                      </Link>
-                    </Button>
-                  </div>
-                )
-                : (
-                  <>
-                    {joinedCourses.map((course, index) => {
-                      const IconComponent = getCourseIcon(course.code || "", index);
-                      const isSelected = selectedCourse?.id === course.id;
-
-                      return (
-                        <Button
-                          key={course.id}
-                          variant={isSelected ? "flat" : "ghost"}
-                          onClick={() => handleCourseSelect(course)}
-                          className="gap-2"
-                        >
-                          <IconComponent className="h-4 w-4" />
-                          <span className="truncate">{course.code || "Unknown"}</span>
-                        </Button>
-                      );
-                    })}
-                    <Button asChild variant="ghost" className="gap-2">
-                      <Link href="/courses">
-                        <PlusCircle className="h-4 w-4" />
-                        Add More
-                      </Link>
-                    </Button>
-                  </>
-                )}
+              <JoinedCourseList
+                courses={joinedCourses}
+                selectedCourseId={selectedCourse?.id}
+                onCourseSelect={handleCourseSelect}
+                isLoading={setSelectedCourseMutation.isPending}
+              />
             </div>
           </div>
         </div>
