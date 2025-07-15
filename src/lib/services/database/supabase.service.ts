@@ -42,7 +42,7 @@ export class SupabaseService {
   private readonly DEFAULT_TIMEOUT = 10000; // 10 seconds
   private readonly DEFAULT_RETRIES = 3;
 
-  private constructor() {}
+  private constructor() { }
 
   /**
    * Get singleton instance
@@ -268,8 +268,8 @@ export class SupabaseService {
             dataCount: Array.isArray(result.data)
               ? result.data.length
               : result.data
-              ? 1
-              : 0,
+                ? 1
+                : 0,
             useAuth,
           }),
           "Query executed successfully",
@@ -305,10 +305,10 @@ export class SupabaseService {
     // Should never reach here, but just in case
     if (options.throwOnError !== false) {
       throw lastError ||
-        errorService.createError(
-          "database_error",
-          "Query failed after all retries",
-        );
+      errorService.createError(
+        "database_error",
+        "Query failed after all retries",
+      );
     }
 
     return { data: null, error: lastError };
@@ -680,8 +680,7 @@ export const supabaseService = SupabaseService.getInstance();
 /**
  * Creates an authenticated Supabase client using Clerk for backward compatibility.
  *
- * @deprecated Use `supabaseService.createAuthenticatedClient()` instead.
- * @returns An authenticated Supabase client instance.
+ * @returns An server Supabase client instance.
  */
 
 export function createServiceRoleClient() {

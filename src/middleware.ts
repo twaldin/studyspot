@@ -5,8 +5,10 @@ import { clerkClient } from "@clerk/nextjs/server";
 import logger from "@/lib/logger";
 
 const isProtectedRoute = createRouteMatcher([
-  "/app(.*)",
   "/",
+  "/courses",
+  "/onboarding",
+  "/content",
 ]);
 
 const isOnboardingRoute = createRouteMatcher([
