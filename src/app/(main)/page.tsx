@@ -20,14 +20,17 @@ export default function Home() {
 
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [isNewPostDialogOpen, setIsNewPostDialogOpen] = useState(false);
+  const [isCreatingChat, setIsCreatingChat] = useState(false);
   const router = useRouter();
   const { data: suggestedQueries = [], isLoading: isLoadingSuggestedQueries } = useSuggestedQueries(selectedCourse?.id);
   const createChatMutation = useCreateChat();
 
   const handleNewChat = async (messageContent: string) => {
-    if (!selectedCourse) {
+    if (!selectedCourse || isCreatingChat) {
       return;
     }
+    
+    setIsCreatingChat(true);
     
     try {
       // Create real chat immediately
@@ -46,6 +49,8 @@ export default function Home() {
       router.push(`/chat/${newChat.id}`);
     } catch (error) {
       console.error('Failed to create chat:', error);
+    } finally {
+      setIsCreatingChat(false);
     }
   };
 
@@ -53,8 +58,8 @@ export default function Home() {
     await handleNewChat(values.message);
   };
 
-  const handleSuggestedQueryClick = (query: string) => {
-    handleNewChat(query);
+  const handleSuggestedQueryClick = async (query: string) => {
+    await handleNewChat(query);
   };
 
   return (
@@ -78,6 +83,7 @@ export default function Home() {
                 variant="outline"
                 className="whitespace-nowrap rounded-full"
                 onClick={() => handleSuggestedQueryClick(suggestion)}
+                disabled={isCreatingChat}
               >
                 <Zap className="w-4 h-4 mr-1" />
                 {suggestion}
@@ -86,7 +92,7 @@ export default function Home() {
           )}
         </div>
         </div>
-        <ChatInputBar onSubmit={handleFormSubmit} />
+        <ChatInputBar onSubmit={handleFormSubmit} isSubmitting={isCreatingChat} />
 
         {/* Dynamic CardGrid section from 'dev' branch */}
         <div className="hidden @md:block">
