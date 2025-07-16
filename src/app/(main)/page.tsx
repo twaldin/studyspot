@@ -1,14 +1,6 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Zap, ArrowRight, Upload, MessagesSquare } from "lucide-react";
 import { useState } from "react";
@@ -17,44 +9,17 @@ import Link from "next/link";
 import { NewPostDialog } from "@/components/new-post-dialog";
 import { ChatInputBar } from "@/components/chat-input-bar";
 import { useRouter } from "next/navigation";
+import { CardGrid } from "@/components/ui/card-grid";
+import { useSelectedCourse } from "@/hooks/api/courses";
 
 const suggestions = [
   "How do we use moles to solve stoichiometry problems?",
   "Will the thermochemistry exam cover energy units?",
 ];
 
-// Card content
-const cardData = [
-  {
-    title: "Card 1",
-    description: "Card 1 description",
-    badge: { text: "Trending", variant: "default" as const }
-  },
-  {
-    title: "Card 2",
-    description: "Card 2 description",
-    badge: { text: "Recently added", variant: "secondary" as const }
-  },
-  {
-    title: "Card 3",
-    description: "Card 3 description",
-  },
-  {
-    title: "Card 4",
-    description: "Card 4 description",
-    badge: { text: "Recently created", variant: "outline" as const }
-  },
-  {
-    title: "Card 5",
-    description: "Card 5 description",
-  },
-  {
-    title: "Card 6",
-    description: "Card 6 description",
-  }
-];
-
 export default function Home() {
+  const { data: selectedCourse, isLoading, error } = useSelectedCourse();
+
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [isNewPostDialogOpen, setIsNewPostDialogOpen] = useState(false);
   const router = useRouter();
@@ -76,6 +41,7 @@ export default function Home() {
                 key={suggestion}
                 variant="outline"
                 className="whitespace-nowrap rounded-full"
+                onClick={() => handleFormSubmit({ message: suggestion })}
               >
                 <Zap className="w-4 h-4" />
                 {suggestion}
@@ -84,30 +50,25 @@ export default function Home() {
           </div>
         </div>
         <ChatInputBar onSubmit={handleFormSubmit} />
-        <div className="hidden gap-4 @md:grid @md:grid-cols-2 @lg:grid-cols-3">
-          {cardData.map((card, i) => (
-            <Card key={i}>
-              <CardHeader>
-                <CardTitle>{card.title}</CardTitle>
-                <CardDescription>{card.description}</CardDescription>
-              </CardHeader>
-              {card.badge && (
-                <CardContent>
-                  <Badge variant={card.badge.variant}>
-                    {card.badge.text}
-                  </Badge>
-                </CardContent>
-              )}
-            </Card>
-          ))}
+
+        {/* Dynamic CardGrid section from 'dev' branch */}
+        <div className="hidden @md:block">
+          {isLoading && <div>Loading course...</div>}
+          {error && <div>Error loading course</div>}
+          {selectedCourse && <CardGrid courseId={selectedCourse.id} />}
         </div>
+
+        {/* Buttons and desktop link from 'chore/mobile-fixes' branch */}
         <div className="flex @md:justify-between items-center">
           <div className="flex items-center">
             <Button variant="ghost" onClick={() => setIsUploadDialogOpen(true)}>
               <Upload className="w-4 h-4" />
               Upload Files
             </Button>
-            <Separator orientation="vertical" className="data-[orientation=vertical]:h-4" />
+            <Separator
+              orientation="vertical"
+              className="data-[orientation=vertical]:h-4"
+            />
             <Button variant="ghost" onClick={() => setIsNewPostDialogOpen(true)}>
               <MessagesSquare className="w-4 h-4" />
               New Post
@@ -121,14 +82,23 @@ export default function Home() {
           </Link>
         </div>
       </div>
+
+      {/* Mobile-only floating link from 'chore/mobile-fixes' branch */}
       <Link href="/content" className="fixed bottom-6 right-6 @md:hidden">
         <Button variant="secondary">
           All Course Content
           <ArrowRight className="w-4 h-4" />
         </Button>
       </Link>
-      <FileUploadDialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen} />
-      <NewPostDialog open={isNewPostDialogOpen} onOpenChange={setIsNewPostDialogOpen} />
+
+      <FileUploadDialog
+        open={isUploadDialogOpen}
+        onOpenChange={setIsUploadDialogOpen}
+      />
+      <NewPostDialog
+        open={isNewPostDialogOpen}
+        onOpenChange={setIsNewPostDialogOpen}
+      />
     </div>
   );
 }
