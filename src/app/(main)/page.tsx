@@ -64,60 +64,62 @@ export default function Home() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-3xl h-full flex flex-col justify-center p-6 gap-4 @container">
-      <h2 className="text-3xl font-crimson-text leading-none">
-        What are we learning today?
-      </h2>
-      <div className="w-full overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
-        <div className="flex gap-2">
-          {suggestions.map((suggestion) => (
-            <Button
-              key={suggestion}
-              variant="outline"
-              className="whitespace-nowrap rounded-full"
-            >
-              <Zap className="w-4 h-4" />
-              {suggestion}
-            </Button>
+    <div className="mx-auto w-full max-w-3xl h-full flex flex-col p-6 @container">
+      <div className="my-auto flex flex-col gap-4">
+        <h2 className="text-3xl font-crimson-text leading-none">
+          What are we learning today?
+        </h2>
+        <div className="w-full overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+          <div className="flex gap-2">
+            {suggestions.map((suggestion) => (
+              <Button
+                key={suggestion}
+                variant="outline"
+                className="whitespace-nowrap rounded-full"
+              >
+                <Zap className="w-4 h-4" />
+                {suggestion}
+              </Button>
+            ))}
+          </div>
+        </div>
+        <ChatInputBar onSubmit={handleFormSubmit} />
+        <div className="hidden gap-4 @md:grid @md:grid-cols-2 @lg:grid-cols-3">
+          {cardData.map((card, i) => (
+            <Card key={i}>
+              <CardHeader>
+                <CardTitle>{card.title}</CardTitle>
+                <CardDescription>{card.description}</CardDescription>
+              </CardHeader>
+              {card.badge && (
+                <CardContent>
+                  <Badge variant={card.badge.variant}>
+                    {card.badge.text}
+                  </Badge>
+                </CardContent>
+              )}
+            </Card>
           ))}
         </div>
-      </div>
-      <ChatInputBar onSubmit={handleFormSubmit} />
-      <div className="hidden gap-4 @md:grid @md:grid-cols-2 @lg:grid-cols-3">
-        {cardData.map((card, i) => (
-          <Card key={i}>
-            <CardHeader>
-              <CardTitle>{card.title}</CardTitle>
-              <CardDescription>{card.description}</CardDescription>
-            </CardHeader>
-            {card.badge && (
-              <CardContent>
-                <Badge variant={card.badge.variant}>
-                  {card.badge.text}
-                </Badge>
-              </CardContent>
-            )}
-          </Card>
-        ))}
-      </div>
-      <div className="flex justify-between items-center">
-        <div className="flex items-center">
-          <Button variant="ghost" onClick={() => setIsUploadDialogOpen(true)}>
-            <Upload className="w-4 h-4" />
-            Upload Files
-          </Button>
-          <Separator orientation="vertical" className="data-[orientation=vertical]:h-4" />
-          <Button variant="ghost" onClick={() => setIsNewPostDialogOpen(true)}>
-            <MessagesSquare className="w-4 h-4" />
-            New Post
-          </Button>
+        <div className="flex justify-between items-center">
+          <div className="flex items-center">
+            <Button variant="ghost" onClick={() => setIsUploadDialogOpen(true)}>
+              <Upload className="w-4 h-4" />
+              Upload Files
+            </Button>
+            <Separator orientation="vertical" className="data-[orientation=vertical]:h-4" />
+            <Button variant="ghost" onClick={() => setIsNewPostDialogOpen(true)}>
+              <MessagesSquare className="w-4 h-4" />
+              New Post
+            </Button>
+          </div>
+          <Link href="/content">
+            <Button variant="secondary">
+              All Course Content
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </Link>
         </div>
-        <Link href="/content">
-          <Button variant="secondary">
-            All Course Content
-            <ArrowRight className="w-4 h-4" />
-          </Button>
-        </Link>
       </div>
       <FileUploadDialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen} />
       <NewPostDialog open={isNewPostDialogOpen} onOpenChange={setIsNewPostDialogOpen} />
