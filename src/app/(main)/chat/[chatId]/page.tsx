@@ -3,7 +3,6 @@
 import { Suspense } from "react"
 import { ChatPageContent } from "./chat-client"
 import { Skeleton } from "@/components/ui/skeleton"
-import { useParams } from "next/navigation"
 
 function ChatLoading() {
   return (
@@ -22,12 +21,9 @@ function ChatLoading() {
 }
 
 export default function ChatPage() {
-  const params = useParams()
-  const chatId = Array.isArray(params?.chatId) ? params.chatId[0] : params?.chatId
-
   return (
     <Suspense fallback={<ChatLoading />}>
-      <ChatPageContent chatId={chatId} />
+      <ChatPageContent />
     </Suspense>
   )
 }
