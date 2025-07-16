@@ -146,7 +146,7 @@ export default function ContentPage() {
   const [showFlashcards, setShowFlashcards] = React.useState(true);
 
   return (
-    <div className="mx-auto w-full max-w-3xl h-full flex flex-col p-6 gap-4">
+    <div className="mx-auto w-full max-w-3xl h-full flex flex-col p-6 gap-4 @container">
       <h2 className="text-3xl font-crimson-text leading-none">
         Search course content
       </h2>
@@ -201,7 +201,7 @@ export default function ContentPage() {
         </div>
       </div>
       <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 @md:grid-cols-2 @lg:grid-cols-3">
           {cardData.map((card, i) => (
             <Card key={i}>
               <CardHeader>
