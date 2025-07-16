@@ -55,7 +55,7 @@ export default function Home() {
         <div className="hidden @md:block">
           {isLoading && <div>Loading course...</div>}
           {error && <div>Error loading course</div>}
-          {selectedCourse && <CardGrid courseId={selectedCourse.id} />}
+          {selectedCourse && <CardGrid courseId={selectedCourse.id} viewAll={false} />}
         </div>
 
         {/* Buttons and desktop link from 'chore/mobile-fixes' branch */}
