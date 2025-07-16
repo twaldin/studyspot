@@ -79,7 +79,7 @@ export function FileUploadDialog({ open, onOpenChange, onUploadFinalized }: File
 
   const { data: selectedCourse, isLoading: isLoadingCourse, error: selectedCourseError } = useSelectedCourse();
   const { data: courses = [], isLoading: isLoadingCourses, error: coursesError } = useCourses();
-  const acceptedFileTypes = ".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.jpg,.jpeg,.png";
+  const acceptedFileTypes = ".pdf,.txt";
   const [files, setFiles] = useState<FileWithValidation[]>([]);
   const [isDragActive, setIsDragActive] = useState(false);
   const validFiles = useMemo(() => files.filter(f => f.isValid), [files]);
