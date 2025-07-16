@@ -23,6 +23,9 @@ import {
 import { ICourse } from "@/features/courses/course.model";
 import { JoinedCourseList } from "@/features/courses/components/joined-course-list";
 import toast from "react-hot-toast";
+import { useChats, useSelectChatCourse } from "@/hooks/api/chats";
+import { useChatNavigation } from "@/features/chat/ChatNavigationContext";
+import { usePathname } from "next/navigation";
 
 import {
   Sidebar,
@@ -75,6 +78,12 @@ export function AppSidebar() {
   const { data: selectedCourse } = useSelectedCourse();
   const setSelectedCourseMutation = useSetSelectedCourse();
 
+  // Chat functionality
+  const { data: chats = [], isLoading: isLoadingChats, error: chatsError } = useChats();
+  const selectChatCourseMutation = useSelectChatCourse();
+  const { handleChatSelect, handleNewChat, handleDeleteChat } = useChatNavigation();
+  const pathname = usePathname();
+
   // Filter courses to only show joined ones
   const joinedCourses = allCourses.filter((course) =>
     joinedCourseIds.includes(course.id)
@@ -86,6 +95,31 @@ export function AppSidebar() {
         toast.error(error.message || "Failed to select course");
       },
     });
+  };
+
+  // Get selected chat ID from URL for UI highlighting
+  const selectedChatId = pathname.startsWith("/chat/")
+    ? pathname.split("/")[2]
+    : null;
+
+  const onChatSelect = (chatId: string) => {
+    // First select the course for this chat, then navigate
+    selectChatCourseMutation.mutate(chatId, {
+      onSuccess: () => {
+        handleChatSelect(chatId);
+      },
+      onError: (error) => {
+        console.error("Failed to select chat course:", error);
+        // Navigate anyway, even if course selection fails
+        handleChatSelect(chatId);
+      },
+    });
+  };
+
+  const onDeleteChat = handleDeleteChat;
+
+  const onNewChatClick = () => {
+    handleNewChat();
   };
   return (
     <Sidebar collapsible="icon">
@@ -142,20 +176,58 @@ export function AppSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
+              {isLoadingChats && (
+                <div className="px-2 py-1 text-sm text-muted-foreground">
+                  Loading chats...
+                </div>
+              )}
+              
+              {chatsError && (
+                <div className="px-2 py-1 text-sm text-destructive">
+                  Failed to load chats
+                </div>
+              )}
+              
+              {!isLoadingChats && !chatsError && chats.length === 0 && (
+                <div className="px-2 py-1 text-sm text-muted-foreground">
+                  No chats yet. Start a new conversation!
+                </div>
+              )}
+              
+              {chats.map((chat) => (
                 <SidebarMenuItem
-                  key={item.title}
+                  key={chat.id}
                   className="group-data-[collapsible=icon]:hidden"
                 >
                   <SidebarMenuButton
                     asChild
                     className="group-data-[collapsible=icon]:justify-center"
+                    isActive={selectedChatId === chat.id}
                   >
-                    <a href={item.url}>
-                      <item.icon className="h-4 w-4 shrink-0" />
-                      <span className="group-data-[collapsible=icon]:hidden">
-                        {item.title}
-                      </span>
+                    <a 
+                      href="#" 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        onChatSelect(chat.id);
+                      }}
+                      className="flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <FlaskConical className="h-4 w-4 shrink-0" />
+                        <span className="group-data-[collapsible=icon]:hidden truncate min-w-0">
+                          {chat.title}
+                        </span>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteChat(chat.id);
+                        }}
+                        className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity shrink-0 ml-2"
+                        aria-label="Delete chat"
+                      >
+                        ×
+                      </button>
                     </a>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
