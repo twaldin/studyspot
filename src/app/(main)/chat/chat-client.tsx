@@ -218,7 +218,7 @@ export function ChatPageContent({ chatId }: { chatId?: string }) {
         <div className="flex flex-col gap-4">
           {messages.map((message, i) =>
             message.type === "user" ? (
-              <UserMessage key={message.id || i} className="w-fit max-w-2xl self-end">
+              <UserMessage key={message.id || i} className="w-fit max-w-[80%] self-end">
                 {message.content}
               </UserMessage>
             ) : (
@@ -227,7 +227,9 @@ export function ChatPageContent({ chatId }: { chatId?: string }) {
                 content={message.content}
                 linkedDocumentIds={message.linkedDocumentIds}
                 isStreaming={isReplying && i === messages.length - 1}
+                className="w-fit max-w-[80%] self-start"
               />
+
             )
           )}
         </div>
