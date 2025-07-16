@@ -2,7 +2,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient, queryKeys, mutationKeys, useAuthenticatedUser } from './base';
 import { Chat, Message } from '@/features/chat/chat.types';
 import logger from '@/lib/logger';
-import { chatStateService } from '@/features/chat/services/chat-state.service';
 
 // Types
 export interface ChatSummary {
@@ -72,7 +71,7 @@ export function useChat(chatId?: string, options?: { enabled?: boolean }) {
       }
       return response.data;
     },
-    enabled: options?.enabled !== false && isAuthenticated && !!chatId && !!schoolId && !chatStateService.isOptimisticChatId(chatId), // Ensure schoolId is loaded and chatId is not optimistic
+    enabled: options?.enabled !== false && isAuthenticated && !!chatId && !!schoolId, // Ensure schoolId is loaded
     staleTime: 1 * 60 * 1000, // 1 minute for individual chat
   });
 }
@@ -128,8 +127,8 @@ export function useUpdateChat() {
       return { chatId, ...response.data };
     },
     onSuccess: ({ chatId, title }) => {
-      // Update chat cache
-      queryClient.invalidateQueries({ queryKey: queryKeys.chats.detail(chatId) });
+      // Don't invalidate chat cache to avoid scroll reset
+      // The chat messages are already updated optimistically during streaming
       
       // Update title in chat list if changed
       if (title) {
@@ -216,10 +215,22 @@ export function useSelectChatCourse() {
       });
       return response;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Optimistically update the selected course cache if we have the course data
+      if (data.course) {
+        queryClient.setQueryData(queryKeys.user.selectedCourse(), data.course);
+      }
+      
       // Invalidate user-related caches since selected course changed
       queryClient.invalidateQueries({ queryKey: queryKeys.user.selectedCourse() });
       queryClient.invalidateQueries({ queryKey: queryKeys.user.profile() });
+      
+      // Invalidate suggested queries for the new course
+      if (data.courseId) {
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.courses.suggestedQueries(data.courseId),
+        });
+      }
       
       logger.info('Updated selected course from chat');
     },

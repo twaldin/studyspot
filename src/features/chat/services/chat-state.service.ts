@@ -1,11 +1,6 @@
 import { Message } from '@/features/chat/chat.types';
 import logger from '@/lib/logger';
 
-export interface OptimisticChatState {
-  chatId: string;
-  messages: Message[];
-  timestamp: number;
-}
 
 export interface ChatStateContext {
   messages: Message[];
@@ -71,68 +66,6 @@ export class ChatStateService {
     return { userMessage: userMsg, assistantMessage: assistantMsg };
   }
 
-  /**
-   * Stores optimistic chat state in sessionStorage for navigation continuity
-   */
-  storeOptimisticChatState(chatId: string, messages: Message[]): void {
-    const state: OptimisticChatState = {
-      chatId,
-      messages,
-      timestamp: Date.now()
-    };
-
-    sessionStorage.setItem(`optimistic-chat-${chatId}`, JSON.stringify(state));
-    
-    logger.info({ 
-      chatId, 
-      messageCount: messages.length 
-    }, '[ChatState] Stored optimistic chat state');
-  }
-
-  /**
-   * Loads optimistic chat state from sessionStorage if available and recent
-   */
-  loadOptimisticChatState(chatId: string): { messages: Message[]; shouldContinueStreaming: boolean; userMessage?: string } | null {
-    const storedState = sessionStorage.getItem(`optimistic-chat-${chatId}`);
-    
-    if (!storedState) {
-      return null;
-    }
-
-    try {
-      const { messages, timestamp }: OptimisticChatState = JSON.parse(storedState);
-      
-      // Only use stored messages if they're recent (within 30 seconds)
-      if (Date.now() - timestamp > 30000) {
-        logger.warn({ 
-          chatId, 
-          age: Date.now() - timestamp 
-        }, '[ChatState] Stored messages too old, ignoring');
-        return null;
-      }
-
-      logger.info({ 
-        chatId, 
-        messageCount: messages.length 
-      }, '[ChatState] Loaded optimistic chat state from storage');
-
-      // Find user message for streaming continuation
-      const userMessage = messages.find((m: Message) => m.type === 'user');
-      
-      // Clean up the stored state
-      sessionStorage.removeItem(`optimistic-chat-${chatId}`);
-
-      return {
-        messages,
-        shouldContinueStreaming: true,
-        userMessage: userMessage?.content
-      };
-
-    } catch (error) {
-      logger.error({ error, chatId }, '[ChatState] Failed to parse stored messages');
-      return null;
-    }
-  }
 
   /**
    * Generates conversation history for API calls from current messages
@@ -210,19 +143,6 @@ export class ChatStateService {
       messages[messages.length - 1]?.content === '';
   }
 
-  /**
-   * Generates optimistic chat ID for new chats
-   */
-  generateOptimisticChatId(): string {
-    return `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  }
-
-  /**
-   * Determines if a chat ID is optimistic (temporary)
-   */
-  isOptimisticChatId(chatId?: string): boolean {
-    return chatId?.startsWith('temp-') ?? false;
-  }
 
   /**
    * Logs message state changes for debugging (throttled)

@@ -16,14 +16,9 @@ export function ChatPageContent() {
   const params = useParams()
   const router = useRouter()
   const chatId = Array.isArray(params?.chatId) ? params.chatId[0] : params?.chatId
+  const [initialMessage, setInitialMessage] = useState<string | null>(null)
   
-  // Check if this is an optimistic ID
-  const isOptimisticId = chatStateService.isOptimisticChatId(chatId)
-  
-  const { data: chat, isLoading: isLoadingChat, error: chatError } = useChat(
-    isOptimisticId ? undefined : chatId,  // Skip API call for optimistic IDs
-    { enabled: !isOptimisticId }  // Disable query for optimistic IDs
-  )
+  const { data: chat, isLoading: isLoadingChat, error: chatError } = useChat(chatId)
   const { data: selectedCourse } = useSelectedCourse()
   const createChatMutation = useCreateChat()
   const updateChatMutation = useUpdateChat()
@@ -32,70 +27,91 @@ export function ChatPageContent() {
   const [isReplying, setIsReplying] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Load chat data when available (for real chats)
+  // Check for initial message in sessionStorage
   useEffect(() => {
-    if (chat && chat.chats && !isOptimisticId) {
+    if (chatId) {
+      const storedInitialMessage = sessionStorage.getItem(`initial-message-${chatId}`)
+      if (storedInitialMessage) {
+        setInitialMessage(storedInitialMessage)
+        // Clean up immediately after reading
+        sessionStorage.removeItem(`initial-message-${chatId}`)
+      }
+    }
+  }, [chatId])
+
+  // Load chat data when available
+  useEffect(() => {
+    if (chat && chat.chats) {
       const convertedMessages = chatStateService.loadChatFromDatabase(chat)
       setMessages(convertedMessages)
       setError(null)
     }
-  }, [chat, isOptimisticId])
+  }, [chat])
 
-  // Load optimistic chat state if this is an optimistic ID
+  // Handle initial message streaming for new chats
   useEffect(() => {
-    if (isOptimisticId && chatId) {
-      const storedState = chatStateService.loadOptimisticChatState(chatId)
+    if (initialMessage && selectedCourse && chat && chatId && !isReplying) {
+      // Check if we should start streaming (messages loaded from database)
+      const shouldStartStreaming = messages.length > 0 && 
+        messages[messages.length - 1].type === 'user' && 
+        messages[messages.length - 1].content === initialMessage
       
-      if (storedState) {
-        setMessages(storedState.messages)
+      if (shouldStartStreaming) {
+        setIsReplying(true)
         
-        // Continue streaming if needed
-        if (storedState.shouldContinueStreaming && storedState.userMessage && selectedCourse) {
-          setIsReplying(true)
-          
-          const continueStreaming = async () => {
-            try {
-              const response = await chatStreamingService.sendMessage(
-                storedState.userMessage!,
-                [],
-                selectedCourse.id
-              )
-
-              await chatStreamingService.processStreamingResponse(response, {
-                setMessages,
-                messageContent: storedState.userMessage!,
-                conversationHistory: [],
-                isNewChat: true,
-                chatId,
-                createChatMutation,
-                updateChatMutation,
-                router,
-                selectedCourse
-              })
-            } catch (error) {
-              console.error('Failed to continue streaming:', error)
-              chatStateService.handleMessageError(
-                { messages, setMessages, setIsReplying, setError },
-                error instanceof Error ? error : new Error('Failed to continue streaming')
-              )
-            } finally {
-              setIsReplying(false)
+        const startStreaming = async () => {
+          try {
+            // Create assistant message for streaming
+            const assistantMessage: Message = {
+              id: Date.now().toString() + '-assistant',
+              content: '',
+              type: 'assistant',
+              linkedDocumentIds: []
             }
+            
+            setMessages(prev => [...prev, assistantMessage])
+            
+            // Start streaming with empty conversation history since this is the first message
+            const response = await chatStreamingService.sendMessage(
+              initialMessage,
+              [], // Empty conversation history for first message
+              selectedCourse.id
+            )
+
+            await chatStreamingService.processStreamingResponse(response, {
+              setMessages,
+              messageContent: initialMessage,
+              conversationHistory: [],
+              isNewChat: false,
+              chatId: chatId,
+              createChatMutation,
+              updateChatMutation,
+              router,
+              selectedCourse,
+              setIsReplying
+            })
+            
+          } catch (error) {
+            console.error('Failed to start streaming:', error)
+            chatStateService.handleMessageError(
+              { messages, setMessages, setIsReplying, setError },
+              error instanceof Error ? error : new Error('Failed to start streaming')
+            )
           }
-          
-          continueStreaming()
         }
+        
+        startStreaming()
       }
     }
-  }, [isOptimisticId, chatId, selectedCourse, createChatMutation, updateChatMutation, router, messages])
+  }, [initialMessage, selectedCourse, chat, chatId, isReplying, messages, createChatMutation, updateChatMutation, router])
 
   // Handle chat loading errors
   useEffect(() => {
-    if (chatError && !isOptimisticId) {
+    if (chatError) {
       const errorMessage = chatError instanceof Error ? chatError.message : 'Failed to load chat'
       setError(errorMessage)
     }
-  }, [chatError, isOptimisticId])
+  }, [chatError])
 
   const showThinkingIndicator = chatStateService.shouldShowThinkingIndicator(messages, isReplying)
 
@@ -138,7 +154,8 @@ export function ChatPageContent() {
         createChatMutation,
         updateChatMutation,
         router,
-        selectedCourse
+        selectedCourse,
+        setIsReplying
       })
 
     } catch (error) {
@@ -147,8 +164,6 @@ export function ChatPageContent() {
         { messages, setMessages, setIsReplying, setError },
         error instanceof Error ? error : new Error('Failed to send message')
       )
-    } finally {
-      setIsReplying(false)
     }
   }, [chatId, selectedCourse, messages, createChatMutation, updateChatMutation, router])
 
@@ -160,7 +175,7 @@ export function ChatPageContent() {
     )
   }
 
-  if (isLoadingChat && !isOptimisticId) {
+  if (isLoadingChat) {
     return (
       <div className="mx-auto w-full max-w-3xl h-full flex flex-col p-6 gap-4">
         <div className="flex-1 overflow-y-auto">
