@@ -6,14 +6,12 @@ import { ChatInputBar } from "@/components/chat-input-bar"
 import { UserMessage } from "@/components/user-message"
 import AssistantMessage from "@/components/assistant-message"
 import { useCreateChat, useUpdateChat, useChat, useDeleteChat } from "@/hooks/api/chats"
-import { useSelectedCourse, useSuggestedQueries } from "@/hooks/api/courses"
+import { useSelectedCourse } from "@/hooks/api/courses"
 import { Message } from "@/features/chat/chat.types"
 import { Skeleton } from "@/components/ui/skeleton"
 import { chatStateService } from "@/features/chat/services/chat-state.service"
 import { chatNavigationService } from "@/features/chat/services/chat-navigation.service"
 import { chatStreamingService } from "@/features/chat/services/chat-streaming.service"
-import { Zap } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import logger from "@/lib/logger"
 
 export function ChatPageContent({ chatId }: { chatId?: string }) {
@@ -32,8 +30,6 @@ export function ChatPageContent({ chatId }: { chatId?: string }) {
   const createChatMutation = useCreateChat()
   const updateChatMutation = useUpdateChat()
   const deleteChatMutation = useDeleteChat()
-  
-  const { data: suggestedQueries = [], isLoading: isLoadingSuggestedQueries } = useSuggestedQueries(selectedCourse?.id)
 
 
   // Load chat data or show welcome message
@@ -90,6 +86,10 @@ export function ChatPageContent({ chatId }: { chatId?: string }) {
       return
     }
     
+    if (isReplying) {
+      return // Prevent double submissions
+    }
+    
     setIsReplying(true)
     setError(null)
 
@@ -137,9 +137,6 @@ export function ChatPageContent({ chatId }: { chatId?: string }) {
     }
   }, [deleteChatMutation, router, chatId])
 
-  const handleSuggestedQueryClick = useCallback((query: string) => {
-    handleSendMessage(query)
-  }, [handleSendMessage])
 
   const handleFormSubmit = async (values: { message: string }) => {
     await handleSendMessage(values.message, chatId)
@@ -173,31 +170,6 @@ export function ChatPageContent({ chatId }: { chatId?: string }) {
       </div>
       
       <div>
-        {chatId === undefined && (isLoadingSuggestedQueries || suggestedQueries.length > 0) && (
-          <div className="w-full overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] mb-4">
-            <div className="flex gap-2">
-              {isLoadingSuggestedQueries ? (
-                <>
-                  <Skeleton className="h-8 w-32 rounded-full" />
-                  <Skeleton className="h-8 w-40 rounded-full" />
-                  <Skeleton className="h-8 w-24 rounded-full" />
-                </>
-              ) : (
-                suggestedQueries.map((suggestion, index) => (
-                  <Button
-                    key={index}
-                    variant="outline"
-                    className="whitespace-nowrap rounded-full"
-                    onClick={() => handleSuggestedQueryClick(suggestion)}
-                  >
-                    <Zap className="w-4 h-4 mr-1" />
-                    {suggestion}
-                  </Button>
-                ))
-              )}
-            </div>
-          </div>
-        )}
         
         {showThinkingIndicator && (
           <div className="mx-auto w-full max-w-3xl flex justify-start mb-4">
