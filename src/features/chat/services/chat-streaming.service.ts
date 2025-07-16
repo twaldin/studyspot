@@ -12,6 +12,7 @@ export interface StreamingContext {
   updateChatMutation: any;
   router: any;
   selectedCourse: any;
+  setIsReplying: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 export interface StreamingResponse {
@@ -53,24 +54,8 @@ export class ChatStreamingService {
     try {
       let chunkCount = 0;
       let linkedDocumentIds: string[] = [];
-      let realChatId = context.chatId;
-
-      // Create real chat for new chats during streaming
-      if (context.isNewChat) {
-        const createRequest: CreateChatRequest = {
-          initialMessages: [
-            { role: 'user', content: context.messageContent }
-          ]
-        };
-        
-        const newChat = await context.createChatMutation.mutateAsync(createRequest);
-        realChatId = newChat.id;
-        
-        logger.info({ 
-          optimisticId: context.chatId, 
-          realId: realChatId 
-        }, '[ChatStreaming] Created real chat, will update URL after streaming');
-      }
+      // Use the chat ID directly since real chat is already created
+      const realChatId = context.chatId;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -116,6 +101,8 @@ export class ChatStreamingService {
 
     } finally {
       reader.releaseLock();
+      // Set isReplying to false when streaming is complete
+      context.setIsReplying(false);
     }
   }
 
@@ -181,9 +168,8 @@ export class ChatStreamingService {
     });
     
     console.info({ 
-      optimisticId: context.chatId, 
-      realId: realChatId 
-    }, '[ChatStreaming] Streaming complete, keeping user on temp page');
+      chatId: realChatId 
+    }, '[ChatStreaming] Streaming complete');
   }
 
   /**

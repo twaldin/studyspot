@@ -17,19 +17,6 @@ export class ChatNavigationService {
 
   private constructor() {}
 
-  /**
-   * Navigates to a new optimistic chat with the given ID
-   */
-  navigateToOptimisticChat(
-    router: AppRouterInstance,
-    optimisticChatId: string
-  ): void {
-    router.push(`/chat/${optimisticChatId}`);
-    
-    console.info({ 
-      optimisticChatId 
-    }, '[ChatNavigation] Navigated to optimistic chat');
-  }
 
   /**
    * Navigates to dashboard (new chat view)
@@ -73,20 +60,10 @@ export class ChatNavigationService {
     previousChatId: string | undefined,
     currentChatId: string | undefined
   ): boolean {
-    if (currentChatId !== previousChatId && previousChatId !== undefined) {
-      // Only clear if we're switching between different real chats
-      // Don't clear when going from undefined to optimistic ID (new chat)
-      // Don't clear when going from optimistic to real ID (chat creation)
-      const isOptimisticToPrevious = previousChatId?.startsWith('temp-');
-      const isOptimisticToCurrent = currentChatId?.startsWith('temp-');
-      
-      if (!isOptimisticToPrevious && !isOptimisticToCurrent && currentChatId && previousChatId) {
-        // Real chat to real chat navigation - should clear state
-        return true;
-      }
-    }
-    
-    return false;
+    // Clear state when switching between different real chats
+    return currentChatId !== previousChatId && 
+           previousChatId !== undefined && 
+           currentChatId !== undefined;
   }
 
   /**
@@ -121,21 +98,6 @@ export class ChatNavigationService {
     return currentPath === `/chat/${expectedChatId}`;
   }
 
-  /**
-   * Handles optimistic to real chat ID transition
-   * Note: We intentionally keep users on the optimistic URL to prevent screen flashing
-   */
-  handleOptimisticToRealTransition(
-    optimisticId: string,
-    realId: string
-  ): void {
-    // We don't update the URL here to prevent screen flashing
-    // The URL will update when the user navigates back to this chat
-    console.info({ 
-      optimisticId, 
-      realId 
-    }, '[ChatNavigation] Optimistic to real ID transition complete (keeping optimistic URL)');
-  }
 
   /**
    * Gets the appropriate chat path for navigation
@@ -167,11 +129,9 @@ export class ChatNavigationService {
    * Validates chat ID format
    */
   isValidChatId(chatId: string): boolean {
-    // Real chat IDs are UUIDs, optimistic IDs start with 'temp-'
+    // Real chat IDs are UUIDs
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    const optimisticRegex = /^temp-\d+-[a-z0-9]+$/;
-    
-    return uuidRegex.test(chatId) || optimisticRegex.test(chatId);
+    return uuidRegex.test(chatId);
   }
 }
 

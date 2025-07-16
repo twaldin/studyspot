@@ -11,8 +11,7 @@ import { ChatInputBar } from "@/components/chat-input-bar";
 import { useRouter } from "next/navigation";
 import { useSuggestedQueries, useSelectedCourse } from "@/hooks/api/courses";
 import { Skeleton } from "@/components/ui/skeleton";
-import { chatStateService } from "@/features/chat/services/chat-state.service";
-import { chatNavigationService } from "@/features/chat/services/chat-navigation.service";
+import { useCreateChat } from "@/hooks/api/chats";
 import { CardGrid } from "@/components/ui/card-grid";
 
 
@@ -23,19 +22,35 @@ export default function Home() {
   const [isNewPostDialogOpen, setIsNewPostDialogOpen] = useState(false);
   const router = useRouter();
   const { data: suggestedQueries = [], isLoading: isLoadingSuggestedQueries } = useSuggestedQueries(selectedCourse?.id);
+  const createChatMutation = useCreateChat();
 
-  const handleNewChat = (messageContent: string) => {
-    const optimisticChatId = chatStateService.generateOptimisticChatId();
-    const { userMessage, assistantMessage } = chatStateService.createInitialMessages(messageContent);
+  const handleNewChat = async (messageContent: string) => {
+    if (!selectedCourse) {
+      return;
+    }
     
-    const initialMessages = [userMessage, assistantMessage];
-    
-    chatStateService.storeOptimisticChatState(optimisticChatId, initialMessages);
-    chatNavigationService.navigateToOptimisticChat(router, optimisticChatId);
+    try {
+      // Create real chat immediately
+      const createRequest = {
+        initialMessages: [
+          { role: 'user', content: messageContent }
+        ]
+      };
+      
+      const newChat = await createChatMutation.mutateAsync(createRequest);
+      
+      // Store initial message for streaming continuation
+      sessionStorage.setItem(`initial-message-${newChat.id}`, messageContent);
+      
+      // Navigate to real chat page
+      router.push(`/chat/${newChat.id}`);
+    } catch (error) {
+      console.error('Failed to create chat:', error);
+    }
   };
 
-  const handleFormSubmit = (values: { message: string }) => {
-    handleNewChat(values.message);
+  const handleFormSubmit = async (values: { message: string }) => {
+    await handleNewChat(values.message);
   };
 
   const handleSuggestedQueryClick = (query: string) => {

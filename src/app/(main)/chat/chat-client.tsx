@@ -25,11 +25,8 @@ export function ChatPageContent({ chatId }: { chatId?: string }) {
   const [isReplying, setIsReplying] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Only fetch chat data if chatId is provided and it's not an optimistic ID
-  const isOptimisticId = chatStateService.isOptimisticChatId(chatId)
-  const { data: chat, isLoading: isLoadingChat, error: chatError } = useChat(
-    isOptimisticId ? undefined : chatId
-  )
+  // Only fetch chat data if chatId is provided
+  const { data: chat, isLoading: isLoadingChat, error: chatError } = useChat(chatId)
 
   // React Query mutations
   const createChatMutation = useCreateChat()
@@ -38,52 +35,10 @@ export function ChatPageContent({ chatId }: { chatId?: string }) {
   
   const { data: suggestedQueries = [], isLoading: isLoadingSuggestedQueries } = useSuggestedQueries(selectedCourse?.id)
 
-  const continueStreamingForOptimisticChat = useCallback(async (
-    messageContent: string, 
-    optimisticChatId: string
-  ) => {
-    try {
-      logger.info({ optimisticChatId, messageContent }, '[ChatPage] Continuing streaming for optimistic chat');
-      
-      if (!selectedCourse) {
-        throw new Error('Please select a course first');
-      }
 
-      const response = await chatStreamingService.sendMessage(
-        messageContent,
-        [], // Empty conversation history for new chats
-        selectedCourse.id
-      );
-
-      await chatStreamingService.processStreamingResponse(response, {
-        setMessages,
-        messageContent,
-        conversationHistory: [],
-        isNewChat: true,
-        chatId: optimisticChatId,
-        createChatMutation,
-        updateChatMutation,
-        router,
-        selectedCourse
-      });
-
-    } catch (error) {
-      chatStateService.handleMessageError({ messages, setMessages, setIsReplying, setError }, error as Error, 1);
-    } finally {
-      setIsReplying(false);
-    }
-  }, [selectedCourse, createChatMutation, updateChatMutation, router, messages]);
-
-  const continueStreamingRef = useRef(continueStreamingForOptimisticChat);
-  continueStreamingRef.current = continueStreamingForOptimisticChat;
-
-  // Load chat data from database for real chats or session storage for optimistic ones
+  // Load chat data or show welcome message
   useEffect(() => {
-    if (chat && chatId && !isOptimisticId && !isReplying) {
-      const convertedMessages = chatStateService.loadChatFromDatabase(chat)
-      setMessages(convertedMessages)
-      setError(null)
-    } else if (!chatId) {
+    if (!chatId) {
       // Dashboard mode - show welcome message
       setMessages([{
         id: 'welcome',
@@ -93,20 +48,8 @@ export function ChatPageContent({ chatId }: { chatId?: string }) {
       }])
       setError(null)
       setIsReplying(false)
-    } else if (isOptimisticId) {
-      const storedState = chatStateService.loadOptimisticChatState(chatId);
-      if (storedState) {
-        setMessages(storedState.messages);
-        setIsReplying(true);
-        
-        if (storedState.shouldContinueStreaming && storedState.userMessage) {
-          setTimeout(() => {
-            continueStreamingRef.current(storedState.userMessage!, chatId);
-          }, 0);
-        }
-      }
     }
-  }, [chat, chatId, isOptimisticId, isReplying]);
+  }, [chatId]);
 
   // Handle chat loading errors
   useEffect(() => {
@@ -142,25 +85,20 @@ export function ChatPageContent({ chatId }: { chatId?: string }) {
       return
     }
     
+    if (!targetChatId) {
+      setError('No chat ID provided')
+      return
+    }
+    
     setIsReplying(true)
     setError(null)
 
-    const isNewChat = !targetChatId
-    let currentChatId = targetChatId
-    
-    if (isNewChat) {
-      setMessages([]) 
-      currentChatId = chatStateService.generateOptimisticChatId()
-      chatNavigationService.navigateToOptimisticChat(router, currentChatId!)
-    }
-
-    const { userMessage, assistantMessage } = chatStateService.createInitialMessages(messageContent)
-    
-    setMessages(prev => [...(isNewChat ? [] : prev), userMessage, assistantMessage])
-
     try {
-      const conversationHistory = chatStateService.getConversationHistory(isNewChat ? [] : messages)
+      const { userMessage, assistantMessage } = chatStateService.createInitialMessages(messageContent)
+      setMessages(prev => [...prev, userMessage, assistantMessage])
 
+      const conversationHistory = chatStateService.getConversationHistory(messages)
+      
       const response = await chatStreamingService.sendMessage(
         messageContent,
         conversationHistory,
@@ -171,17 +109,16 @@ export function ChatPageContent({ chatId }: { chatId?: string }) {
         setMessages,
         messageContent,
         conversationHistory,
-        isNewChat,
-        chatId: currentChatId!,
+        isNewChat: false,
+        chatId: targetChatId,
         createChatMutation,
         updateChatMutation,
         router,
         selectedCourse,
+        setIsReplying
       })
     } catch (error) {
       chatStateService.handleMessageError({ messages, setMessages, setIsReplying, setError }, error as Error)
-    } finally {
-      setIsReplying(false)
     }
   }, [messages, selectedCourse, createChatMutation, updateChatMutation, router])
 
