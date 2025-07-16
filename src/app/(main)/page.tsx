@@ -17,44 +17,15 @@ import Link from "next/link";
 import { NewPostDialog } from "@/components/new-post-dialog";
 import { ChatInputBar } from "@/components/chat-input-bar";
 import { useRouter } from "next/navigation";
-
+import { CardGrid } from "@/components/ui/card-grid";
+import { useSelectedCourse } from "@/hooks/api/courses";
 const suggestions = [
   "How do we use moles to solve stoichiometry problems?",
   "Will the thermochemistry exam cover energy units?",
 ];
-
-// Card content
-const cardData = [
-  {
-    title: "Card 1",
-    description: "Card 1 description",
-    badge: { text: "Trending", variant: "default" as const }
-  },
-  {
-    title: "Card 2",
-    description: "Card 2 description",
-    badge: { text: "Recently added", variant: "secondary" as const }
-  },
-  {
-    title: "Card 3",
-    description: "Card 3 description",
-  },
-  {
-    title: "Card 4",
-    description: "Card 4 description",
-    badge: { text: "Recently created", variant: "outline" as const }
-  },
-  {
-    title: "Card 5",
-    description: "Card 5 description",
-  },
-  {
-    title: "Card 6",
-    description: "Card 6 description",
-  }
-];
-
 export default function Home() {
+  const { data: selectedCourse, isLoading, error } = useSelectedCourse();
+
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [isNewPostDialogOpen, setIsNewPostDialogOpen] = useState(false);
   const router = useRouter();
@@ -83,22 +54,10 @@ export default function Home() {
         </div>
       </div>
       <ChatInputBar onSubmit={handleFormSubmit} />
-      <div className="hidden gap-4 @md:grid @md:grid-cols-2 @lg:grid-cols-3">
-        {cardData.map((card, i) => (
-          <Card key={i}>
-            <CardHeader>
-              <CardTitle>{card.title}</CardTitle>
-              <CardDescription>{card.description}</CardDescription>
-            </CardHeader>
-            {card.badge && (
-              <CardContent>
-                <Badge variant={card.badge.variant}>
-                  {card.badge.text}
-                </Badge>
-              </CardContent>
-            )}
-          </Card>
-        ))}
+      <div className="hidden gap-4 @md:block">
+        {isLoading && <div>Loading course...</div>}
+        {error && <div>Error loading course</div>}
+        {selectedCourse && <CardGrid courseId={selectedCourse.id} />}
       </div>
       <div className="flex justify-between items-center">
         <div className="flex items-center">

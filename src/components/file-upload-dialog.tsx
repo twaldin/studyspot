@@ -264,7 +264,7 @@ export function FileUploadDialog({ open, onOpenChange, onUploadFinalized }: File
               <SelectContent>
                 {courses.map((course) => (
                   <SelectItem key={course.id} value={course.id}>
-                    {course.title || course.code}
+                    {course.code}
                   </SelectItem>
                 ))}
               </SelectContent>
