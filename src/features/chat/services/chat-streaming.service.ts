@@ -1,3 +1,4 @@
+import logger from '@/lib/logger';
 import { Message } from '@/features/chat/chat.types';
 import type { CreateChatRequest } from '@/hooks/api/chats';
 
@@ -47,7 +48,7 @@ export class ChatStreamingService {
       throw new Error('Response body is not readable');
     }
 
-    console.info('Starting to process streaming response');
+    logger.info('Starting to process streaming response');
 
     try {
       let chunkCount = 0;
@@ -65,7 +66,7 @@ export class ChatStreamingService {
         const newChat = await context.createChatMutation.mutateAsync(createRequest);
         realChatId = newChat.id;
         
-        console.info({ 
+        logger.info({ 
           optimisticId: context.chatId, 
           realId: realChatId 
         }, '[ChatStreaming] Created real chat, will update URL after streaming');

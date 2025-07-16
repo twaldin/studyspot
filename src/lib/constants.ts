@@ -40,4 +40,10 @@ export const DEFAULT_MESSAGES = {
   ERROR_FALLBACK:
     "Sorry, I encountered an issue processing the response. Please try again.",
   GENERIC_ERROR: "An unexpected error occurred. Please try again.",
+  SUGGESTED_QUERIES: [
+    "What are the key concepts for the next exam?",
+    "Can you explain the last lecture in simpler terms?",
+    "Summarize the main points of this week's readings.",
+    "What are some practice problems for this topic?",
+  ],
 } as const;

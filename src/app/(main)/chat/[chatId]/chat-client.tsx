@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { ChatInputBar } from "@/components/chat-input-bar"
 import { UserMessage } from "@/components/user-message"
-import { AssistantMessage } from "@/components/assistant-message"
+import AssistantMessage from "@/components/assistant-message"
 import { useChat, useCreateChat, useUpdateChat } from "@/hooks/api/chats"
 import { useSelectedCourse } from "@/hooks/api/courses"
 import { Message } from "@/features/chat/chat.types"
@@ -87,7 +87,7 @@ export function ChatPageContent() {
         }
       }
     }
-  }, [isOptimisticId, chatId, selectedCourse, createChatMutation, updateChatMutation, router])
+  }, [isOptimisticId, chatId, selectedCourse, createChatMutation, updateChatMutation, router, messages])
 
   // Handle chat loading errors
   useEffect(() => {
@@ -96,6 +96,8 @@ export function ChatPageContent() {
       setError(errorMessage)
     }
   }, [chatError, isOptimisticId])
+
+  const showThinkingIndicator = chatStateService.shouldShowThinkingIndicator(messages, isReplying)
 
   const handleFormSubmit = useCallback(async (values: { message: string }) => {
     if (!selectedCourse) {
@@ -192,18 +194,31 @@ export function ChatPageContent() {
             ) : (
               <AssistantMessage 
                 key={message.id || i} 
-                className="w-fit max-w-2xl self-start"
-                isThinking={chatStateService.shouldShowThinkingIndicator(messages, isReplying) && i === messages.length - 1}
+                content={message.content}
+                linkedDocumentIds={message.linkedDocumentIds}
                 isStreaming={isReplying && i === messages.length - 1 && message.content.trim().length > 0}
-              >
-                {message.content}
-              </AssistantMessage>
+              />
             )
           )}
         </div>
       </div>
       
       <div>
+        {showThinkingIndicator && (
+          <div className="mx-auto w-full max-w-3xl flex justify-start mb-4">
+            <div className="py-0 max-w-xl">
+              <div className="flex items-center space-x-2 text-gray-500">
+                <div className="flex space-x-1">
+                  <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                  <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                  <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></div>
+                </div>
+                <span className="text-sm">StudySpot is thinking...</span>
+              </div>
+            </div>
+          </div>
+        )}
+        
         <ChatInputBar onSubmit={handleFormSubmit} isSubmitting={isReplying} />
       </div>
     </div>

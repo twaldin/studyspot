@@ -17,11 +17,12 @@ import Link from "next/link";
 import { NewPostDialog } from "@/components/new-post-dialog";
 import { ChatInputBar } from "@/components/chat-input-bar";
 import { useRouter } from "next/navigation";
+import { useSuggestedQueries, useSelectedCourse } from "@/hooks/api/courses";
+import { Skeleton } from "@/components/ui/skeleton";
+import { chatStateService } from "@/features/chat/services/chat-state.service";
+import { chatNavigationService } from "@/features/chat/services/chat-navigation.service";
 
-const suggestions = [
-  "How do we use moles to solve stoichiometry problems?",
-  "Will the thermochemistry exam cover energy units?",
-];
+
 
 // Card content
 const cardData = [
@@ -59,8 +60,25 @@ export default function Home() {
   const [isNewPostDialogOpen, setIsNewPostDialogOpen] = useState(false);
   const router = useRouter();
 
+  const { data: selectedCourse } = useSelectedCourse();
+  const { data: suggestedQueries = [], isLoading: isLoadingSuggestedQueries } = useSuggestedQueries(selectedCourse?.id);
+
+  const handleNewChat = (messageContent: string) => {
+    const optimisticChatId = chatStateService.generateOptimisticChatId();
+    const { userMessage, assistantMessage } = chatStateService.createInitialMessages(messageContent);
+    
+    const initialMessages = [userMessage, assistantMessage];
+    
+    chatStateService.storeOptimisticChatState(optimisticChatId, initialMessages);
+    chatNavigationService.navigateToOptimisticChat(router, optimisticChatId);
+  };
+
   const handleFormSubmit = (values: { message: string }) => {
-    router.push(`/chat?message=${encodeURIComponent(values.message)}`);
+    handleNewChat(values.message);
+  };
+
+  const handleSuggestedQueryClick = (query: string) => {
+    handleNewChat(query);
   };
 
   return (
@@ -70,16 +88,25 @@ export default function Home() {
       </h2>
       <div className="w-full overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
         <div className="flex gap-2">
-          {suggestions.map((suggestion) => (
-            <Button
-              key={suggestion}
-              variant="outline"
-              className="whitespace-nowrap rounded-full"
-            >
-              <Zap className="w-4 h-4" />
-              {suggestion}
-            </Button>
-          ))}
+          {isLoadingSuggestedQueries ? (
+            <>
+              <Skeleton className="h-8 w-32 rounded-full" />
+              <Skeleton className="h-8 w-40 rounded-full" />
+              <Skeleton className="h-8 w-24 rounded-full" />
+            </>
+          ) : (
+            suggestedQueries.map((suggestion) => (
+              <Button
+                key={suggestion}
+                variant="outline"
+                className="whitespace-nowrap rounded-full"
+                onClick={() => handleSuggestedQueryClick(suggestion)}
+              >
+                <Zap className="w-4 h-4 mr-1" />
+                {suggestion}
+              </Button>
+            ))
+          )}
         </div>
       </div>
       <ChatInputBar onSubmit={handleFormSubmit} />
