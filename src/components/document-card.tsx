@@ -12,19 +12,19 @@ interface DocumentCardProps {
 
 export function DocumentCard({ url, file, fileType }: DocumentCardProps) {
   return (
-    <a 
-          href={url} 
-          target="_blank" 
+    <a
+          href={url}
+          target="_blank"
           rel="noopener noreferrer"
-          className="text-blue-600"
+          className="h-full text-blue-600"
         >
-    <Card>
+    <Card className="h-full">
       <CardHeader>
         <CardTitle>  {(file.file_name || 'Untitled Document').substring(0, (file.file_name || 'Untitled Document').lastIndexOf('.')) || file.file_name || 'Untitled Document'}</CardTitle>
         <CardDescription>{fileType}</CardDescription>
       </CardHeader>
       <CardContent>
-        
+
       </CardContent>
     </Card>
             </a>
