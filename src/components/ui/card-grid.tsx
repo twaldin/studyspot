@@ -24,7 +24,7 @@ export function CardGrid({ courseId }: CardGridProps) {
  const limitedDocuments = documents.slice(0, 6);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className="hidden gap-4 @md:grid @md:grid-cols-2 @lg:grid-cols-3">
       {limitedDocuments.map((doc) => (
         <DocumentCard
           key={doc.id} // Use document ID as key
