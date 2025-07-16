@@ -90,7 +90,7 @@ export function CoursesPageContent() {
 
   return (
     <>
-      <div className="mx-auto w-full max-w-3xl h-full flex flex-col p-6 gap-4">
+      <div className="mx-auto w-full max-w-3xl h-full flex flex-col p-6 gap-4 @container">
         <h2 className="text-3xl font-crimson-text leading-none">
           Find your courses
         </h2>
@@ -131,7 +131,7 @@ export function CoursesPageContent() {
               <p className="text-muted-foreground">No courses found. Create your first course!</p>
             </div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 @md:grid-cols-2 @lg:grid-cols-3">
               {courses?.map((course, i) => {
                 const isJoined = !isJoinedCoursesLoading && joinedCourses.includes(course.id);
                 const isJoinedLoading = isJoinedCoursesLoading;
