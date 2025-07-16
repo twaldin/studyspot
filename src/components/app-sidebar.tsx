@@ -10,6 +10,7 @@ import {
   Radical,
   Settings,
   User,
+  X,
 } from "lucide-react";
 import StudySpotLogo from "@/components/branding/studyspot-logo";
 import Image from "next/image";
@@ -36,6 +37,7 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
@@ -116,7 +118,9 @@ export function AppSidebar() {
     });
   };
 
-  const onDeleteChat = handleDeleteChat;
+  const onDeleteChat = (chatId: string) => {
+    handleDeleteChat(chatId);
+  };
 
   const onNewChatClick = () => {
     handleNewChat();
@@ -210,26 +214,25 @@ export function AppSidebar() {
                         e.preventDefault();
                         onChatSelect(chat.id);
                       }}
-                      className="flex items-center justify-between"
                     >
-                      <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <FlaskConical className="h-4 w-4 shrink-0" />
-                        <span className="group-data-[collapsible=icon]:hidden truncate min-w-0">
-                          {chat.title}
-                        </span>
-                      </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onDeleteChat(chat.id);
-                        }}
-                        className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity shrink-0 ml-2"
-                        aria-label="Delete chat"
-                      >
-                        ×
-                      </button>
+                      <FlaskConical className="h-4 w-4 shrink-0" />
+                      <span className="group-data-[collapsible=icon]:hidden truncate min-w-0">
+                        {chat.title}
+                      </span>
                     </a>
                   </SidebarMenuButton>
+                  <SidebarMenuAction
+                    showOnHover
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      onDeleteChat(chat.id);
+                    }}
+                    aria-label="Delete chat"
+                    className="opacity-0 group-hover/menu-item:opacity-100 cursor-pointer"
+                  >
+                    <X className="h-3 w-3" />
+                  </SidebarMenuAction>
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>

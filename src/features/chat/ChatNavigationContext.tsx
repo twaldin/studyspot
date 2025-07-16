@@ -4,13 +4,13 @@ import React, { createContext, useContext, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDeleteChat } from '@/hooks/api/chats';
 import logger from '@/lib/logger';
-// import posthog from 'posthog-js'; // TODO: Add posthog when needed
+// 
 
 interface ChatNavigationContextType {
   // Navigation actions only (no message state)
   handleNewChat: () => void;
   handleChatSelect: (chatId: string) => void;
-  handleDeleteChat: (chatId: string) => Promise<void>;
+  handleDeleteChat: (chatId: string) => void;
 }
 
 const ChatNavigationContext = createContext<ChatNavigationContextType | undefined>(undefined);
@@ -34,29 +34,29 @@ export const ChatNavigationProvider: React.FC<{ children: React.ReactNode }> = (
   const handleChatSelect = useCallback((chatId: string) => {
     if (!chatId) return;
 
-    // TODO: Add posthog tracking when needed
-    // posthog.capture('chat_selected', { chat_id: chatId });
+    
+    
     console.log('Chat selected:', chatId);
 
     // Navigate to the chat page
     router.push(`/chat/${chatId}`);
   }, [router]);
 
-  const handleDeleteChat = useCallback(async (chatId: string) => {
-    try {
-      await deleteChatMutation.mutateAsync(chatId);
-      
-      // Navigate to dashboard if we're currently viewing the deleted chat
-      const currentPath = window.location.pathname;
-      if (currentPath === `/chat/${chatId}`) {
-        router.push('/');
-      }
-
-      logger.info({ chatId }, '[ChatNavigation] Deleted chat');
-    } catch (error) {
-      logger.error({ error, chatId }, '[ChatNavigation] Failed to delete chat');
-      throw error;
-    }
+  const handleDeleteChat = useCallback((chatId: string) => {
+    deleteChatMutation.mutate(chatId, {
+      onSuccess: () => {
+        const currentPath = window.location.pathname;
+        if (currentPath === `/chat/${chatId}`) {
+          router.push('/');
+        }
+        logger.info({ chatId }, '[ChatNavigation] Optimistically deleted chat');
+      },
+      onError: (error) => {
+        // Error is already logged in the mutation hook
+        // We could add a toast notification here if needed
+        // For now, the UI will revert automatically
+      },
+    });
   }, [deleteChatMutation, router]);
 
   const contextValue: ChatNavigationContextType = {

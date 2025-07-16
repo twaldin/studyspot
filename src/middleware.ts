@@ -59,8 +59,7 @@ export default clerkMiddleware(async (auth, req) => {
 
           if (
             !selectedCourseId &&
-            !req.nextUrl.pathname.includes("/select-course") &&
-            !req.nextUrl.pathname.includes("/create-course")
+            !req.nextUrl.pathname.includes("/courses")
           ) {
             return NextResponse.redirect(
               new URL("/courses", req.url),

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient, queryKeys, mutationKeys, useAuthenticatedUser } from './base';
 import { Chat, Message } from '@/features/chat/chat.types';
 import logger from '@/lib/logger';
+import { chatStateService } from '@/features/chat/services/chat-state.service';
 
 // Types
 export interface ChatSummary {
@@ -71,7 +72,7 @@ export function useChat(chatId?: string, options?: { enabled?: boolean }) {
       }
       return response.data;
     },
-    enabled: options?.enabled !== false && isAuthenticated && !!chatId && !!schoolId, // Ensure schoolId is loaded
+    enabled: options?.enabled !== false && isAuthenticated && !!chatId && !!schoolId && !chatStateService.isOptimisticChatId(chatId), // Ensure schoolId is loaded and chatId is not optimistic
     staleTime: 1 * 60 * 1000, // 1 minute for individual chat
   });
 }
@@ -149,24 +150,56 @@ export function useUpdateChat() {
 export function useDeleteChat() {
   const queryClient = useQueryClient();
   const { schoolId } = useAuthenticatedUser();
-  
+
   return useMutation({
     mutationKey: mutationKeys.chats.delete,
     mutationFn: async (chatId: string) => {
-      await apiClient(`/chats/${chatId}`, { method: 'DELETE' });
+      await apiClient(`/chats/${chatId}`, { method: "DELETE" });
       return chatId;
     },
-    onSuccess: (deletedChatId) => {
-      // Invalidate the chats list to refetch from the server
-      queryClient.invalidateQueries({ queryKey: queryKeys.chats.list(schoolId) });
-      
-      // Remove individual chat cache
-      queryClient.removeQueries({ queryKey: queryKeys.chats.detail(deletedChatId) });
-      
-      logger.info({ chatId: deletedChatId }, 'Deleted chat');
+    onMutate: async (deletedChatId: string) => {
+      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.chats.list(schoolId),
+      });
+
+      // Snapshot the previous value
+      const previousChats = queryClient.getQueryData(
+        queryKeys.chats.list(schoolId)
+      );
+
+      // Optimistically remove the chat from the list
+      queryClient.setQueryData(
+        queryKeys.chats.list(schoolId),
+        (old: ChatSummary[] | undefined) =>
+          old?.filter((chat) => chat.id !== deletedChatId) || []
+      );
+
+      // Return a context object with the snapshotted value
+      return { previousChats };
     },
-    onError: (error) => {
-      logger.error({ error }, 'Failed to delete chat');
+    onError: (err, deletedChatId, context) => {
+      // Rollback to the previous state on error
+      if (context?.previousChats) {
+        queryClient.setQueryData(
+          queryKeys.chats.list(schoolId),
+          context.previousChats
+        );
+      }
+      logger.error({ error: err, chatId: deletedChatId }, "Failed to delete chat");
+    },
+    onSettled: (deletedChatId) => {
+      // Invalidate the chats list to refetch from the server and ensure consistency
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.chats.list(schoolId),
+      });
+
+      // Also remove the individual chat cache if it exists
+      if (deletedChatId) {
+        queryClient.removeQueries({
+          queryKey: queryKeys.chats.detail(deletedChatId),
+        });
+      }
     },
   });
 }

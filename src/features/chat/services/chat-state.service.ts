@@ -1,4 +1,5 @@
 import { Message } from '@/features/chat/chat.types';
+import logger from '@/lib/logger';
 
 export interface OptimisticChatState {
   chatId: string;
@@ -41,7 +42,7 @@ export class ChatStateService {
       linkedDocumentIds: msg.linkedDocumentIds || [],
     }));
 
-    console.info({ 
+    logger.info({ 
       chatId: chat.id, 
       messageCount: convertedMessages.length 
     }, '[ChatState] Loaded chat from database');
@@ -82,7 +83,7 @@ export class ChatStateService {
 
     sessionStorage.setItem(`optimistic-chat-${chatId}`, JSON.stringify(state));
     
-    console.info({ 
+    logger.info({ 
       chatId, 
       messageCount: messages.length 
     }, '[ChatState] Stored optimistic chat state');
@@ -103,14 +104,14 @@ export class ChatStateService {
       
       // Only use stored messages if they're recent (within 30 seconds)
       if (Date.now() - timestamp > 30000) {
-        console.warn({ 
+        logger.warn({ 
           chatId, 
           age: Date.now() - timestamp 
         }, '[ChatState] Stored messages too old, ignoring');
         return null;
       }
 
-      console.info({ 
+      logger.info({ 
         chatId, 
         messageCount: messages.length 
       }, '[ChatState] Loaded optimistic chat state from storage');
@@ -128,7 +129,7 @@ export class ChatStateService {
       };
 
     } catch (error) {
-      console.error({ error, chatId }, '[ChatState] Failed to parse stored messages');
+      logger.error({ error, chatId }, '[ChatState] Failed to parse stored messages');
       return null;
     }
   }
@@ -154,7 +155,7 @@ export class ChatStateService {
   ): void {
     context.setMessages(prev => {
       const newMessages = [...prev, userMessage];
-      console.info({ 
+      logger.info({ 
         messageCount: newMessages.length, 
         lastMessage: userMessage.content 
       }, '[ChatState] Added user message');
@@ -163,7 +164,7 @@ export class ChatStateService {
 
     context.setMessages(prev => {
       const newMessages = [...prev, assistantMessage];
-      console.info({ 
+      logger.info({ 
         messageCount: newMessages.length 
       }, '[ChatState] Added assistant thinking message');
       return newMessages;
@@ -185,7 +186,7 @@ export class ChatStateService {
     context.setMessages(prev => prev.slice(0, -removeLastMessages));
     context.setIsReplying(false);
 
-    console.error({ error }, '[ChatState] Handled message error');
+    logger.error({ error }, '[ChatState] Handled message error');
   }
 
   /**
@@ -196,7 +197,7 @@ export class ChatStateService {
     context.setError(null);
     context.setIsReplying(false);
     
-    console.info({ reason }, '[ChatState] Cleared chat state');
+    logger.info({ reason }, '[ChatState] Cleared chat state');
   }
 
   /**
@@ -229,7 +230,7 @@ export class ChatStateService {
   logMessageStateChange(chatId: string | undefined, messages: Message[], isReplying: boolean): void {
     // Use setTimeout to throttle logging and prevent infinite loops
     setTimeout(() => {
-      console.info({ 
+      logger.info({ 
         chatId, 
         messageCount: messages.length, 
         isReplying,

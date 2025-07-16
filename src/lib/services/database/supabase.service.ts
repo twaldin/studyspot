@@ -90,6 +90,13 @@ export class SupabaseService {
       // Check cache first
       if (this.clientCache.has(cacheKey)) {
         const cachedClient = this.clientCache.get(cacheKey)!;
+        logger.debug(
+          LogContext.database("cache_hit", undefined, {
+            cacheKey,
+            type: "authenticated",
+          }),
+          "Using cached Supabase client",
+        );
         return cachedClient;
       }
 
@@ -114,18 +121,19 @@ export class SupabaseService {
       // Cache the client (with TTL handled by cleanup)
       this.clientCache.set(cacheKey, client);
 
-      // Schedule cleanup after 15 minutes
+      // Schedule cleanup after 5 minutes (matches our cache key rounding)
       setTimeout(() => {
         this.clientCache.delete(cacheKey);
-      }, 15 * 60 * 1000);
+      }, 5 * 60 * 1000);
 
       logger.debug(
-        LogContext.database("create_client", undefined, {
+        LogContext.database("cache_miss", undefined, {
           cacheKey,
           timeout: options.timeout,
           type: "authenticated",
+          cacheSize: this.clientCache.size,
         }),
-        "Created authenticated Supabase client",
+        "Created new Supabase client (cache miss)",
       );
       return client;
     } catch (error) {
@@ -607,10 +615,14 @@ export class SupabaseService {
   private getTokenFingerprint(token: string): string {
     try {
       const payload = JSON.parse(atob(token.split(".")[1]));
-      // Use issued at time + first 8 chars of token as fingerprint
-      return `${payload.iat || "unknown"}_${token.slice(-8)}`;
+      // Use expiration time rounded to nearest 5 minutes for longer cache reuse
+      // This allows tokens with different exp times to share the same cached client
+      // as long as they're within the same 5-minute window
+      const exp = payload.exp || 0;
+      const roundedExp = Math.floor(exp / 300) * 300; // Round to nearest 5 minutes (300 seconds)
+      return `${roundedExp}`;
     } catch {
-      return token.slice(-8) || "invalid";
+      return "invalid";
     }
   }
 
