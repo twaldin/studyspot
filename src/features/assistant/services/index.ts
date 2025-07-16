@@ -1,0 +1,1 @@
+export { assistantStreamHandler } from './stream-handler.service';
