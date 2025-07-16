@@ -692,7 +692,7 @@ export const supabaseService = SupabaseService.getInstance();
 /**
  * Creates an authenticated Supabase client using Clerk for backward compatibility.
  *
- * @returns An server Supabase client instance.
+ * @returns An authenticated Supabase client instance.
  */
 
 export function createServiceRoleClient() {

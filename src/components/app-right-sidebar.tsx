@@ -39,15 +39,21 @@ import {
 } from "@/components/ui/dropdown-menu";
 import logger from "@/lib/logger";
 import { useRouter } from "next/navigation";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 
 function CustomToaster() {
   const { toasts, handlers } = useToaster();
   const { startPause, endPause, calculateOffset, updateHeight } = handlers;
+  const isMobile = useIsMobile();
 
   return (
     <div
-      className="fixed bottom-4 right-4 z-50 w-64 px-4"
+      className={
+        isMobile
+          ? "fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-80 max-w-[calc(100vw-2rem)] px-4"
+          : "fixed bottom-4 right-4 z-50 w-64 px-4"
+      }
       onMouseEnter={startPause}
       onMouseLeave={endPause}
     >
