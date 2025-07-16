@@ -298,6 +298,7 @@ export function FileUploadDialog({ open, onOpenChange, onUploadFinalized }: File
           <Button 
             type="submit" 
             onClick={onUploadClick}
+            variant="primary"
             disabled={validFiles.length === 0 || isUploading || !selectedCourseId || isLoadingCourses}
           >
             {isUploading ? 'Uploading...' : 'Upload'}
