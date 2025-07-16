@@ -101,7 +101,7 @@ export default function Home() {
             </Card>
           ))}
         </div>
-        <div className="flex justify-between items-center">
+        <div className="flex @md:justify-between items-center">
           <div className="flex items-center">
             <Button variant="ghost" onClick={() => setIsUploadDialogOpen(true)}>
               <Upload className="w-4 h-4" />
@@ -113,7 +113,7 @@ export default function Home() {
               New Post
             </Button>
           </div>
-          <Link href="/content">
+          <Link href="/content" className="hidden @md:block">
             <Button variant="secondary">
               All Course Content
               <ArrowRight className="w-4 h-4" />
@@ -121,6 +121,12 @@ export default function Home() {
           </Link>
         </div>
       </div>
+      <Link href="/content" className="fixed bottom-6 right-6 @md:hidden">
+        <Button variant="secondary">
+          All Course Content
+          <ArrowRight className="w-4 h-4" />
+        </Button>
+      </Link>
       <FileUploadDialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen} />
       <NewPostDialog open={isNewPostDialogOpen} onOpenChange={setIsNewPostDialogOpen} />
     </div>
