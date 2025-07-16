@@ -22,8 +22,6 @@ export default function Home() {
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [isNewPostDialogOpen, setIsNewPostDialogOpen] = useState(false);
   const router = useRouter();
-
-  const { data: selectedCourse } = useSelectedCourse();
   const { data: suggestedQueries = [], isLoading: isLoadingSuggestedQueries } = useSuggestedQueries(selectedCourse?.id);
 
   const handleNewChat = (messageContent: string) => {
@@ -45,7 +43,7 @@ export default function Home() {
   };
 
   return (
-       <div className="mx-auto w-full max-w-3xl h-full flex flex-col p-6 @container">
+    <div className="mx-auto w-full max-w-3xl h-full flex flex-col p-6 @container">
       <div className="my-auto flex flex-col gap-4">
         <h2 className="text-3xl font-crimson-text leading-none">
           What are we learning today?
@@ -71,6 +69,7 @@ export default function Home() {
               </Button>
             ))
           )}
+        </div>
         </div>
         <ChatInputBar onSubmit={handleFormSubmit} />
 
