@@ -62,7 +62,7 @@ export default function RootLayout({
               </kbd>
             </p>
           </header>
-          <main className="h-[calc(100vh-4rem)]">{children}</main>
+          <main className="h-[calc(100vh-4rem)] overflow-y-auto">{children}</main>
         </SidebarInset>
       </SidebarProvider>
       <AppRightSidebar />

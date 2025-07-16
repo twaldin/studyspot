@@ -58,11 +58,11 @@ export function ChatPageContent() {
         <div className="flex flex-col gap-4">
           {messages.map((message, i) =>
             message.role === "user" ? (
-              <UserMessage key={i} className="w-fit max-w-2xl self-end">
+              <UserMessage key={i} className="w-fit max-w-[80%] self-end">
                 {message.content}
               </UserMessage>
             ) : (
-              <AssistantMessage key={i} className="w-fit max-w-2xl self-start">
+              <AssistantMessage key={i} className="w-fit max-w-[80%] self-start">
                 {message.content}
               </AssistantMessage>
             )
