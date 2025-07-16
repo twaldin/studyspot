@@ -222,13 +222,13 @@ export function ChatPageContent({ chatId }: { chatId?: string }) {
                 {message.content}
               </UserMessage>
             ) : (
-              <AssistantMessage 
-                key={message.id || i} 
-                content={message.content}
-                linkedDocumentIds={message.linkedDocumentIds}
-                isStreaming={isReplying && i === messages.length - 1}
-                className="w-fit max-w-[80%] self-start"
-              />
+              <div key={message.id || i} className="w-fit max-w-[80%] self-start">
+                <AssistantMessage 
+                  content={message.content}
+                  linkedDocumentIds={message.linkedDocumentIds}
+                  isStreaming={isReplying && i === messages.length - 1}
+                />
+              </div>
 
             )
           )}
