@@ -141,6 +141,9 @@ export const mutationKeys = {
     update: ['chats', 'update'] as const,
     delete: ['chats', 'delete'] as const,
     selectCourse: ['chats', 'selectCourse'] as const,
+    selectAndNavigate: ['chats', 'selectAndNavigate'] as const,
+    updateCache: ['chats', 'updateCache'] as const,
+    updateCacheWithHistory: ['chats', 'updateCacheWithHistory'] as const,
   },
   
   documents: {

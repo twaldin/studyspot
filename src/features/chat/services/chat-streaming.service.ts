@@ -7,7 +7,7 @@ export interface StreamingContext {
   messageContent: string;
   conversationHistory: Array<{ role: string; content: string; linkedDocumentIds?: string[] }>;
   isNewChat: boolean;
-  chatId: string;
+  chatId?: string; // Optional for temporary chats
   createChatMutation: any;
   updateChatMutation: any;
   router: any;
@@ -54,8 +54,6 @@ export class ChatStreamingService {
     try {
       let chunkCount = 0;
       let linkedDocumentIds: string[] = [];
-      // Use the chat ID directly since real chat is already created
-      const realChatId = context.chatId;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -96,8 +94,10 @@ export class ChatStreamingService {
         }
       }
 
-      // Update chat with complete conversation after streaming is complete
-      await this.finalizeChat(context, fullResponse, linkedDocumentIds, realChatId);
+      // Update chat with complete conversation after streaming is complete (skip for temporary chats)
+      if (context.chatId) {
+        await this.finalizeChat(context, fullResponse, linkedDocumentIds, context.chatId);
+      }
 
     } finally {
       reader.releaseLock();

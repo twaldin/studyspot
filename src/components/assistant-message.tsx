@@ -2,24 +2,26 @@
 import { marked } from 'marked';
 import React, { useState, useEffect } from 'react';
 import DOMPurify from 'dompurify';
-// import { useDocumentsByIds } from '@/hooks/api/documents';
-// import { Document } from '@/features/document/document.service';
+import { useDocumentsByIds } from '@/hooks/api/documents';
+import { Document } from '@/features/document/document.service';
 import { renderMarkdownWithLatex } from '@/lib/renderMarkdown';
+import { DocumentCard } from '@/components/document-card';
 
 interface AssistantMessageProps {
   content: string;
   linkedDocumentIds?: string[];
-  // documents?: Document[];
   isStreaming?: boolean;
 }
 
 const AssistantMessage: React.FC<AssistantMessageProps> = ({
   content,
   linkedDocumentIds,
-  // documents: passedDocuments,
   isStreaming,
 }) => {
   const [html, setHtml] = useState('');
+  
+  // Fetch linked documents
+  const { data: linkedDocuments = [], isLoading: isLoadingDocuments } = useDocumentsByIds(linkedDocumentIds || []);
 
   // Parse the displayed content as Markdown
   useEffect(() => {
@@ -98,6 +100,29 @@ const AssistantMessage: React.FC<AssistantMessageProps> = ({
           className="markdown-content leading-[1.8] select-text"
           dangerouslySetInnerHTML={createMarkup()}
         />
+        
+        {/* Render linked documents - only show after streaming is complete */}
+        {!isStreaming && linkedDocuments.length > 0 && (
+          <div className="mt-3">
+            <div className="grid gap-4 grid-cols-1 @md:grid-cols-2 @lg:grid-cols-3">
+              {linkedDocuments.map((document) => (
+                <DocumentCard
+                  key={document.id}
+                  url={document.file_url}
+                  file={document}
+                  fileType={document.file_type === 'application/pdf' ? 'pdf' : 'Unknown'}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {/* Show loading state for documents */}
+        {!isStreaming && isLoadingDocuments && linkedDocumentIds && linkedDocumentIds.length > 0 && (
+          <div className="mt-3 text-sm text-gray-500">
+            Loading sources...
+          </div>
+        )}
       </div>
     </div>
   );

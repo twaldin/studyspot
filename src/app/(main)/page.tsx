@@ -13,6 +13,7 @@ import { useSuggestedQueries, useSelectedCourse } from "@/hooks/api/courses";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCreateChat } from "@/hooks/api/chats";
 import { CardGrid } from "@/components/ui/card-grid";
+import logger from "@/lib/logger";
 
 
 export default function Home() {
@@ -33,22 +34,42 @@ export default function Home() {
     setIsCreatingChat(true);
     
     try {
-      // Create real chat immediately
+      // Generate temporary chat ID for immediate navigation
+      const tempChatId = `temp-${Date.now()}`;
+      
+      // Store message and course data for immediate access
+      sessionStorage.setItem(`temp-message-${tempChatId}`, messageContent);
+      sessionStorage.setItem(`temp-course-${tempChatId}`, JSON.stringify(selectedCourse));
+      
+      // Navigate immediately with temp ID for perceived performance
+      logger.info('Navigating to temporary chat:', { tempChatId });
+      router.push(`/chat/${tempChatId}`);
+      
+      // Create real chat in background
       const createRequest = {
         initialMessages: [
           { role: 'user', content: messageContent }
         ]
       };
       
+      logger.info('Creating real chat in background');
       const newChat = await createChatMutation.mutateAsync(createRequest);
       
-      // Store initial message for streaming continuation
+      // Store initial message for real chat
       sessionStorage.setItem(`initial-message-${newChat.id}`, messageContent);
       
-      // Navigate to real chat page
-      router.push(`/chat/${newChat.id}`);
+      // Replace temp ID with real chat ID in URL without page reload
+      logger.info('Replacing URL with real chat ID:', { tempChatId, realChatId: newChat.id });
+      router.replace(`/chat/${newChat.id}`);
+      
+      // Clean up temp storage
+      sessionStorage.removeItem(`temp-message-${tempChatId}`);
+      sessionStorage.removeItem(`temp-course-${tempChatId}`);
+      
     } catch (error) {
       console.error('Failed to create chat:', error);
+      // Navigate back to dashboard on error
+      router.push('/');
     } finally {
       setIsCreatingChat(false);
     }
