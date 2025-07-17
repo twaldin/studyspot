@@ -229,13 +229,12 @@ export function useSelectChatCourse() {
       return response;
     },
     onSuccess: (data) => {
-      // Optimistically update the selected course cache if we have the course data
+      // Update the selected course cache if we have the course data
       if (data.course) {
         queryClient.setQueryData(queryKeys.user.selectedCourse(), data.course);
       }
       
-      // Invalidate user-related caches since selected course changed
-      queryClient.invalidateQueries({ queryKey: queryKeys.user.selectedCourse() });
+      // Only invalidate user profile, not the selected course (we just set it)
       queryClient.invalidateQueries({ queryKey: queryKeys.user.profile() });
       
       // Invalidate suggested queries for the new course
@@ -267,13 +266,12 @@ export function useSelectChatAndNavigate() {
       return { chatId, ...response };
     },
     onSuccess: (data) => {
-      // Optimistically update the selected course cache if we have the course data
+      // Update the selected course cache if we have the course data
       if (data.course) {
         queryClient.setQueryData(queryKeys.user.selectedCourse(), data.course);
       }
       
-      // Invalidate user-related caches since selected course changed
-      queryClient.invalidateQueries({ queryKey: queryKeys.user.selectedCourse() });
+      // Only invalidate user profile, not the selected course (we just set it)
       queryClient.invalidateQueries({ queryKey: queryKeys.user.profile() });
       
       // Invalidate suggested queries for the new course

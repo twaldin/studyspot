@@ -19,9 +19,11 @@ interface ChatInputBarProps {
   onSubmit: (values: FormSchema) => void;
   className?: string;
   isSubmitting?: boolean;
+  placeholder?: string;
+  disabled?: boolean;
 }
 
-export function ChatInputBar({ onSubmit, className, isSubmitting }: ChatInputBarProps) {
+export function ChatInputBar({ onSubmit, className, isSubmitting, placeholder = "Can you help me with...", disabled = false }: ChatInputBarProps) {
   const form = useForm<FormSchema>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -49,11 +51,12 @@ export function ChatInputBar({ onSubmit, className, isSubmitting }: ChatInputBar
             <FormItem>
               <FormControl>
                 <Textarea
-                  placeholder="Can you help me with..."
+                  placeholder={placeholder}
                   className="min-h-20 resize-none max-h-24 pr-12 rounded-xl [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']"
+                  disabled={disabled}
                   {...field}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
+                    if (e.key === 'Enter' && !e.shiftKey && !disabled) {
                       e.preventDefault();
                       handleSubmit(handleFormSubmit)();
                     }
@@ -68,7 +71,7 @@ export function ChatInputBar({ onSubmit, className, isSubmitting }: ChatInputBar
           variant="default"
           size="sm"
           className="absolute bottom-2 right-2"
-          disabled={isSubmitting || !formState.isValid}
+          disabled={disabled || isSubmitting || !formState.isValid}
         >
           <MoveRight className="size-6" />
           <span className="sr-only">Submit</span>

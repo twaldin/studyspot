@@ -403,21 +403,9 @@ export function ChatPageContent() {
     )
   }
 
-  if (!isTemporaryChat && isLoadingChat) {
-    return (
-      <div className="mx-auto w-full max-w-3xl h-full flex flex-col p-6 gap-4">
-        <div className="flex-1 overflow-y-auto">
-          <div className="flex flex-col gap-4">
-            <Skeleton className="w-48 h-12 rounded-lg self-end" />
-            <Skeleton className="w-64 h-16 rounded-lg self-end" />
-          </div>
-        </div>
-        <div>
-          <Skeleton className="w-full h-10" />
-        </div>
-      </div>
-    )
-  }
+  // For non-temporary chats, show the shell immediately with the input bar
+  const showLoadingMessages = !isTemporaryChat && isLoadingChat;
+  const showEmptyState = !isTemporaryChat && !isLoadingChat && !chat;
 
   return (
     <div className="mx-auto w-full max-w-3xl h-full flex flex-col p-6 gap-4">
@@ -429,18 +417,34 @@ export function ChatPageContent() {
       
       <div className="flex-1 overflow-y-auto">
         <div className="flex flex-col gap-4">
-          {messages.map((message, i) =>
-            message.type === "user" ? (
-              <UserMessage key={message.id || i} className="w-fit max-w-2xl self-end">
-                {message.content}
-              </UserMessage>
-            ) : (
-              <AssistantMessage 
-                key={message.id || i} 
-                content={message.content}
-                linkedDocumentIds={message.linkedDocumentIds}
-                isStreaming={isReplying && i === messages.length - 1 && message.content.trim().length > 0}
-              />
+          {showLoadingMessages ? (
+            // Show message skeletons while loading
+            <>
+              <Skeleton className="w-48 h-12 rounded-lg self-end" />
+              <Skeleton className="w-64 h-16 rounded-lg self-start" />
+              <Skeleton className="w-56 h-10 rounded-lg self-end" />
+              <Skeleton className="w-72 h-20 rounded-lg self-start" />
+            </>
+          ) : showEmptyState ? (
+            // Show empty state for failed loads
+            <div className="flex items-center justify-center h-full text-muted-foreground">
+              Chat not found
+            </div>
+          ) : (
+            // Show actual messages
+            messages.map((message, i) =>
+              message.type === "user" ? (
+                <UserMessage key={message.id || i} className="w-fit max-w-2xl self-end">
+                  {message.content}
+                </UserMessage>
+              ) : (
+                <AssistantMessage 
+                  key={message.id || i} 
+                  content={message.content}
+                  linkedDocumentIds={message.linkedDocumentIds}
+                  isStreaming={isReplying && i === messages.length - 1 && message.content.trim().length > 0}
+                />
+              )
             )
           )}
         </div>
@@ -462,7 +466,12 @@ export function ChatPageContent() {
           </div>
         )}
         
-        <ChatInputBar onSubmit={handleFormSubmit} isSubmitting={isReplying} />
+        <ChatInputBar 
+          onSubmit={handleFormSubmit} 
+          isSubmitting={isReplying}
+          placeholder={showLoadingMessages ? "Loading chat..." : "Can you help me with..."}
+          disabled={showLoadingMessages}
+        />
       </div>
     </div>
   )
