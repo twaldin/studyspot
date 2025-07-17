@@ -5,8 +5,10 @@ import {
   queryKeys,
   useAuthenticatedUser,
 } from "./base";
+import { useUserSchool } from "./user"; // Import useUserSchool
 import { ICourse } from "@/features/courses/course.model";
 import logger from "@/lib/logger";
+import { RATE_LIMITS, rateLimiter } from "@/lib/utils/rate-limiter";
 
 // Types
 interface CreateCourseRequest {
@@ -25,9 +27,10 @@ interface SuggestedQueriesResponse {
 
 // Course list query
 export function useCourses() {
-  const { schoolId, isAuthenticated } = useAuthenticatedUser();
+  const { data: school, isLoading: isSchoolLoading } = useUserSchool();
+  const schoolId = school?.id;
+  const { isAuthenticated } = useAuthenticatedUser();
 
-  console.log("use courses called");
   return useQuery({
     queryKey: queryKeys.courses.list(schoolId),
     queryFn: async () => {
@@ -36,7 +39,7 @@ export function useCourses() {
       );
       return response.courses || [];
     },
-    enabled: isAuthenticated && !!schoolId,
+    enabled: isAuthenticated && !!schoolId && !isSchoolLoading,
     staleTime: 10 * 60 * 1000, // 10 minutes for course list
   });
 }
@@ -95,7 +98,8 @@ export function useSuggestedQueries(courseId?: string) {
 // Set selected course mutation
 export function useSetSelectedCourse() {
   const queryClient = useQueryClient();
-  const { schoolId } = useAuthenticatedUser();
+  const { data: school } = useUserSchool();
+  const schoolId = school?.id;
 
   return useMutation({
     mutationKey: mutationKeys.user.setSelectedCourse,
@@ -107,35 +111,23 @@ export function useSetSelectedCourse() {
       return course;
     },
     onMutate: async (course) => {
-      // Cancel any outgoing refetches
       await queryClient.cancelQueries({
         queryKey: queryKeys.user.selectedCourse(),
       });
-
-      // Snapshot the previous value
       const previousSelectedCourse = queryClient.getQueryData(
         queryKeys.user.selectedCourse(),
       );
-
-      // Optimistically update to the new course immediately
       queryClient.setQueryData(queryKeys.user.selectedCourse(), course);
-
       return { previousSelectedCourse };
     },
     onSuccess: (course) => {
-      // Ensure cache is set to server response
+      queryClient.invalidateQueries({ queryKey: queryKeys.courses.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.chats.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.documents.all });
       queryClient.setQueryData(queryKeys.user.selectedCourse(), course);
-
-      // Invalidate related caches
-      queryClient.invalidateQueries({ queryKey: queryKeys.user.profile() });
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.courses.suggestedQueries(course.id),
-      });
-
       logger.info({ courseId: course.id }, "Set selected course");
     },
     onError: (error, course, context) => {
-      // Rollback on error
       if (context?.previousSelectedCourse !== undefined) {
         queryClient.setQueryData(
           queryKeys.user.selectedCourse(),
@@ -147,92 +139,35 @@ export function useSetSelectedCourse() {
   });
 }
 
-// Clear selected course mutation
-export function useClearSelectedCourse() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationKey: mutationKeys.user.clearSelectedCourse,
-    mutationFn: async () => {
-      await apiClient("/user/selected-course", { method: "DELETE" });
-    },
-    onSuccess: () => {
-      // Clear selected course cache
-      queryClient.setQueryData(queryKeys.user.selectedCourse(), null);
-
-      // Invalidate related caches
-      queryClient.invalidateQueries({ queryKey: queryKeys.user.profile() });
-      queryClient.invalidateQueries({
-        predicate: (query) =>
-          query.queryKey[0] === "courses" &&
-          query.queryKey.includes("suggestedQueries"),
-      });
-
-      logger.info("Cleared selected course");
-    },
-    onError: (error) => {
-      logger.error({ error }, "Failed to clear selected course");
-    },
-  });
-}
-
 // Create course mutation
 export function useCreateCourse() {
   const queryClient = useQueryClient();
-  const { schoolId } = useAuthenticatedUser();
+  const { data: school } = useUserSchool();
+  const schoolId = school?.id;
 
   return useMutation({
     mutationKey: mutationKeys.courses.create,
     mutationFn: async (courseData: CreateCourseRequest) => {
-      // Retry logic for race condition handling
-      const maxRetries = 3;
-      let lastError: any;
-
-      for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-          const response = await apiClient<{ data: CreateCourseResponse }>(
-            "/courses",
-            {
-              method: "POST",
-              body: JSON.stringify(courseData),
-            },
-          );
-          return response.data.course;
-        } catch (error: any) {
-          lastError = error;
-
-          // If it's a duplicate error and not the final attempt, wait and retry
-          if (
-            error.message?.includes("already exists") && attempt < maxRetries
-          ) {
-            logger.warn({
-              attempt,
-              courseCode: courseData.code,
-              error: error.message,
-            }, "Course creation failed due to race condition, retrying...");
-
-            // Wait progressively longer between retries (500ms, 1s, 1.5s)
-            await new Promise((resolve) => setTimeout(resolve, attempt * 500));
-            continue;
-          }
-
-          // For other errors or final attempt, throw immediately
-          throw error;
-        }
+      if (rateLimiter.checkRateLimit("/courses", RATE_LIMITS.COURSE_CREATION)) {
+        throw new Error("Rate limit exceeded for course creation");
       }
-
-      throw lastError;
+      const response = await apiClient<CreateCourseResponse>(
+        "/courses",
+        {
+          method: "POST",
+          body: JSON.stringify(courseData),
+        },
+      );
+      return response.course;
     },
     onSuccess: () => {
-      // Invalidate courses list to refetch with new course
       queryClient.invalidateQueries({
         queryKey: queryKeys.courses.list(schoolId),
       });
-
       logger.info("Created new course");
     },
     onError: (error) => {
-      logger.error({ error }, "Failed to create course after retries");
+      logger.error({ error }, "Failed to create course");
     },
   });
 }
@@ -240,7 +175,8 @@ export function useCreateCourse() {
 // Delete course mutation
 export function useDeleteCourse() {
   const queryClient = useQueryClient();
-  const { schoolId } = useAuthenticatedUser();
+  const { data: school } = useUserSchool();
+  const schoolId = school?.id;
 
   return useMutation({
     mutationKey: mutationKeys.courses.delete,
@@ -249,28 +185,20 @@ export function useDeleteCourse() {
       return courseId;
     },
     onMutate: async (courseId) => {
-      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
       await queryClient.cancelQueries({
         queryKey: queryKeys.courses.list(schoolId),
       });
-
-      // Snapshot the previous value
       const previousCourses = queryClient.getQueryData(
         queryKeys.courses.list(schoolId),
       );
-
-      // Optimistically update to the new value
       queryClient.setQueryData(
         queryKeys.courses.list(schoolId),
         (old: ICourse[] | undefined) =>
           old?.filter((course) => course.id !== courseId) || [],
       );
-
-      // Return context with the previous value
       return { previousCourses };
     },
     onSuccess: (deletedCourseId) => {
-      // Check if deleted course was selected and clear it
       const selectedCourse = queryClient.getQueryData(
         queryKeys.user.selectedCourse(),
       ) as ICourse | null;
@@ -278,16 +206,12 @@ export function useDeleteCourse() {
         queryClient.setQueryData(queryKeys.user.selectedCourse(), null);
         queryClient.invalidateQueries({ queryKey: queryKeys.user.profile() });
       }
-
-      // Invalidate and refetch courses list to ensure database sync
       queryClient.invalidateQueries({
         queryKey: queryKeys.courses.list(schoolId),
       });
-
       logger.info({ courseId: deletedCourseId }, "Deleted course");
     },
     onError: (error, courseId, context) => {
-      // If the mutation fails, use the context to roll back
       if (context?.previousCourses) {
         queryClient.setQueryData(
           queryKeys.courses.list(schoolId),
@@ -297,7 +221,6 @@ export function useDeleteCourse() {
       logger.error({ error }, "Failed to delete course");
     },
     onSettled: () => {
-      // Always refetch after error or success to ensure cache consistency
       queryClient.invalidateQueries({
         queryKey: queryKeys.courses.list(schoolId),
       });
@@ -308,49 +231,81 @@ export function useDeleteCourse() {
 // Join course mutation
 export function useJoinCourse() {
   const queryClient = useQueryClient();
+  const { data: school } = useUserSchool();
+  const schoolId = school?.id;
 
   return useMutation({
     mutationKey: mutationKeys.user.joinCourse,
-    mutationFn: async (courseId: string) => {
-      const response = await apiClient<{ success: boolean; joinedCourses: string[] }>(
+    mutationFn: async ({ courseId, courseData }: { courseId: string; courseData: ICourse }) => {
+      const response = await apiClient<
+        { success: boolean; joinedCourses: string[] }
+      >(
         "/courses/join",
         {
           method: "POST",
           body: JSON.stringify({ courseId }),
         },
       );
-      return response.joinedCourses;
+      return { joinedCourses: response.joinedCourses, courseData };
     },
-    onMutate: async (courseId) => {
-      // Cancel any outgoing refetches
+    onMutate: async ({ courseId, courseData }) => {
       await queryClient.cancelQueries({
         queryKey: queryKeys.user.joinedCourses(),
       });
-
-      // Snapshot the previous value
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.user.selectedCourse(),
+      });
       const previousJoinedCourses = queryClient.getQueryData(
         queryKeys.user.joinedCourses(),
       ) as string[] | undefined;
-
-      // Optimistically update joined courses
+      const previousSelectedCourse = queryClient.getQueryData(
+        queryKeys.user.selectedCourse(),
+      ) as ICourse | null;
       const currentJoinedCourses = previousJoinedCourses || [];
       const updatedJoinedCourses = [...currentJoinedCourses, courseId];
-      queryClient.setQueryData(queryKeys.user.joinedCourses(), updatedJoinedCourses);
-
-      return { previousJoinedCourses };
+      queryClient.setQueryData(
+        queryKeys.user.joinedCourses(),
+        updatedJoinedCourses,
+      );
+      queryClient.setQueryData(queryKeys.user.selectedCourse(), courseData);
+      queryClient.setQueryData(
+        [...queryKeys.chats.list(schoolId), 'joined-courses', updatedJoinedCourses],
+        (oldData: any) => oldData || []
+      );
+      return { previousJoinedCourses, previousSelectedCourse };
     },
-    onSuccess: (joinedCourses) => {
-      // Update joined courses cache with server response
+    onSuccess: async ({ joinedCourses, courseData }) => {
       queryClient.setQueryData(queryKeys.user.joinedCourses(), joinedCourses);
-
-      logger.info("Joined course successfully");
+      await apiClient("/user/selected-course", {
+        method: "POST",
+        body: JSON.stringify({ courseId: courseData.id }),
+      });
+      queryClient.setQueryData(queryKeys.user.selectedCourse(), courseData);
+      queryClient.invalidateQueries({ queryKey: queryKeys.courses.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.chats.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.documents.all });
+      setTimeout(() => {
+        queryClient.invalidateQueries({ 
+          predicate: (query) => {
+            const key = query.queryKey;
+            return Array.isArray(key) && key.length >= 2 && 
+                   key[0] === 'chats' && key[1] === 'list';
+          }
+        });
+      }, 100);
+      logger.info({ courseId: courseData.id }, "Joined course and set as selected");
     },
-    onError: (error, courseId, context) => {
-      // Rollback on error
+    onError: (error, { courseId }, context) => {
       if (context?.previousJoinedCourses !== undefined) {
         queryClient.setQueryData(
           queryKeys.user.joinedCourses(),
           context.previousJoinedCourses,
+        );
+      }
+      if (context?.previousSelectedCourse !== undefined) {
+        queryClient.setQueryData(
+          queryKeys.user.selectedCourse(),
+          context.previousSelectedCourse,
         );
       }
       logger.error({ error }, "Failed to join course");
@@ -361,49 +316,111 @@ export function useJoinCourse() {
 // Leave course mutation
 export function useLeaveCourse() {
   const queryClient = useQueryClient();
+  const { data: school } = useUserSchool();
+  const schoolId = school?.id;
 
   return useMutation({
     mutationKey: mutationKeys.user.leaveCourse,
     mutationFn: async (courseId: string) => {
-      const response = await apiClient<{ success: boolean; joinedCourses: string[] }>(
-        "/courses/leave",
-        {
-          method: "POST",
-          body: JSON.stringify({ courseId }),
-        },
-      );
-      return response.joinedCourses;
+      const response = await apiClient<{
+        success: boolean;
+        joinedCourses: string[];
+      }>("/courses/leave", {
+        method: "POST",
+        body: JSON.stringify({ courseId }),
+      });
+      return { joinedCourses: response.joinedCourses, leftCourseId: courseId };
     },
     onMutate: async (courseId) => {
-      // Cancel any outgoing refetches
       await queryClient.cancelQueries({
         queryKey: queryKeys.user.joinedCourses(),
       });
-
-      // Snapshot the previous value
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.user.selectedCourse(),
+      });
       const previousJoinedCourses = queryClient.getQueryData(
         queryKeys.user.joinedCourses(),
       ) as string[] | undefined;
-
-      // Optimistically update joined courses
+      const previousSelectedCourse = queryClient.getQueryData(
+        queryKeys.user.selectedCourse(),
+      ) as ICourse | null;
       const currentJoinedCourses = previousJoinedCourses || [];
-      const updatedJoinedCourses = currentJoinedCourses.filter(id => id !== courseId);
-      queryClient.setQueryData(queryKeys.user.joinedCourses(), updatedJoinedCourses);
-
-      return { previousJoinedCourses };
+      const updatedJoinedCourses = currentJoinedCourses.filter(
+        (id) => id !== courseId,
+      );
+      queryClient.setQueryData(
+        queryKeys.user.joinedCourses(),
+        updatedJoinedCourses,
+      );
+      if (previousSelectedCourse?.id === courseId) {
+        queryClient.setQueryData(queryKeys.user.selectedCourse(), null);
+      }
+      queryClient.setQueryData(
+        [...queryKeys.chats.list(schoolId), 'joined-courses', updatedJoinedCourses],
+        (oldData: any) => oldData || []
+      );
+      return { 
+        updatedJoinedCourses, 
+        previousJoinedCourses, 
+        previousSelectedCourse,
+        wasSelectedCourseLeft: previousSelectedCourse?.id === courseId
+      };
     },
-    onSuccess: (joinedCourses) => {
-      // Update joined courses cache with server response
+    onSuccess: async ({ joinedCourses, leftCourseId }, courseId, context) => {
       queryClient.setQueryData(queryKeys.user.joinedCourses(), joinedCourses);
-
-      logger.info("Left course successfully");
+      if (context?.wasSelectedCourseLeft) {
+        if (joinedCourses.length > 0) {
+          const allCourses = queryClient.getQueryData(
+            queryKeys.courses.list(schoolId),
+          ) as ICourse[] | undefined;
+          
+          if (allCourses) {
+            const firstJoinedCourse = allCourses.find((course) => 
+              joinedCourses.includes(course.id)
+            );
+            
+            if (firstJoinedCourse) {
+              await apiClient("/user/selected-course", {
+                method: "POST",
+                body: JSON.stringify({ courseId: firstJoinedCourse.id }),
+              });
+              queryClient.setQueryData(queryKeys.user.selectedCourse(), firstJoinedCourse);
+              logger.info({ courseId: firstJoinedCourse.id }, "Auto-selected next available course");
+            }
+          }
+        } else {
+          await apiClient("/user/selected-course", { method: "DELETE" });
+          queryClient.setQueryData(queryKeys.user.selectedCourse(), null);
+          logger.info("Cleared selected course - no courses remaining");
+        }
+      }
+      await queryClient.invalidateQueries({ queryKey: queryKeys.courses.all });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.chats.all });
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.documents.all,
+      });
+      setTimeout(() => {
+        queryClient.invalidateQueries({ 
+          predicate: (query) => {
+            const key = query.queryKey;
+            return Array.isArray(key) && key.length >= 2 && 
+                   key[0] === 'chats' && key[1] === 'list';
+          }
+        });
+      }, 100);
+      logger.info({ courseId: leftCourseId }, "Left course successfully");
     },
     onError: (error, courseId, context) => {
-      // Rollback on error
       if (context?.previousJoinedCourses !== undefined) {
         queryClient.setQueryData(
           queryKeys.user.joinedCourses(),
           context.previousJoinedCourses,
+        );
+      }
+      if (context?.previousSelectedCourse !== undefined) {
+        queryClient.setQueryData(
+          queryKeys.user.selectedCourse(),
+          context.previousSelectedCourse,
         );
       }
       logger.error({ error }, "Failed to leave course");
@@ -411,3 +428,16 @@ export function useLeaveCourse() {
   });
 }
 
+// Verify course mutation
+export function useVerifyCourse() {
+  return useMutation({
+    mutationKey: mutationKeys.courses.verify,
+    mutationFn: async ({ courseCode }: { courseCode: string }) => {
+      const response = await apiClient("/courses/verify", {
+        method: "POST",
+        body: JSON.stringify({ courseCode }),
+      });
+      return response;
+    },
+  });
+}

@@ -34,7 +34,9 @@ import {
 import { useSidebar } from "@/components/ui/sidebar"
 import { FileUploadDialog } from "@/components/file-upload-dialog"
 import { CreateCourseDialog } from "@/components/create-course-dialog"
-import { NewPostDialog } from "./new-post-dialog";
+import { NewPostDialog } from "./new-post-dialog"
+import { useIsDeveloper } from "@/hooks/api/user"
+import { useDeveloperMode } from "@/contexts/developer-mode-context"
 
 type CommandInfo = {
   id: string
@@ -54,6 +56,8 @@ export function CommandPalette() {
   const { theme, setTheme } = useTheme()
   const router = useRouter()
   const [recentCommandIds, setRecentCommandIds] = React.useState<string[]>([])
+  const { data: isDeveloper = false } = useIsDeveloper()
+  const { isDeveloperModeEnabled, toggleDeveloperMode } = useDeveloperMode()
 
   const toggleTheme = React.useCallback(() => {
     setTheme(theme === "dark" ? "light" : "dark")
@@ -192,6 +196,13 @@ export function CommandPalette() {
         group: "Developer Tools",
       },
       {
+        id: "toggle-developer-mode",
+        label: isDeveloperModeEnabled ? "Disable Developer Mode" : "Enable Developer Mode",
+        icon: Settings,
+        action: toggleDeveloperMode,
+        group: "Developer Tools",
+      },
+      {
         id: "profile",
         label: "Profile",
         icon: User,
@@ -210,7 +221,7 @@ export function CommandPalette() {
         group: "Settings",
       },
     ],
-    [router, openFileUploadDialog, spawnToast, toggleSidebar, toggleTheme, openCreateCourseDialog, openNewPostDialog],
+    [router, openFileUploadDialog, spawnToast, toggleSidebar, toggleTheme, openCreateCourseDialog, openNewPostDialog, isDeveloperModeEnabled, toggleDeveloperMode],
   )
 
   React.useEffect(() => {
@@ -249,11 +260,26 @@ export function CommandPalette() {
 
   const recentCommands = recentCommandIds
     .map(id => commands.find(cmd => cmd.id === id))
-    .filter(Boolean) as CommandInfo[]
+    .filter(Boolean)
+    .filter(command => {
+      if (!command) return false
+      // Hide developer tools from recent commands if user is not a developer
+      if (command.group === "Developer Tools" && !isDeveloper) {
+        return false
+      }
+      return true
+    }) as CommandInfo[]
   const recentCommandIdsSet = new Set(recentCommandIds)
 
   const commandGroups = commands
     .filter(command => !recentCommandIdsSet.has(command.id))
+    .filter(command => {
+      // Hide developer tools if user is not a developer
+      if (command.group === "Developer Tools" && !isDeveloper) {
+        return false
+      }
+      return true
+    })
     .reduce(
       (acc, command) => {
         if (!acc[command.group]) {

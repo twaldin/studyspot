@@ -23,14 +23,19 @@ export async function POST(request: Request) {
     }
 
     // Update user metadata with selected school and onboarding completion
+    // Clear selectedCourseId since user is changing schools
     const client = await clerkClient();
+    const user = await client.users.getUser(auth.userId);
+
     const metadata = {
       publicMetadata: {
+        ...user.publicMetadata, // Preserve existing metadata
         selectedSchool,
         selectedSchoolName,
         selectedSchoolDomain,
         hasCompletedOnboarding: true,
         onboardingCompletedAt: new Date().toISOString(),
+        selectedCourseId: undefined, // Clear selected course when changing schools
       },
     };
 

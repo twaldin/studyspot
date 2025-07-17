@@ -10,8 +10,11 @@ import {
   PlusCircle,
   Radical,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { ICourse } from "@/features/courses/course.model";
+import { useSetSelectedCourse } from "@/hooks/api/courses";
+import toast from "react-hot-toast";
 
 // Default icons for courses (will be used if no specific icon is provided)
 const defaultCourseIcons = [FlaskConical, Radical, Box, Music, PartyPopper];
@@ -26,23 +29,37 @@ const getCourseIcon = (courseCode: string, index: number) => {
 interface JoinedCourseListProps {
   courses: ICourse[];
   selectedCourseId?: string | null;
-  onCourseSelect: (course: ICourse) => void;
-  isLoading?: boolean;
   onAddMoreClick?: () => void; // Optional callback for when "Add More" is clicked
 }
 
 export function JoinedCourseList({
   courses,
   selectedCourseId,
-  onCourseSelect,
-  isLoading = false,
   onAddMoreClick,
 }: JoinedCourseListProps) {
+  const setSelectedCourseMutation = useSetSelectedCourse();
+  
   const handleAddMoreClick = () => {
     // Call the optional callback if provided (for mobile sidebar closing)
     if (onAddMoreClick) {
       onAddMoreClick();
     }
+  };
+  
+  const handleCourseClick = (course: ICourse) => {
+    if (selectedCourseId === course.id) {
+      // Course is already selected, no need to do anything
+      return;
+    }
+    
+    setSelectedCourseMutation.mutate(course, {
+      onSuccess: () => {
+        toast.success(`Switched to ${course.code}`);
+      },
+      onError: (error: any) => {
+        toast.error(error.message || "Failed to select course");
+      },
+    });
   };
 
   if (courses.length === 0) {
@@ -66,15 +83,20 @@ export function JoinedCourseList({
         const isSelected = selectedCourseId === course.id;
 
         return (
-          <Button
+          <button
             key={course.id}
-            variant={isSelected ? "flat" : "ghost"}
-            onClick={() => onCourseSelect(course)}
-            className="gap-2 transition-none active:bg-inherit active:text-inherit hover:bg-inherit hover:text-inherit"
+            onClick={() => handleCourseClick(course)}
+            disabled={setSelectedCourseMutation.isPending}
+            className={cn(
+              "flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors hover:bg-accent hover:text-accent-foreground disabled:opacity-50",
+              isSelected 
+                ? "bg-secondary text-secondary-foreground" 
+                : "text-muted-foreground"
+            )}
           >
             <IconComponent className="h-4 w-4" />
             <span className="truncate">{course.code || "Unknown"}</span>
-          </Button>
+          </button>
         );
       })}
       <Button asChild variant="ghost" className="gap-2" onClick={handleAddMoreClick}>

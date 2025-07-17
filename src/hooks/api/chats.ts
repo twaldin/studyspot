@@ -1,13 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient, queryKeys, mutationKeys, useAuthenticatedUser } from './base';
+import { useUserSchool } from "./user"; // Import useUserSchool
 import { Chat, Message } from '@/features/chat/chat.types';
 import logger from '@/lib/logger';
+import { rateLimiter, RATE_LIMITS } from '@/lib/utils/rate-limiter';
 
 // Types
 export interface ChatSummary {
   id: string;
   title: string;
   created_at: string;
+  course_id: string;
 }
 
 export interface CreateChatRequest {
@@ -33,57 +36,74 @@ export interface UpdateChatResponse {
 
 // Chat list query
 export function useChats() {
-  const { schoolId, isAuthenticated } = useAuthenticatedUser();
+  const { data: school, isLoading: isSchoolLoading } = useUserSchool();
+  const schoolId = school?.id;
+  const { isAuthenticated, joinedCourses } = useAuthenticatedUser();
   
   return useQuery({
-    queryKey: queryKeys.chats.list(schoolId),
+    queryKey: [...queryKeys.chats.list(schoolId), 'joined-courses', joinedCourses],
     queryFn: async () => {
       const response = await apiClient<{ chats: ChatSummary[] }>('/chats');
-      return response.chats || [];
+      const allChats = response.chats || [];
+      
+      const filteredChats = allChats.filter(chat => 
+        joinedCourses.includes(chat.course_id)
+      );
+      
+      logger.info({ 
+        totalChats: allChats.length, 
+        filteredChats: filteredChats.length,
+        joinedCourses: joinedCourses.length 
+      }, 'Filtered chats by joined courses');
+      
+      return filteredChats;
     },
-    enabled: isAuthenticated && !!schoolId,
-    staleTime: 5 * 60 * 1000, // 5 minutes for chat list
-    refetchInterval: 30 * 1000, // Refetch every 30 seconds instead of on every focus
-    refetchOnWindowFocus: false, // Prevent refetch on window focus to reduce API calls
+    enabled: isAuthenticated && !!schoolId && !isSchoolLoading,
+    staleTime: 1 * 60 * 1000,
+    refetchInterval: 30 * 1000,
+    refetchOnWindowFocus: false,
     retry: (failureCount, error) => {
-      // Don't retry on auth errors
       if (error && 'status' in error && [401, 403].includes((error as any).status)) {
         return false;
       }
-      return failureCount < 2; // Limit retries to 2
+      return failureCount < 2;
     },
   });
 }
 
 // Individual chat query
 export function useChat(chatId?: string, options?: { enabled?: boolean }) {
-  const { isAuthenticated, schoolId } = useAuthenticatedUser();
+  const { data: school, isLoading: isSchoolLoading } = useUserSchool();
+  const schoolId = school?.id;
+  const { isAuthenticated } = useAuthenticatedUser();
   
   return useQuery({
     queryKey: queryKeys.chats.detail(chatId!),
     queryFn: async () => {
-      // The API endpoint for fetching a chat requires a school context, 
-      // which is implicitly handled by the server based on the user's session.
-      // The schoolId is added to the `enabled` check to ensure the user's context is loaded.
       const response = await apiClient<{ data: Chat }>(`/chats/${chatId}`);
       if (!response.data) {
         throw new Error('Chat not found');
       }
       return response.data;
     },
-    enabled: options?.enabled !== false && isAuthenticated && !!chatId && !!schoolId, // Ensure schoolId is loaded
-    staleTime: 5 * 60 * 1000, // 5 minutes for individual chat
+    enabled: options?.enabled !== false && isAuthenticated && !!chatId && !!schoolId && !isSchoolLoading,
+    staleTime: 5 * 60 * 1000,
   });
 }
 
 // Create chat mutation
 export function useCreateChat() {
   const queryClient = useQueryClient();
-  const { schoolId } = useAuthenticatedUser();
+  const { data: school } = useUserSchool();
+  const schoolId = school?.id;
   
   return useMutation({
     mutationKey: mutationKeys.chats.create,
     mutationFn: async (data: CreateChatRequest) => {
+      if (rateLimiter.checkRateLimit('/chats', RATE_LIMITS.CHAT_MESSAGES)) {
+        throw new Error('Rate limit exceeded for chat creation');
+      }
+      
       const response = await apiClient<Chat>('/chats', {
         method: 'POST',
         body: JSON.stringify(data),
@@ -91,17 +111,16 @@ export function useCreateChat() {
       return response;
     },
     onSuccess: (newChat) => {
-      // Add to chats list cache
       queryClient.setQueryData(queryKeys.chats.list(schoolId), (old: ChatSummary[] | undefined) => {
         const chatSummary: ChatSummary = {
           id: newChat.id,
           title: newChat.title,
           created_at: newChat.created_at,
+          course_id: newChat.course_id,
         };
         return [chatSummary, ...(old || [])];
       });
       
-      // Set the new chat data
       queryClient.setQueryData(queryKeys.chats.detail(newChat.id), newChat);
       
       logger.info({ chatId: newChat.id }, 'Created new chat');
@@ -115,11 +134,16 @@ export function useCreateChat() {
 // Update chat mutation
 export function useUpdateChat() {
   const queryClient = useQueryClient();
-  const { schoolId } = useAuthenticatedUser();
+  const { data: school } = useUserSchool();
+  const schoolId = school?.id;
   
   return useMutation({
     mutationKey: mutationKeys.chats.update,
     mutationFn: async ({ chatId, data }: { chatId: string; data: UpdateChatRequest }) => {
+      if (rateLimiter.checkRateLimit(`/chats/${chatId}`, RATE_LIMITS.CHAT_MESSAGES)) {
+        throw new Error('Rate limit exceeded for chat updates');
+      }
+      
       const response = await apiClient<{ data: UpdateChatResponse }>(`/chats/${chatId}`, {
         method: 'PATCH',
         body: JSON.stringify(data),
@@ -127,12 +151,10 @@ export function useUpdateChat() {
       return { chatId, messages: data.messages, ...response.data };
     },
     onSuccess: ({ chatId, title, messages }) => {
-      // Update the individual chat cache with the complete message history
       if (messages) {
         queryClient.setQueryData(queryKeys.chats.detail(chatId), (oldData: any) => {
           if (!oldData) return oldData;
           
-          // Update the chat data with complete message history
           const updatedData = {
             ...oldData,
             chats: messages
@@ -143,7 +165,6 @@ export function useUpdateChat() {
         });
       }
       
-      // Update title in chat list if changed
       if (title) {
         queryClient.setQueryData(queryKeys.chats.list(schoolId), (old: ChatSummary[] | undefined) =>
           old?.map(chat => chat.id === chatId ? { ...chat, title } : chat) || []
@@ -161,7 +182,8 @@ export function useUpdateChat() {
 // Delete chat mutation
 export function useDeleteChat() {
   const queryClient = useQueryClient();
-  const { schoolId } = useAuthenticatedUser();
+  const { data: school } = useUserSchool();
+  const schoolId = school?.id;
 
   return useMutation({
     mutationKey: mutationKeys.chats.delete,
@@ -170,28 +192,23 @@ export function useDeleteChat() {
       return chatId;
     },
     onMutate: async (deletedChatId: string) => {
-      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
       await queryClient.cancelQueries({
         queryKey: queryKeys.chats.list(schoolId),
       });
 
-      // Snapshot the previous value
       const previousChats = queryClient.getQueryData(
         queryKeys.chats.list(schoolId)
       );
 
-      // Optimistically remove the chat from the list
       queryClient.setQueryData(
         queryKeys.chats.list(schoolId),
         (old: ChatSummary[] | undefined) =>
           old?.filter((chat) => chat.id !== deletedChatId) || []
       );
 
-      // Return a context object with the snapshotted value
       return { previousChats };
     },
     onError: (err, deletedChatId, context) => {
-      // Rollback to the previous state on error
       if (context?.previousChats) {
         queryClient.setQueryData(
           queryKeys.chats.list(schoolId),
@@ -201,12 +218,10 @@ export function useDeleteChat() {
       logger.error({ error: err, chatId: deletedChatId }, "Failed to delete chat");
     },
     onSettled: (deletedChatId) => {
-      // Invalidate the chats list to refetch from the server and ensure consistency
       queryClient.invalidateQueries({
         queryKey: queryKeys.chats.list(schoolId),
       });
 
-      // Also remove the individual chat cache if it exists
       if (deletedChatId) {
         queryClient.removeQueries({
           queryKey: queryKeys.chats.detail(deletedChatId),
@@ -215,6 +230,9 @@ export function useDeleteChat() {
     },
   });
 }
+
+// ... (rest of the file remains the same)
+
 
 // Select chat course mutation (switches user's selected course based on chat)
 export function useSelectChatCourse() {
@@ -229,13 +247,12 @@ export function useSelectChatCourse() {
       return response;
     },
     onSuccess: (data) => {
-      // Optimistically update the selected course cache if we have the course data
+      // Update the selected course cache if we have the course data
       if (data.course) {
         queryClient.setQueryData(queryKeys.user.selectedCourse(), data.course);
       }
       
-      // Invalidate user-related caches since selected course changed
-      queryClient.invalidateQueries({ queryKey: queryKeys.user.selectedCourse() });
+      // Only invalidate user profile, not the selected course (we just set it)
       queryClient.invalidateQueries({ queryKey: queryKeys.user.profile() });
       
       // Invalidate suggested queries for the new course
@@ -267,13 +284,12 @@ export function useSelectChatAndNavigate() {
       return { chatId, ...response };
     },
     onSuccess: (data) => {
-      // Optimistically update the selected course cache if we have the course data
+      // Update the selected course cache if we have the course data
       if (data.course) {
         queryClient.setQueryData(queryKeys.user.selectedCourse(), data.course);
       }
       
-      // Invalidate user-related caches since selected course changed
-      queryClient.invalidateQueries({ queryKey: queryKeys.user.selectedCourse() });
+      // Only invalidate user profile, not the selected course (we just set it)
       queryClient.invalidateQueries({ queryKey: queryKeys.user.profile() });
       
       // Invalidate suggested queries for the new course
