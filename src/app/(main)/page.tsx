@@ -126,7 +126,7 @@ export default function Home() {
         {/* Dynamic CardGrid section from 'dev' branch */}
         <div className="hidden @md:block">
           {error && <div>Error loading course</div>}
-          {selectedCourse && <CardGrid courseId={selectedCourse.id} />}
+          {selectedCourse && <CardGrid courseId={selectedCourse.id} viewAll={false} />}
         </div>
 
         {/* Buttons and desktop link from 'chore/mobile-fixes' branch */}
