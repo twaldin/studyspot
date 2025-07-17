@@ -73,13 +73,13 @@ function Button({
         variant={variant as "primary" | "secondary"}
         className={cn(
           {
-            "shadow-[0_3px_0_0_var(--secondary-button-border-bottom),0_1px_2px_0_rgb(0_0_0/0.1)]":
+            [`shadow-[0_3px_0_0_var(--secondary-button-border-bottom),0_1px_2px_0_rgb(0_0_0/0.1)]${!props.disabled ? ' hover:shadow-[0_4px_0_0_var(--secondary-button-border-bottom),0_2px_3px_0_rgb(0_0_0/0.12)]' : ''}`]:
               variant === "secondary",
-            "shadow-[0_3px_0_0_var(--primary-button-border-bottom),0_1px_2px_0_rgb(0_0_0/0.1)]":
+            [`shadow-[0_3px_0_0_var(--primary-button-border-bottom),0_1px_2px_0_rgb(0_0_0/0.1)]${!props.disabled ? ' hover:shadow-[0_4px_0_0_var(--primary-button-border-bottom),0_2px_3px_0_rgb(0_0_0/0.12)]' : ''}`]:
               variant === "primary",
           },
           !props.disabled &&
-            "transition-all duration-150 ease-in-out has-[[data-slot=button]]:active:translate-y-[3px] has-[[data-slot=button]]:active:shadow-none"
+            "transition-all duration-150 ease-in-out hover:-translate-y-[1px] has-[[data-slot=button]]:active:translate-y-[3px] has-[[data-slot=button]]:active:shadow-none"
         )}
       >
         {buttonElement}
