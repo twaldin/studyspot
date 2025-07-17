@@ -89,13 +89,16 @@ export default function SelectSchoolPage() {
 
     // Prevent rapid successive selections of the same school
     if (processingSchoolId.current === school.id) {
-      logger.warn({ schoolId: school.id }, "School selection already in progress, ignoring duplicate request");
+      logger.warn(
+        { schoolId: school.id },
+        "School selection already in progress, ignoring duplicate request",
+      );
       return;
     }
 
     setIsProcessing(true);
     processingSchoolId.current = school.id;
-    
+
     try {
       // Trim the school name to remove any whitespace or newlines
       const cleanedSchoolName = school.name.trim();
@@ -115,16 +118,16 @@ export default function SelectSchoolPage() {
           { schoolId: targetSchoolId, schoolName: cleanedSchoolName },
           "School selected and onboarding updated successfully",
         );
-        
+
         // Navigate to Canvas integration step
         router.push("/onboarding/connect-canvas");
       } else {
         logger.warn(
-          { 
-            targetSchoolId, 
-            currentProcessingId: processingSchoolId.current 
+          {
+            targetSchoolId,
+            currentProcessingId: processingSchoolId.current,
           },
-          "School selection changed during processing, skipping navigation"
+          "School selection changed during processing, skipping navigation",
         );
       }
     } catch (e: any) {
@@ -132,10 +135,12 @@ export default function SelectSchoolPage() {
         { error: e, schoolId: school.id },
         "Failed to process school selection",
       );
-      
+
       // Show user-friendly error message
       if (e.message?.includes("School ID changed during fetch")) {
-        logger.warn("School selection changed during processing, user may have selected another school");
+        logger.warn(
+          "School selection changed during processing, user may have selected another school",
+        );
       } else {
         // Re-throw other errors to show generic error handling
         throw e;
@@ -245,4 +250,3 @@ export default function SelectSchoolPage() {
     </div>
   );
 }
-

@@ -283,6 +283,42 @@ export function useSelectChatAndNavigate() {
       });
       return { chatId, ...response };
     },
+    onMutate: async (chatId) => {
+      // Cancel any outgoing queries for selected course
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.user.selectedCourse(),
+      });
+      
+      // Get the previous selected course for rollback
+      const previousSelectedCourse = queryClient.getQueryData(
+        queryKeys.user.selectedCourse(),
+      );
+      
+      // Try to get the chat data to extract course info for optimistic update
+      const chatsQueryData = queryClient.getQueriesData({
+        queryKey: queryKeys.chats.all
+      });
+      
+      let chats: ChatSummary[] | undefined;
+      if (chatsQueryData.length > 0) {
+        chats = chatsQueryData[0][1] as ChatSummary[] | undefined;
+      }
+      
+      const chat = chats?.find(c => c.id === chatId);
+      if (chat?.course_id) {
+        // Get course data for optimistic update
+        const allCourses = queryClient.getQueryData(
+          queryKeys.courses.all
+        ) as any[] | undefined;
+        
+        const course = allCourses?.find(c => c.id === chat.course_id);
+        if (course) {
+          queryClient.setQueryData(queryKeys.user.selectedCourse(), course);
+        }
+      }
+      
+      return { previousSelectedCourse };
+    },
     onSuccess: (data) => {
       // Update the selected course cache if we have the course data
       if (data.course) {
@@ -301,7 +337,14 @@ export function useSelectChatAndNavigate() {
       
       logger.info('Updated selected course and ready for navigation');
     },
-    onError: (error) => {
+    onError: (error, chatId, context) => {
+      // Rollback optimistic update on error
+      if (context?.previousSelectedCourse !== undefined) {
+        queryClient.setQueryData(
+          queryKeys.user.selectedCourse(),
+          context.previousSelectedCourse,
+        );
+      }
       logger.error({ error }, 'Failed to select chat course');
     },
   });
