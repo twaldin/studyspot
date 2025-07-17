@@ -150,6 +150,10 @@ input[type="search"]::-webkit-search-results-decoration {
 
 /* Markdown content styles */
 @layer components {
+  .markdown-content {
+    @apply text-sm;
+  }
+
   .markdown-content h1,
   .markdown-content h2,
   .markdown-content h3,
