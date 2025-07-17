@@ -72,7 +72,7 @@ export function PostClient() {
           <div className="flex flex-col gap-3">
             <Textarea 
               placeholder="Share your thoughts, answer the question, or provide additional resources..."
-              className="min-h-[100px] resize-none"
+              className="min-h-[70px] resize-none"
             />
             <div className="flex justify-end">
               <Button variant="primary">Post Reply</Button>
