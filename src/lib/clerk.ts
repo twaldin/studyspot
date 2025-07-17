@@ -34,7 +34,7 @@ export const clearSelectedCourseForUser = async (userId: string) => {
     const client = await clerkClient();
     await client.users.updateUserMetadata(userId, {
       publicMetadata: {
-        selectedCourseId: null,
+        selectedCourseId: undefined,
       },
     });
     

@@ -20,6 +20,8 @@ interface ChatInputBarProps {
   onSubmit: (values: FormSchema) => void;
   className?: string;
   isSubmitting?: boolean;
+  placeholder?: string;
+  disabled?: boolean;
 }
 
 export const ChatInputBar = React.forwardRef<HTMLTextAreaElement, ChatInputBarProps>(
@@ -30,6 +32,7 @@ export const ChatInputBar = React.forwardRef<HTMLTextAreaElement, ChatInputBarPr
         message: "",
       },
     });
+
 
     const { formState, register, handleSubmit, reset } = form;
 
@@ -43,6 +46,7 @@ export const ChatInputBar = React.forwardRef<HTMLTextAreaElement, ChatInputBarPr
         <form
           onSubmit={handleSubmit(handleFormSubmit)}
           className={cn("relative", className)}
+
         >
           <FormField
             control={form.control}

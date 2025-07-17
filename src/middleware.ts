@@ -6,81 +6,60 @@ import logger from "@/lib/logger";
 
 const isProtectedRoute = createRouteMatcher([
   "/",
-  "/courses",
-  "/onboarding",
-  "/content",
+  "/courses(.*)",
+  "/onboarding(.*)",
+  "/content(.*)",
+  "/chat(.*)",
 ]);
 
-const isOnboardingRoute = createRouteMatcher([
-  "/onboarding(.*)",
-]);
+const isOnboardingRoute = createRouteMatcher(["/onboarding(.*)"]);
 
 export default clerkMiddleware(async (auth, req) => {
   try {
-    // Check if this is a protected route
     if (isProtectedRoute(req)) {
       const { userId } = await auth();
 
-      // If not authenticated, redirect to sign-in
       if (!userId) {
         const signInUrl = new URL("/sign-in", req.url);
         signInUrl.searchParams.set("redirectUrl", req.url);
         return NextResponse.redirect(signInUrl);
       }
 
-      // Check if user has completed onboarding
+      // Always allow onboarding routes - no additional checks needed
+      if (isOnboardingRoute(req)) {
+        return NextResponse.next();
+      }
+
       const onboardingStatus = await getUserOnboardingStatus(userId);
 
+      // If user hasn't completed onboarding, redirect to onboarding
       if (!onboardingStatus.hasCompletedOnboarding) {
-        // If not completed onboarding and not already on onboarding page
-        if (!req.nextUrl.pathname.startsWith("/onboarding")) {
-          const onboardingUrl = new URL("/onboarding/select-school", req.url);
-          return NextResponse.redirect(onboardingUrl);
-        }
-      } else {
+        const onboardingUrl = new URL("/onboarding/select-school", req.url);
+        return NextResponse.redirect(onboardingUrl);
+      }
+
+      // User has completed onboarding, check for selected course only for non-courses pages
+      if (!req.nextUrl.pathname.startsWith("/courses")) {
         try {
           const client = await clerkClient();
           const user = await client.users.getUser(userId);
           const selectedCourseId = user.publicMetadata?.selectedCourseId;
 
-          // If completed onboarding but accessing /app root, handle redirects
-          if (
-            req.nextUrl.pathname === "/app" || req.nextUrl.pathname === "/app/"
-          ) {
-            if (!selectedCourseId) {
-              return NextResponse.redirect(
-                new URL("/courses", req.url),
-              );
-            } else {
-              const dashboardUrl = new URL("/app/dashboard", req.url);
-              return NextResponse.redirect(dashboardUrl);
-            }
-          }
-
-          if (
-            !selectedCourseId &&
-            !req.nextUrl.pathname.includes("/courses")
-          ) {
-            return NextResponse.redirect(
-              new URL("/courses", req.url),
-            );
+          if (!selectedCourseId) {
+            return NextResponse.redirect(new URL("/courses", req.url));
           }
         } catch (error) {
-          console.error("Error checking selected course:", error);
           logger.error(
             { error, url: req.url },
             "Error checking selected course in middleware",
           );
-          // Continue to the requested page if there's an error checking
         }
       }
     }
 
     return NextResponse.next();
   } catch (error) {
-    console.error("Middleware execution error:", error);
     logger.error({ error, url: req.url }, "Middleware execution error");
-    // Return a fallback response to prevent the middleware from completely failing
     return NextResponse.next();
   }
 });

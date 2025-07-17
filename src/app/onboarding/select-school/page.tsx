@@ -39,6 +39,7 @@ export default function SelectSchoolPage() {
   );
   const [searchTerm, setSearchTerm] = React.useState("");
   const [activeIndex, setActiveIndex] = React.useState(-1);
+  const [isProcessing, setIsProcessing] = React.useState(false);
   const router = useRouter();
   const { user } = useUser();
   const listContainerRef = React.useRef<HTMLDivElement>(null);
@@ -96,6 +97,9 @@ export default function SelectSchoolPage() {
   };
 
   const handleSelectSchool = async (school: School) => {
+    if (isProcessing) return;
+    
+    setIsProcessing(true);
     try {
       // Trim the school name to remove any whitespace or newlines
       const cleanedSchoolName = school.name.trim();
@@ -105,6 +109,34 @@ export default function SelectSchoolPage() {
         selectedSchoolName: cleanedSchoolName,
         selectedSchoolDomain: school.domain,
       });
+      
+      // Force reload of user metadata to ensure fresh data
+      await user?.reload();
+      
+      // Wait for metadata consistency - check that the selected school matches
+      let attempts = 0;
+      const maxAttempts = 10;
+      while (attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+        await user?.reload();
+        
+        if (user?.publicMetadata?.selectedSchool === school.id) {
+          logger.info(
+            { schoolId: school.id, attempts: attempts + 1 },
+            "Metadata consistency confirmed"
+          );
+          break;
+        }
+        attempts++;
+      }
+      
+      if (attempts >= maxAttempts) {
+        logger.warn(
+          { schoolId: school.id, userMetadata: user?.publicMetadata },
+          "Metadata consistency check timed out, proceeding anyway"
+        );
+      }
+      
       logger.info(
         { schoolId: school.id, schoolName: cleanedSchoolName },
         "School selected and onboarding updated successfully",
@@ -116,6 +148,8 @@ export default function SelectSchoolPage() {
         { error: e, schoolId: school.id },
         "Failed to process school selection",
       );
+    } finally {
+      setIsProcessing(false);
     }
   };
   return (
@@ -200,7 +234,7 @@ export default function SelectSchoolPage() {
             <Button
               variant="primary"
               className="w-full"
-              disabled={!selectedSchoolId}
+              disabled={!selectedSchoolId || isProcessing}
               onClick={() => {
                 const selectedSchool = filteredSchools.find((school) =>
                   school.id === selectedSchoolId
@@ -210,7 +244,7 @@ export default function SelectSchoolPage() {
                 }
               }}
             >
-              Continue
+              {isProcessing ? "Setting up your school..." : "Continue"}
             </Button>
           </CardFooter>
         </Card>

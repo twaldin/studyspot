@@ -9,6 +9,7 @@ import { useChat, useCreateChat, useUpdateChat } from "@/hooks/api/chats"
 import { useSelectedCourse } from "@/hooks/api/courses"
 import { Message } from "@/features/chat/chat.types"
 import { Skeleton } from "@/components/ui/skeleton"
+import { ScrollToBottomButton } from "@/components/scroll-to-bottom"
 import { chatStateService } from "@/features/chat/services/chat-state.service"
 import { chatStreamingService } from "@/features/chat/services/chat-streaming.service"
 import logger from "@/lib/logger"
@@ -37,6 +38,9 @@ export function ChatPageContent() {
   const [messages, setMessages] = useState<Message[]>([])
   const [isReplying, setIsReplying] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isAtBottom, setIsAtBottom] = useState(true)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const chatContainerRef = useRef<HTMLDivElement>(null)
 
   // Custom streaming processor for temporary chats that captures the response
   const processTemporaryStreamingResponse = useCallback(async (response: Response, context: any) => {
@@ -131,9 +135,31 @@ export function ChatPageContent() {
     }
   }, [initialMessage, updateChatMutation, setPendingStreamResponse, setMessages, setIsReplying]);
 
+  // Scroll to bottom function
+  const scrollToBottom = useCallback(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'end'
+      })
+    }
+  }, [])
+
+  // Check if user is near bottom of chat
+  const handleScroll = useCallback(() => {
+    if (chatContainerRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current
+      const isAtBottom = scrollHeight - scrollTop - clientHeight < 100 // 100px threshold
+      setIsAtBottom(isAtBottom)
+    }
+  }, [])
+
   // Handle chat ID changes and initialize state
   useEffect(() => {
     if (!chatId) return;
+
+    // Clear messages when chat changes
+    setMessages([])
     
     if (chatId.startsWith('temp-')) {
       // Handle temporary chat
@@ -207,14 +233,14 @@ export function ChatPageContent() {
     });
   }, [chatId, pendingStreamResponse, initialMessage, updateChatMutation])
 
-  // Load chat data when available
+  // Load chat data when available, but only if messages are not already populated
   useEffect(() => {
-    if (chat && chat.chats) {
+    if (chat && chat.chats && messages.length === 0) {
       const convertedMessages = chatStateService.loadChatFromDatabase(chat)
       setMessages(convertedMessages)
       setError(null)
     }
-  }, [chat])
+  }, [chat, messages.length])
 
   // Handle immediate streaming for temporary chats
   useEffect(() => {
@@ -403,6 +429,10 @@ export function ChatPageContent() {
     )
   }
 
+  // For non-temporary chats, show the shell immediately with the input bar
+  const showLoadingMessages = !isTemporaryChat && isLoadingChat;
+  const showEmptyState = !isTemporaryChat && !isLoadingChat && !chat;
+
   if (!isTemporaryChat && isLoadingChat) {
     return (
       <div className="mx-auto w-full max-w-3xl h-full flex flex-col p-6 pt-0">
@@ -427,24 +457,50 @@ export function ChatPageContent() {
         </div>
       )}
       
-      <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+      <div 
+        ref={chatContainerRef}
+        className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']"
+        onScroll={handleScroll}
+      >
         <div className="flex flex-col gap-4 py-4">
-          {messages.map((message, i) =>
-            message.type === "user" ? (
-              <UserMessage key={message.id || i} className="w-fit max-w-2xl self-end">
-                {message.content}
-              </UserMessage>
-            ) : (
-              <AssistantMessage 
-                key={message.id || i} 
-                content={message.content}
-                linkedDocumentIds={message.linkedDocumentIds}
-                isStreaming={isReplying && i === messages.length - 1 && message.content.trim().length > 0}
-              />
+          {showLoadingMessages ? (
+            // Show message skeletons while loading
+            <>
+              <Skeleton className="w-48 h-12 rounded-lg self-end" />
+              <Skeleton className="w-64 h-16 rounded-lg self-start" />
+              <Skeleton className="w-56 h-10 rounded-lg self-end" />
+              <Skeleton className="w-72 h-20 rounded-lg self-start" />
+            </>
+          ) : showEmptyState ? (
+            // Show empty state for failed loads
+            <div className="flex items-center justify-center h-full text-muted-foreground">
+              Chat not found
+            </div>
+          ) : (
+            // Show actual messages
+            messages.map((message, i) =>
+              message.type === "user" ? (
+                <UserMessage key={message.id || i} className="w-fit max-w-2xl self-end">
+                  {message.content}
+                </UserMessage>
+              ) : (
+                <AssistantMessage 
+                  key={message.id || i} 
+                  content={message.content}
+                  linkedDocumentIds={message.linkedDocumentIds}
+                  isStreaming={isReplying && i === messages.length - 1 && message.content.trim().length > 0}
+                />
+              )
             )
           )}
+          <div ref={messagesEndRef} />
         </div>
       </div>
+
+      <ScrollToBottomButton
+        isAtBottom={isAtBottom}
+        scrollToBottom={scrollToBottom}
+      />
       
       <div>
         {showThinkingIndicator && (
@@ -462,7 +518,12 @@ export function ChatPageContent() {
           </div>
         )}
         
-        <ChatInputBar onSubmit={handleFormSubmit} isSubmitting={isReplying} />
+        <ChatInputBar 
+          onSubmit={handleFormSubmit} 
+          isSubmitting={isReplying}
+          placeholder={showLoadingMessages ? "Loading chat..." : "Can you help me with..."}
+          disabled={showLoadingMessages}
+        />
       </div>
     </div>
   )
