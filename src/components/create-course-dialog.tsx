@@ -16,7 +16,7 @@ import { SingleFileInput } from "@/components/ui/single-file-input"
 import { Loader2, ChevronDown, ChevronUp } from "lucide-react"
 import React, { useState, useCallback } from "react"
 import { useUploadThing } from '../uploadthing'
-import { useCreateCourse, useJoinCourse, useSetSelectedCourse, useVerifyCourse } from "@/hooks/api/courses"
+import { useCreateCourse, useJoinCourse, useVerifyCourse } from "@/hooks/api/courses"
 import { useUserSchool } from "@/hooks/api/user"
 import toast from "react-hot-toast"
 import { useQueryClient } from "@tanstack/react-query"
@@ -49,7 +49,6 @@ export function CreateCourseDialog({
   const verifyCourseMutation = useVerifyCourse()
   const createCourseMutation = useCreateCourse()
   const joinCourseMutation = useJoinCourse()
-  const setSelectedCourseMutation = useSetSelectedCourse()
   const { data: userSchool } = useUserSchool()
 
   const handleFileSelect = async (file: File | null) => {
@@ -147,11 +146,11 @@ export function CreateCourseDialog({
       const createData = await createCourseMutation.mutateAsync(payload)
 
       if (createData) {
-        // Step 2: Join the course
-        await joinCourseMutation.mutateAsync(createData.id)
-
-        // Step 3: Set as selected
-        await setSelectedCourseMutation.mutateAsync(createData)
+        // Step 2: Join the course (this automatically sets it as selected)
+        await joinCourseMutation.mutateAsync({
+          courseId: createData.id,
+          courseData: createData
+        })
 
         toast.success("Course created and selected successfully!")
         queryClient.invalidateQueries({ queryKey: ['courses'] })
@@ -174,7 +173,6 @@ export function CreateCourseDialog({
     uploadedFileUrl,
     createCourseMutation,
     joinCourseMutation,
-    setSelectedCourseMutation,
     queryClient,
     handleReset,
     onOpenChange

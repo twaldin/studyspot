@@ -2,15 +2,10 @@
 
 import * as React from "react";
 import {
-  Box,
   CheckCircle,
-  FlaskConical,
   Info,
   LoaderCircle,
-  Music,
   PartyPopper,
-  PlusCircle,
-  Radical,
   Settings,
   User,
   X,
@@ -20,15 +15,12 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import toast, { useToaster } from "react-hot-toast";
 import { useClerk, useUser } from "@clerk/nextjs";
-import Link from "next/link";
-import { useRemoveSchool } from "@/hooks/api";
+import { useRemoveSchool, useClearUserCourses } from "@/hooks/api";
 import {
   useCourses,
   useJoinedCourses,
   useSelectedCourse,
-  useSetSelectedCourse,
 } from "@/hooks/api/courses";
-import { ICourse } from "@/features/courses/course.model";
 import { JoinedCourseList } from "@/features/courses/components/joined-course-list";
 import {
   DropdownMenu,
@@ -40,6 +32,7 @@ import {
 import logger from "@/lib/logger";
 import { useRouter, usePathname } from "next/navigation";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useQueryClient } from "@tanstack/react-query";
 
 function CustomToaster() {
   const { toasts, handlers } = useToaster();
@@ -48,9 +41,11 @@ function CustomToaster() {
 
   return (
     <div
-      className={isMobile
-        ? "fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-80 max-w-[calc(100vw-2rem)] px-4"
-        : "fixed bottom-4 right-4 z-50 w-64 px-4"}
+      className={
+        isMobile
+          ? "fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-80 max-w-[calc(100vw-2rem)] px-4"
+          : "fixed bottom-4 right-4 z-50 w-64 px-4"
+      }
       onMouseEnter={startPause}
       onMouseLeave={endPause}
     >
@@ -131,6 +126,8 @@ function CustomToaster() {
 export function AppRightSidebar() {
   const { openUserProfile, signOut } = useClerk();
   const removeSchoolMutation = useRemoveSchool();
+  const clearUserCoursesMutation = useClearUserCourses();
+  const queryClient = useQueryClient();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -138,11 +135,10 @@ export function AppRightSidebar() {
   const { data: allCourses = [] } = useCourses();
   const { data: joinedCourseIds = [] } = useJoinedCourses();
   const { data: selectedCourse } = useSelectedCourse();
-  const setSelectedCourseMutation = useSetSelectedCourse();
 
   // Filter courses to only show joined ones
   const joinedCourses = allCourses.filter((course) =>
-    joinedCourseIds.includes(course.id)
+    joinedCourseIds.includes(course.id),
   );
 
   const handleSignOut = () => {
@@ -153,37 +149,30 @@ export function AppRightSidebar() {
     openUserProfile();
   };
 
-  const handleCourseSelect = (course: ICourse) => {
-    // Check if we're currently in a chat page
-    const isInChat = pathname.startsWith('/chat/');
-    
-    setSelectedCourseMutation.mutate(course, {
-      onSuccess: () => {
-        // If we're in a chat page, navigate to dashboard to switch course context
-        if (isInChat) {
-          router.push('/');
-        }
-      },
-      onError: (error: any) => {
-        toast.error(error.message || "Failed to select course");
-      },
-    });
-  };
   const { user } = useUser();
-  
+
   // Track course changes to provide feedback when course switches due to chat selection
-  const prevSelectedCourse = React.useRef<string | undefined>(selectedCourse?.id);
+  const prevSelectedCourse = React.useRef<string | undefined>(
+    selectedCourse?.id,
+  );
   React.useEffect(() => {
-    const isInChat = pathname.startsWith('/chat/');
-    
+    const isInChat = pathname.startsWith("/chat/");
+
     // If course changed while in a chat (likely due to chat selection), show feedback
-    if (isInChat && selectedCourse && prevSelectedCourse.current && 
-        selectedCourse.id !== prevSelectedCourse.current) {
-      toast.success(`Switched to ${selectedCourse.title || selectedCourse.code}`, {
-        duration: 3000,
-      });
+    if (
+      isInChat &&
+      selectedCourse &&
+      prevSelectedCourse.current &&
+      selectedCourse.id !== prevSelectedCourse.current
+    ) {
+      toast.success(
+        `Switched to ${selectedCourse.title || selectedCourse.code}`,
+        {
+          duration: 3000,
+        },
+      );
     }
-    
+
     prevSelectedCourse.current = selectedCourse?.id;
   }, [selectedCourse, pathname]);
 
@@ -197,32 +186,45 @@ export function AppRightSidebar() {
   }, []);
 
   const handleRemoveSchool = async () => {
-    if (removeSchoolMutation.isPending) return;
+    if (removeSchoolMutation.isPending || clearUserCoursesMutation.isPending) {
+      return;
+    }
 
-    // Confirm before removing school
     const confirmed = window.confirm(
-      "Are you sure you want to remove your school selection? You will be redirected to select a new school. Your chats will be preserved and available when you return to this school.",
+      "Are you sure you want to switch schools? Your course enrollments will be cleared, but your chats will be preserved and available if you return to this school.",
     );
 
     if (!confirmed) return;
 
     try {
-      // Use React Query mutation to remove school - this will automatically clear all caches
+      // Clear joined and selected courses from user metadata
+      await clearUserCoursesMutation.mutateAsync();
+
+      // Remove the school association from the user
       await removeSchoolMutation.mutateAsync();
 
-      // Clear selected course using React Query mutation
-      //await clearSelectedCourseMutation.mutateAsync();
-
-      // Force refresh the user object to get updated metadata
-      if (user) {
-        await user.reload();
+      // Clear backend user cache
+      if (user?.id) {
+        await fetch('/api/user/cache', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.id })
+        }).catch(() => {
+          logger.warn("Failed to clear backend user cache during school removal");
+        });
       }
 
-      // Redirect to onboarding to select a new school
+      // Force a reload of the user object to ensure metadata is fresh
+      await user?.reload();
+
+      // Clear the entire react-query cache to ensure no stale data
+      await queryClient.clear();
+
+      // Redirect to school selection
       router.push("/onboarding/select-school");
     } catch (error) {
-      logger.error({ error }, "Error removing school");
-      alert("Failed to remove school selection. Please try again.");
+      logger.error({ error }, "Error switching schools");
+      toast.error("Failed to switch schools. Please try again.");
     }
   };
 
@@ -265,8 +267,6 @@ export function AppRightSidebar() {
               <JoinedCourseList
                 courses={joinedCourses}
                 selectedCourseId={selectedCourse?.id}
-                onCourseSelect={handleCourseSelect}
-                isLoading={setSelectedCourseMutation.isPending}
               />
             </div>
           </div>

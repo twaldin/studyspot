@@ -86,6 +86,7 @@ export function useUserSchool() {
 // Update onboarding mutation
 export function useUpdateOnboarding() {
   const queryClient = useQueryClient();
+  const { user } = useAuthenticatedUser();
 
   return useMutation({
     mutationKey: mutationKeys.user.updateOnboarding,
@@ -96,17 +97,22 @@ export function useUpdateOnboarding() {
       });
       return data;
     },
-    onSuccess: () => {
-      // Invalidate user-related caches since school data changed
-      queryClient.invalidateQueries({ queryKey: queryKeys.user.profile() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.user.school() });
-
-      // Clear all school-scoped data
-      queryClient.invalidateQueries({ queryKey: queryKeys.courses.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.chats.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.documents.all });
-
-      logger.info("Updated onboarding data and cleared school-scoped caches");
+    onSuccess: async () => {
+      // Clear the backend user cache to ensure fresh data
+      if (user?.id) {
+        await fetch('/api/user/cache', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.id })
+        }).catch(() => {
+          // If cache clearing fails, continue anyway
+          logger.warn("Failed to clear backend user cache");
+        });
+      }
+      
+      // Clear the entire react-query cache to ensure all queries are refetched with the new school ID
+      queryClient.clear();
+      logger.info("Cleared query cache after updating onboarding data");
     },
     onError: (error) => {
       logger.error({ error }, "Failed to update onboarding");
@@ -117,13 +123,25 @@ export function useUpdateOnboarding() {
 // Remove school mutation
 export function useRemoveSchool() {
   const queryClient = useQueryClient();
+  const { user } = useAuthenticatedUser();
 
   return useMutation({
     mutationKey: mutationKeys.user.removeSchool,
     mutationFn: async () => {
       await apiClient("/user/school", { method: "DELETE" });
     },
-    onSuccess: () => {
+    onSuccess: async () => {
+      // Clear the backend user cache
+      if (user?.id) {
+        await fetch('/api/user/cache', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.id })
+        }).catch(() => {
+          logger.warn("Failed to clear backend user cache");
+        });
+      }
+      
       // Clear ALL caches since school removal affects everything
       queryClient.clear();
 
@@ -131,6 +149,22 @@ export function useRemoveSchool() {
     },
     onError: (error) => {
       logger.error({ error }, "Failed to remove school");
+    },
+  });
+}
+
+export function useClearUserCourses() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationKey: mutationKeys.user.clearCourses,
+    mutationFn: async () => {
+      await apiClient("/user/clear-courses", { method: "POST" });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.courses.all });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.user.selectedCourse(),
+      });
     },
   });
 }

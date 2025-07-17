@@ -9,6 +9,7 @@ export interface ChatSummary {
   id: string;
   title: string;
   created_at: string;
+  course_id: string;
 }
 
 export interface CreateChatRequest {
@@ -71,6 +72,7 @@ export class ChatService {
           id,
           title,
           created_at,
+          course_id,
           courses!inner (
             school_id
           )
@@ -84,11 +86,12 @@ export class ChatService {
         throw new Error('Failed to fetch chats from database');
       }
 
-      // Clean up the response to remove the courses data
+      // Clean up the response to remove the courses data but keep course_id
       const cleanedChats: ChatSummary[] = (chats || []).map((chat: any) => ({
         id: chat.id,
         title: chat.title,
-        created_at: chat.created_at
+        created_at: chat.created_at,
+        course_id: chat.course_id
       }));
 
       logger.info({ userId, selectedSchool, count: cleanedChats.length }, '[ChatService] Successfully fetched chats');
