@@ -117,7 +117,6 @@ export default function Home() {
 
         {/* Dynamic CardGrid section from 'dev' branch */}
         <div className="hidden @md:block">
-          {isLoading && <div>Loading course...</div>}
           {error && <div>Error loading course</div>}
           {selectedCourse && <CardGrid courseId={selectedCourse.id} />}
         </div>
