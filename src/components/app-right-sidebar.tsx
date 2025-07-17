@@ -41,7 +41,6 @@ import logger from "@/lib/logger";
 import { useRouter } from "next/navigation";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-
 function CustomToaster() {
   const { toasts, handlers } = useToaster();
   const { startPause, endPause, calculateOffset, updateHeight } = handlers;
@@ -49,11 +48,9 @@ function CustomToaster() {
 
   return (
     <div
-      className={
-        isMobile
-          ? "fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-80 max-w-[calc(100vw-2rem)] px-4"
-          : "fixed bottom-4 right-4 z-50 w-64 px-4"
-      }
+      className={isMobile
+        ? "fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-80 max-w-[calc(100vw-2rem)] px-4"
+        : "fixed bottom-4 right-4 z-50 w-64 px-4"}
       onMouseEnter={startPause}
       onMouseLeave={endPause}
     >
@@ -195,7 +192,7 @@ export function AppRightSidebar() {
       }
 
       // Redirect to onboarding to select a new school
-      router.push("/onboarding");
+      router.push("/onboarding/select-school");
     } catch (error) {
       logger.error({ error }, "Error removing school");
       alert("Failed to remove school selection. Please try again.");

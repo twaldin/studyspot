@@ -1,3 +1,5 @@
+"use client"
+
 import { Suspense } from "react"
 import { ChatPageContent } from "./chat-client"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -18,10 +20,10 @@ function ChatLoading() {
   )
 }
 
-export default function ChatPage() {
+export default function NewChatPage() {
   return (
     <Suspense fallback={<ChatLoading />}>
       <ChatPageContent />
     </Suspense>
   )
-} 
+}

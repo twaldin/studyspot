@@ -34,7 +34,7 @@ export default clerkMiddleware(async (auth, req) => {
       if (!onboardingStatus.hasCompletedOnboarding) {
         // If not completed onboarding and not already on onboarding page
         if (!req.nextUrl.pathname.startsWith("/onboarding")) {
-          const onboardingUrl = new URL("/onboarding", req.url);
+          const onboardingUrl = new URL("/onboarding/select-school", req.url);
           return NextResponse.redirect(onboardingUrl);
         }
       } else {
