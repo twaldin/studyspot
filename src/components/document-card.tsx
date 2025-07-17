@@ -12,11 +12,11 @@ interface DocumentCardProps {
 
 export function DocumentCard({ url, file, fileType }: DocumentCardProps) {
   return (
-    <a 
-          href={url} 
-          target="_blank" 
+    <a
+          href={url}
+          target="_blank"
           rel="noopener noreferrer"
-          className="text-blue-600"
+          className="h-full text-blue-600"
         >
     <Card className="h-fit">
       <CardHeader className="pb-3">
