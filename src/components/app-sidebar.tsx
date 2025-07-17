@@ -168,23 +168,18 @@ export function AppSidebar() {
     : null;
 
   const onChatSelect = (chatId: string) => {
-    // Navigate immediately for instant feel
+    // Navigate immediately for instant feel (optimistic navigation)
     handleChatSelect(chatId);
+    
+    // Close mobile sidebar immediately
+    closeMobileIfOpen();
 
-    // Update course selection in background
+    // Update course selection in background with optimistic update
     selectChatAndNavigateMutation.mutate(chatId, {
-      onSuccess: () => {
-        // Navigate immediately after course selection
-        handleChatSelect(chatId);
-        // Close mobile sidebar after successful navigation
-        closeMobileIfOpen();
-      },
       onError: (error) => {
         console.error("Failed to select chat course:", error);
-        // Navigate anyway, even if course selection fails
-        handleChatSelect(chatId);
-        // Close mobile sidebar even on error
-        closeMobileIfOpen();
+        toast.error("Failed to update course selection");
+        // The optimistic update will be rolled back automatically by React Query
       },
     });
   };
