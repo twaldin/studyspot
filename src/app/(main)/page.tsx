@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Zap, ArrowRight, Upload, MessagesSquare } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { FileUploadDialog } from "@/components/file-upload-dialog";
 import Link from "next/link";
 import { NewPostDialog } from "@/components/new-post-dialog";
@@ -18,6 +18,7 @@ import logger from "@/lib/logger";
 
 export default function Home() {
   const { data: selectedCourse, isLoading, error } = useSelectedCourse();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [isNewPostDialogOpen, setIsNewPostDialogOpen] = useState(false);
@@ -25,6 +26,13 @@ export default function Home() {
   const router = useRouter();
   const { data: suggestedQueries = [], isLoading: isLoadingSuggestedQueries } = useSuggestedQueries(selectedCourse?.id);
   const createChatMutation = useCreateChat();
+
+  // Auto-focus the textarea when component mounts
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, []);
 
   const handleNewChat = async (messageContent: string) => {
     if (!selectedCourse || isCreatingChat) {
@@ -113,13 +121,12 @@ export default function Home() {
           )}
         </div>
         </div>
-        <ChatInputBar onSubmit={handleFormSubmit} isSubmitting={isCreatingChat} />
+        <ChatInputBar ref={textareaRef} onSubmit={handleFormSubmit} isSubmitting={isCreatingChat} />
 
         {/* Dynamic CardGrid section from 'dev' branch */}
         <div className="hidden @md:block">
-          {isLoading && <div>Loading course...</div>}
           {error && <div>Error loading course</div>}
-          {selectedCourse && <CardGrid courseId={selectedCourse.id} />}
+          {selectedCourse && <CardGrid courseId={selectedCourse.id} viewAll={false} />}
         </div>
 
         {/* Buttons and desktop link from 'chore/mobile-fixes' branch */}

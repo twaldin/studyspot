@@ -145,11 +145,11 @@ export function ChatPageContent({ chatId }: { chatId?: string }) {
   const showThinkingIndicator = chatStateService.shouldShowThinkingIndicator(messages, isReplying)
 
   return (
-    <div className="mx-auto w-full max-w-3xl h-full flex flex-col p-6 gap-4">
+    <div className="mx-auto w-full max-w-3xl h-full flex flex-col p-6 pt-0">
       {error && <div className="text-red-500 p-4 text-center bg-red-100 rounded-md">{error}</div>}
       
-      <div className="flex-1 overflow-y-auto no-scrollbar">
-        <div className="flex flex-col gap-4">
+      <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+        <div className="flex flex-col gap-4 py-4">
           {messages.map((message, i) =>
             message.type === "user" ? (
               <UserMessage key={message.id || i} className="w-fit max-w-[80%] self-end">

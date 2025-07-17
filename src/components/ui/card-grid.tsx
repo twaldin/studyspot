@@ -5,9 +5,10 @@ import { useDocuments } from "@/hooks/api/documents"
 
 interface CardGridProps {
   courseId?: string
+  viewAll?: boolean
 }
 
-export function CardGrid({ courseId }: CardGridProps) {
+export function CardGrid({ courseId, viewAll }: CardGridProps) {
   const { data: documents, isLoading, error } = useDocuments(courseId);
 
   if (isLoading) {
@@ -21,9 +22,10 @@ export function CardGrid({ courseId }: CardGridProps) {
   if (!documents || documents.length === 0) {
     return <div className="text-center py-4 text-gray-500">No documents found</div>;
   }
- const limitedDocuments = documents.slice(0, 6);
+  const limitedDocuments = viewAll === false ? documents.slice(0, 6) : documents;
 
   return (
+    
     <div className="hidden gap-4 @md:grid @md:grid-cols-2 @lg:grid-cols-3">
       {limitedDocuments.map((doc) => (
         <DocumentCard

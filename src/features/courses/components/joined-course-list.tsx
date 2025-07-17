@@ -29,6 +29,7 @@ interface JoinedCourseListProps {
   selectedCourseId?: string | null;
   onCourseSelect: (course: ICourse) => void;
   isLoading?: boolean;
+  onAddMoreClick?: () => void; // Optional callback for when "Add More" is clicked
 }
 
 export function JoinedCourseList({
@@ -36,12 +37,20 @@ export function JoinedCourseList({
   selectedCourseId,
   onCourseSelect,
   isLoading = false,
+  onAddMoreClick,
 }: JoinedCourseListProps) {
+  const handleAddMoreClick = () => {
+    // Call the optional callback if provided (for mobile sidebar closing)
+    if (onAddMoreClick) {
+      onAddMoreClick();
+    }
+  };
+
   if (courses.length === 0) {
     return (
       <div className="text-center text-muted-foreground py-4">
         <p className="text-sm mb-2">No courses joined yet</p>
-        <Button asChild variant="ghost" className="gap-2">
+        <Button asChild variant="ghost" className="gap-2" onClick={handleAddMoreClick}>
           <Link href="/courses">
             <PlusCircle className="h-4 w-4" />
             Join Courses
@@ -72,7 +81,7 @@ export function JoinedCourseList({
           </Button>
         );
       })}
-      <Button asChild variant="ghost" className="gap-2">
+      <Button asChild variant="ghost" className="gap-2" onClick={handleAddMoreClick}>
         <Link href="/courses">
           <PlusCircle className="h-4 w-4" />
           Add More

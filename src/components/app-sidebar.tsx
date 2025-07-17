@@ -49,6 +49,7 @@ import {
   SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -65,6 +66,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+
+// Custom hook to handle mobile sidebar closing
+const useMobileSidebarClose = () => {
+  const { isMobile, setOpenMobile } = useSidebar();
+  
+  const closeMobileIfOpen = React.useCallback(() => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  }, [isMobile, setOpenMobile]);
+  
+  return { closeMobileIfOpen };
+};
 
 // Menu items.
 const items = [
@@ -116,6 +130,9 @@ export function AppSidebar() {
   const pathname = usePathname();
   const hasJoinedCourses = joinedCourseIds && joinedCourseIds.length > 0;
 
+  // Mobile sidebar close functionality
+  const { closeMobileIfOpen } = useMobileSidebarClose();
+
   // Filter courses to only show joined ones
   const joinedCourses = allCourses.filter((course) =>
     joinedCourseIds.includes(course.id)
@@ -125,6 +142,10 @@ export function AppSidebar() {
     setSelectedCourseMutation.mutate(course, {
       onError: (error: any) => {
         toast.error(error.message || "Failed to select course");
+      },
+      onSuccess: () => {
+        // Close mobile sidebar after successful course selection
+        closeMobileIfOpen();
       },
     });
   };
@@ -140,9 +161,18 @@ export function AppSidebar() {
     
     // Update course selection in background
     selectChatAndNavigateMutation.mutate(chatId, {
+      onSuccess: () => {
+        // Navigate immediately after course selection
+        handleChatSelect(chatId);
+        // Close mobile sidebar after successful navigation
+        closeMobileIfOpen();
+      },
       onError: (error) => {
         console.error("Failed to select chat course:", error);
-        // User has already navigated, so just log the error
+        // Navigate anyway, even if course selection fails
+        handleChatSelect(chatId);
+        // Close mobile sidebar even on error
+        closeMobileIfOpen();
       },
     });
   };
@@ -167,6 +197,8 @@ export function AppSidebar() {
       return;
     }
     handleNewChat();
+    // Close mobile sidebar after navigation
+    closeMobileIfOpen();
   };
 
   const handleSignOut = () => {
@@ -233,7 +265,8 @@ export function AppSidebar() {
           <StudySpotLogo className="h-10 w-auto group-data-[collapsible=icon]:hidden" />
         </div>
         <Button
-          className="w-full justify-start gap-2 group-data-[collapsible=icon]:w-fit group-data-[collapsible=icon]:justify-center"
+          className="w-full justify-start gap-2 group-data-[collapsible=icon]:w-fit group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:self-center"
+
           variant="secondary"
           onClick={onNewChatClick}
         >
@@ -256,6 +289,7 @@ export function AppSidebar() {
                 selectedCourseId={selectedCourse?.id}
                 onCourseSelect={handleCourseSelect}
                 isLoading={setSelectedCourseMutation.isPending}
+                onAddMoreClick={closeMobileIfOpen}
               />
             </div>
           </SidebarGroupContent>
