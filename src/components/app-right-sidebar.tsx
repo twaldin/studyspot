@@ -162,7 +162,6 @@ export function AppRightSidebar() {
         // If we're in a chat page, navigate to dashboard to switch course context
         if (isInChat) {
           router.push('/');
-          toast.success(`Switched to ${course.title || course.code}`);
         }
       },
       onError: (error: any) => {

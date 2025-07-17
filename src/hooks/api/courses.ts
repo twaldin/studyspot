@@ -7,6 +7,7 @@ import {
 } from "./base";
 import { ICourse } from "@/features/courses/course.model";
 import logger from "@/lib/logger";
+import { rateLimiter, RATE_LIMITS } from "@/lib/utils/rate-limiter";
 
 // Types
 interface CreateCourseRequest {
@@ -184,6 +185,11 @@ export function useCreateCourse() {
   return useMutation({
     mutationKey: mutationKeys.courses.create,
     mutationFn: async (courseData: CreateCourseRequest) => {
+      // Apply course creation rate limiting
+      if (rateLimiter.checkRateLimit('/courses', RATE_LIMITS.COURSE_CREATION)) {
+        throw new Error('Rate limit exceeded for course creation');
+      }
+      
       // Retry logic for race condition handling
       const maxRetries = 3;
       let lastError: any;

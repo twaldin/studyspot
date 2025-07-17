@@ -32,6 +32,9 @@ importers:
       '@llamaindex/readers':
         specifier: ^3.1.13
         version: 3.1.13(@llamaindex/core@0.6.14)(@llamaindex/env@0.1.30)
+      '@next/eslint-plugin-next':
+        specifier: ^15.4.1
+        version: 15.4.1
       '@radix-ui/react-alert-dialog':
         specifier: ^1.1.14
         version: 1.1.14(@types/react-dom@19.1.6(@types/react@19.1.8))(@types/react@19.1.8)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -201,6 +204,9 @@ importers:
       eslint-config-next:
         specifier: ^15.4.1
         version: 15.4.1(eslint@9.31.0(jiti@2.4.2))(typescript@5.8.3)
+      eslint-plugin-react-hooks:
+        specifier: ^5.2.0
+        version: 5.2.0(eslint@9.31.0(jiti@2.4.2))
       tailwindcss:
         specifier: ^4
         version: 4.1.11

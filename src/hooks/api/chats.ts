@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient, queryKeys, mutationKeys, useAuthenticatedUser } from './base';
 import { Chat, Message } from '@/features/chat/chat.types';
 import logger from '@/lib/logger';
+import { rateLimiter, RATE_LIMITS } from '@/lib/utils/rate-limiter';
 
 // Types
 export interface ChatSummary {
@@ -84,6 +85,11 @@ export function useCreateChat() {
   return useMutation({
     mutationKey: mutationKeys.chats.create,
     mutationFn: async (data: CreateChatRequest) => {
+      // Apply chat-specific rate limiting
+      if (rateLimiter.checkRateLimit('/chats', RATE_LIMITS.CHAT_MESSAGES)) {
+        throw new Error('Rate limit exceeded for chat creation');
+      }
+      
       const response = await apiClient<Chat>('/chats', {
         method: 'POST',
         body: JSON.stringify(data),
@@ -120,6 +126,11 @@ export function useUpdateChat() {
   return useMutation({
     mutationKey: mutationKeys.chats.update,
     mutationFn: async ({ chatId, data }: { chatId: string; data: UpdateChatRequest }) => {
+      // Apply chat update rate limiting
+      if (rateLimiter.checkRateLimit(`/chats/${chatId}`, RATE_LIMITS.CHAT_MESSAGES)) {
+        throw new Error('Rate limit exceeded for chat updates');
+      }
+      
       const response = await apiClient<{ data: UpdateChatResponse }>(`/chats/${chatId}`, {
         method: 'PATCH',
         body: JSON.stringify(data),

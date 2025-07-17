@@ -10,6 +10,7 @@ import {
   PlusCircle,
   Radical,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { ICourse } from "@/features/courses/course.model";
 
@@ -61,7 +62,10 @@ export function JoinedCourseList({
             key={course.id}
             variant={isSelected ? "flat" : "ghost"}
             onClick={() => onCourseSelect(course)}
-            className="gap-2 transition-none active:bg-inherit active:text-inherit hover:bg-inherit hover:text-inherit"
+            className={cn(
+              "gap-2 transition-none",
+              isSelected && "hover:bg-secondary", // Override hover effect when selected
+            )}
           >
             <IconComponent className="h-4 w-4" />
             <span className="truncate">{course.code || "Unknown"}</span>
