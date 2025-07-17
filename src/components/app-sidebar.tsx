@@ -24,7 +24,7 @@ import {
 import { ICourse } from "@/features/courses/course.model";
 import { JoinedCourseList } from "@/features/courses/components/joined-course-list";
 import toast from "react-hot-toast";
-import { useChats, useSelectChatCourse } from "@/hooks/api/chats";
+import { useChats, useSelectChatCourse, usePreloadChat, useSelectChatAndNavigate } from "@/hooks/api/chats";
 import { useChatNavigation } from "@/features/chat/ChatNavigationContext";
 import { usePathname } from "next/navigation";
 
@@ -99,6 +99,8 @@ export function AppSidebar() {
   // Chat functionality
   const { data: chats = [], isLoading: isLoadingChats, error: chatsError } = useChats();
   const selectChatCourseMutation = useSelectChatCourse();
+  const selectChatAndNavigateMutation = useSelectChatAndNavigate();
+  const preloadChat = usePreloadChat();
   const { handleChatSelect, handleNewChat, handleDeleteChat } = useChatNavigation();
   const pathname = usePathname();
 
@@ -121,9 +123,10 @@ export function AppSidebar() {
     : null;
 
   const onChatSelect = (chatId: string) => {
-    // First select the course for this chat, then navigate
-    selectChatCourseMutation.mutate(chatId, {
+    // Use the combined mutation for faster navigation
+    selectChatAndNavigateMutation.mutate(chatId, {
       onSuccess: () => {
+        // Navigate immediately after course selection
         handleChatSelect(chatId);
       },
       onError: (error) => {
@@ -132,6 +135,11 @@ export function AppSidebar() {
         handleChatSelect(chatId);
       },
     });
+  };
+
+  const onChatHover = (chatId: string) => {
+    // Preload chat data on hover for faster perceived loading
+    preloadChat(chatId);
   };
 
   const onDeleteChat = (chatId: string) => {
@@ -269,6 +277,7 @@ export function AppSidebar() {
                         e.preventDefault();
                         onChatSelect(chat.id);
                       }}
+                      onMouseEnter={() => onChatHover(chat.id)}
                     >
                       <FlaskConical className="h-4 w-4 shrink-0" />
                       <span className="group-data-[collapsible=icon]:hidden truncate min-w-0">

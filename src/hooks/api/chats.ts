@@ -42,7 +42,7 @@ export function useChats() {
       return response.chats || [];
     },
     enabled: isAuthenticated && !!schoolId,
-    staleTime: 2 * 60 * 1000, // 2 minutes for chat list
+    staleTime: 5 * 60 * 1000, // 5 minutes for chat list
     refetchInterval: 30 * 1000, // Refetch every 30 seconds instead of on every focus
     refetchOnWindowFocus: false, // Prevent refetch on window focus to reduce API calls
     retry: (failureCount, error) => {
@@ -72,7 +72,7 @@ export function useChat(chatId?: string, options?: { enabled?: boolean }) {
       return response.data;
     },
     enabled: options?.enabled !== false && isAuthenticated && !!chatId && !!schoolId, // Ensure schoolId is loaded
-    staleTime: 1 * 60 * 1000, // 1 minute for individual chat
+    staleTime: 5 * 60 * 1000, // 5 minutes for individual chat
   });
 }
 
@@ -124,11 +124,24 @@ export function useUpdateChat() {
         method: 'PATCH',
         body: JSON.stringify(data),
       });
-      return { chatId, ...response.data };
+      return { chatId, messages: data.messages, ...response.data };
     },
-    onSuccess: ({ chatId, title }) => {
-      // Don't invalidate chat cache to avoid scroll reset
-      // The chat messages are already updated optimistically during streaming
+    onSuccess: ({ chatId, title, messages }) => {
+      // Update the individual chat cache with the complete message history
+      if (messages) {
+        queryClient.setQueryData(queryKeys.chats.detail(chatId), (oldData: any) => {
+          if (!oldData) return oldData;
+          
+          // Update the chat data with complete message history
+          const updatedData = {
+            ...oldData,
+            chats: messages
+          };
+          
+          logger.info('Updated chat cache with complete message history', { chatId, messagesCount: messages.length });
+          return updatedData;
+        });
+      }
       
       // Update title in chat list if changed
       if (title) {
@@ -236,6 +249,144 @@ export function useSelectChatCourse() {
     },
     onError: (error) => {
       logger.error({ error }, 'Failed to select chat course');
+    },
+  });
+}
+
+// Combined chat selection and course selection for faster navigation
+export function useSelectChatAndNavigate() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationKey: mutationKeys.chats.selectAndNavigate,
+    mutationFn: async (chatId: string) => {
+      // Perform course selection API call
+      const response = await apiClient<{ courseId: string | null; course: any }>(`/chats/${chatId}/select`, {
+        method: 'POST',
+      });
+      return { chatId, ...response };
+    },
+    onSuccess: (data) => {
+      // Optimistically update the selected course cache if we have the course data
+      if (data.course) {
+        queryClient.setQueryData(queryKeys.user.selectedCourse(), data.course);
+      }
+      
+      // Invalidate user-related caches since selected course changed
+      queryClient.invalidateQueries({ queryKey: queryKeys.user.selectedCourse() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.user.profile() });
+      
+      // Invalidate suggested queries for the new course
+      if (data.courseId) {
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.courses.suggestedQueries(data.courseId),
+        });
+      }
+      
+      logger.info('Updated selected course and ready for navigation');
+    },
+    onError: (error) => {
+      logger.error({ error }, 'Failed to select chat course');
+    },
+  });
+}
+
+// Preload chat data for performance optimization
+export function usePreloadChat() {
+  const queryClient = useQueryClient();
+  const { isAuthenticated, schoolId } = useAuthenticatedUser();
+  
+  return (chatId: string) => {
+    if (!isAuthenticated || !schoolId || !chatId) return;
+    
+    // Prefetch chat data if not already cached
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.chats.detail(chatId),
+      queryFn: async () => {
+        const response = await apiClient<{ data: Chat }>(`/chats/${chatId}`);
+        if (!response.data) {
+          throw new Error('Chat not found');
+        }
+        return response.data;
+      },
+      staleTime: 5 * 60 * 1000,
+    });
+  };
+}
+
+// Update chat cache with new assistant message (for first message only)
+export function useUpdateChatCache() {
+  const queryClient = useQueryClient();
+  const { schoolId } = useAuthenticatedUser();
+  
+  return useMutation({
+    mutationKey: mutationKeys.chats.updateCache,
+    mutationFn: async ({ chatId, userMessage, assistantMessage, linkedDocumentIds }: {
+      chatId: string;
+      userMessage: string;
+      assistantMessage: string;
+      linkedDocumentIds: string[];
+    }) => {
+      // This doesn't make an API call, just updates the cache
+      return { chatId, userMessage, assistantMessage, linkedDocumentIds };
+    },
+    onSuccess: ({ chatId, userMessage, assistantMessage, linkedDocumentIds }) => {
+      // Update the individual chat cache
+      queryClient.setQueryData(queryKeys.chats.detail(chatId), (oldData: any) => {
+        if (!oldData) return oldData;
+        
+        const newMessages = [
+          { role: 'user', content: userMessage },
+          { role: 'assistant', content: assistantMessage, linkedDocumentIds }
+        ];
+        
+        // Update the chat data with new messages
+        const updatedData = {
+          ...oldData,
+          chats: newMessages
+        };
+        
+        logger.info('Updated chat cache with new assistant message', { chatId, messagesCount: newMessages.length });
+        return updatedData;
+      });
+    },
+    onError: (error) => {
+      logger.error({ error }, 'Failed to update chat cache');
+    },
+  });
+}
+
+// Update chat cache with full conversation history (for subsequent messages)
+export function useUpdateChatCacheWithHistory() {
+  const queryClient = useQueryClient();
+  const { schoolId } = useAuthenticatedUser();
+  
+  return useMutation({
+    mutationKey: mutationKeys.chats.updateCacheWithHistory,
+    mutationFn: async ({ chatId, messages }: {
+      chatId: string;
+      messages: Array<{ role: string; content: string; linkedDocumentIds?: string[] }>;
+    }) => {
+      // This doesn't make an API call, just updates the cache
+      return { chatId, messages };
+    },
+    onSuccess: ({ chatId, messages }) => {
+      // Update the individual chat cache with full conversation
+      queryClient.setQueryData(queryKeys.chats.detail(chatId), (oldData: any) => {
+        if (!oldData) return oldData;
+        
+        // Update the chat data with complete message history
+        const updatedData = {
+          ...oldData,
+          chats: messages
+        };
+        
+        logger.info('Updated chat cache with full conversation history', { chatId, messagesCount: messages.length });
+        return updatedData;
+      });
+    },
+    onError: (error) => {
+      logger.error({ error }, 'Failed to update chat cache with history');
     },
   });
 }

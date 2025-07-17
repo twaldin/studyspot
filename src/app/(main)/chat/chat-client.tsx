@@ -120,7 +120,7 @@ export function ChatPageContent({ chatId }: { chatId?: string }) {
     } catch (error) {
       chatStateService.handleMessageError({ messages, setMessages, setIsReplying, setError }, error as Error)
     }
-  }, [messages, selectedCourse, createChatMutation, updateChatMutation, router])
+  }, [messages, selectedCourse, createChatMutation, updateChatMutation, router, isReplying])
 
   const handleDeleteChat = useCallback(async (chatIdToDelete: string) => {
     try {
