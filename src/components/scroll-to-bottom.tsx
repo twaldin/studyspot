@@ -1,10 +1,11 @@
 "use client"
 
-import { Button, type ButtonProps } from "@/components/ui/button"
+import { Button } from "@/components/ui/button"
+import type { ButtonHTMLAttributes } from "react"
 import { ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-interface ScrollToBottomButtonProps extends ButtonProps {
+interface ScrollToBottomButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   isAtBottom: boolean
   scrollToBottom: () => void
 }

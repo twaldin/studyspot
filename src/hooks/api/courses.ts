@@ -7,7 +7,7 @@ import {
 } from "./base";
 import { ICourse } from "@/features/courses/course.model";
 import logger from "@/lib/logger";
-import { rateLimiter, RATE_LIMITS } from "@/lib/utils/rate-limiter";
+import { RATE_LIMITS, rateLimiter } from "@/lib/utils/rate-limiter";
 
 // Types
 interface CreateCourseRequest {
@@ -124,14 +124,13 @@ export function useSetSelectedCourse() {
       return { previousSelectedCourse };
     },
     onSuccess: (course) => {
-      // Ensure cache is set to server response (but don't invalidate immediately)
-      queryClient.setQueryData(queryKeys.user.selectedCourse(), course);
+      // Invalidate all queries that depend on the selected course
+      queryClient.invalidateQueries({ queryKey: queryKeys.courses.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.chats.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.documents.all });
 
-      // Invalidate related caches but not the selected course itself
-      queryClient.invalidateQueries({ queryKey: queryKeys.user.profile() });
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.courses.suggestedQueries(course.id),
-      });
+      // Set the selected course in the cache
+      queryClient.setQueryData(queryKeys.user.selectedCourse(), course);
 
       logger.info({ courseId: course.id }, "Set selected course");
     },
@@ -158,11 +157,13 @@ export function useClearSelectedCourse() {
       await apiClient("/user/selected-course", { method: "DELETE" });
     },
     onSuccess: () => {
-      // Clear selected course cache
+      // Clear selected course cache and force refetch
       queryClient.setQueryData(queryKeys.user.selectedCourse(), null);
+      queryClient.invalidateQueries({ queryKey: queryKeys.user.selectedCourse() });
 
-      // Invalidate related caches
+      // Invalidate related caches to ensure fresh data
       queryClient.invalidateQueries({ queryKey: queryKeys.user.profile() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.user.all });
       queryClient.invalidateQueries({
         predicate: (query) =>
           query.queryKey[0] === "courses" &&
@@ -186,48 +187,18 @@ export function useCreateCourse() {
     mutationKey: mutationKeys.courses.create,
     mutationFn: async (courseData: CreateCourseRequest) => {
       // Apply course creation rate limiting
-      if (rateLimiter.checkRateLimit('/courses', RATE_LIMITS.COURSE_CREATION)) {
-        throw new Error('Rate limit exceeded for course creation');
-      }
-      
-      // Retry logic for race condition handling
-      const maxRetries = 3;
-      let lastError: any;
-
-      for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-          const response = await apiClient<{ data: CreateCourseResponse }>(
-            "/courses",
-            {
-              method: "POST",
-              body: JSON.stringify(courseData),
-            },
-          );
-          return response.data.course;
-        } catch (error: any) {
-          lastError = error;
-
-          // If it's a duplicate error and not the final attempt, wait and retry
-          if (
-            error.message?.includes("already exists") && attempt < maxRetries
-          ) {
-            logger.warn({
-              attempt,
-              courseCode: courseData.code,
-              error: error.message,
-            }, "Course creation failed due to race condition, retrying...");
-
-            // Wait progressively longer between retries (500ms, 1s, 1.5s)
-            await new Promise((resolve) => setTimeout(resolve, attempt * 500));
-            continue;
-          }
-
-          // For other errors or final attempt, throw immediately
-          throw error;
-        }
+      if (rateLimiter.checkRateLimit("/courses", RATE_LIMITS.COURSE_CREATION)) {
+        throw new Error("Rate limit exceeded for course creation");
       }
 
-      throw lastError;
+      const response = await apiClient<CreateCourseResponse>(
+        "/courses",
+        {
+          method: "POST",
+          body: JSON.stringify(courseData),
+        },
+      );
+      return response.course;
     },
     onSuccess: () => {
       // Invalidate courses list to refetch with new course
@@ -238,7 +209,7 @@ export function useCreateCourse() {
       logger.info("Created new course");
     },
     onError: (error) => {
-      logger.error({ error }, "Failed to create course after retries");
+      logger.error({ error }, "Failed to create course");
     },
   });
 }
@@ -318,7 +289,9 @@ export function useJoinCourse() {
   return useMutation({
     mutationKey: mutationKeys.user.joinCourse,
     mutationFn: async (courseId: string) => {
-      const response = await apiClient<{ success: boolean; joinedCourses: string[] }>(
+      const response = await apiClient<
+        { success: boolean; joinedCourses: string[] }
+      >(
         "/courses/join",
         {
           method: "POST",
@@ -341,7 +314,10 @@ export function useJoinCourse() {
       // Optimistically update joined courses
       const currentJoinedCourses = previousJoinedCourses || [];
       const updatedJoinedCourses = [...currentJoinedCourses, courseId];
-      queryClient.setQueryData(queryKeys.user.joinedCourses(), updatedJoinedCourses);
+      queryClient.setQueryData(
+        queryKeys.user.joinedCourses(),
+        updatedJoinedCourses,
+      );
 
       return { previousJoinedCourses };
     },
@@ -367,17 +343,18 @@ export function useJoinCourse() {
 // Leave course mutation
 export function useLeaveCourse() {
   const queryClient = useQueryClient();
+  const { schoolId } = useAuthenticatedUser();
 
   return useMutation({
     mutationKey: mutationKeys.user.leaveCourse,
     mutationFn: async (courseId: string) => {
-      const response = await apiClient<{ success: boolean; joinedCourses: string[] }>(
-        "/courses/leave",
-        {
-          method: "POST",
-          body: JSON.stringify({ courseId }),
-        },
-      );
+      const response = await apiClient<{
+        success: boolean;
+        joinedCourses: string[];
+      }>("/courses/leave", {
+        method: "POST",
+        body: JSON.stringify({ courseId }),
+      });
       return response.joinedCourses;
     },
     onMutate: async (courseId) => {
@@ -393,14 +370,26 @@ export function useLeaveCourse() {
 
       // Optimistically update joined courses
       const currentJoinedCourses = previousJoinedCourses || [];
-      const updatedJoinedCourses = currentJoinedCourses.filter(id => id !== courseId);
-      queryClient.setQueryData(queryKeys.user.joinedCourses(), updatedJoinedCourses);
+      const updatedJoinedCourses = currentJoinedCourses.filter(
+        (id) => id !== courseId,
+      );
+      queryClient.setQueryData(
+        queryKeys.user.joinedCourses(),
+        updatedJoinedCourses,
+      );
 
-      return { previousJoinedCourses };
+      return { updatedJoinedCourses, previousJoinedCourses };
     },
-    onSuccess: (joinedCourses) => {
+    onSuccess: async (joinedCourses, courseId) => {
       // Update joined courses cache with server response
       queryClient.setQueryData(queryKeys.user.joinedCourses(), joinedCourses);
+
+      // Invalidate all course-related data to reflect the change
+      await queryClient.invalidateQueries({ queryKey: queryKeys.courses.all });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.chats.all });
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.documents.all,
+      });
 
       logger.info("Left course successfully");
     },
@@ -417,3 +406,16 @@ export function useLeaveCourse() {
   });
 }
 
+// Verify course mutation
+export function useVerifyCourse() {
+  return useMutation({
+    mutationKey: mutationKeys.courses.verify,
+    mutationFn: async ({ courseCode }: { courseCode: string }) => {
+      const response = await apiClient("/courses/verify", {
+        method: "POST",
+        body: JSON.stringify({ courseCode }),
+      });
+      return response;
+    },
+  });
+}

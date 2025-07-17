@@ -23,6 +23,7 @@ export async function POST(request: Request) {
     }
 
     // Update user metadata with selected school and onboarding completion
+    // Clear selectedCourseId since user is changing schools
     const client = await clerkClient();
     const metadata = {
       publicMetadata: {
@@ -31,6 +32,7 @@ export async function POST(request: Request) {
         selectedSchoolDomain,
         hasCompletedOnboarding: true,
         onboardingCompletedAt: new Date().toISOString(),
+        selectedCourseId: undefined, // Clear selected course when changing schools
       },
     };
 

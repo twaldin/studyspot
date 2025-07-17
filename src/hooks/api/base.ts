@@ -141,6 +141,7 @@ export const mutationKeys = {
   courses: {
     create: ['courses', 'create'] as const,
     delete: ['courses', 'delete'] as const,
+    verify: ['courses', 'verify'] as const,
   },
   
   chats: {

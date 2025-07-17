@@ -20,7 +20,7 @@ export interface CourseVerificationResult {
   message: string;
   confidence?: number;
   reason?: string;
-  type?: "duplicate" | "invalid_pattern" | "not_found";
+  type?: "duplicate" | "invalid_pattern" | "not_found" | "content_unsafe";
 }
 
 // Course creation types
