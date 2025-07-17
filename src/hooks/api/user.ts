@@ -79,7 +79,9 @@ export function useUserSchool() {
       return response.school;
     },
     enabled: isAuthenticated,
-    staleTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 1 * 60 * 1000, // Reduced to 1 minute to prevent stale data during rapid school switches
+    gcTime: 5 * 60 * 1000, // 5 minutes garbage collection
+    refetchOnWindowFocus: true, // Refetch when window gains focus to ensure fresh data
   });
 }
 
@@ -97,7 +99,22 @@ export function useUpdateOnboarding() {
       });
       return data;
     },
-    onSuccess: async () => {
+    onMutate: async (data) => {
+      // Optimistically update the user school data
+      await queryClient.cancelQueries({ queryKey: queryKeys.user.school() });
+      
+      const previousSchool = queryClient.getQueryData(queryKeys.user.school());
+      
+      // Set the new school data optimistically
+      queryClient.setQueryData(queryKeys.user.school(), {
+        id: data.selectedSchool,
+        name: data.selectedSchoolName,
+        domain: data.selectedSchoolDomain,
+      });
+      
+      return { previousSchool };
+    },
+    onSuccess: async (data, variables, context) => {
       // Clear the backend user cache to ensure fresh data
       if (user?.id) {
         await fetch('/api/user/cache', {
@@ -110,11 +127,25 @@ export function useUpdateOnboarding() {
         });
       }
       
-      // Clear the entire react-query cache to ensure all queries are refetched with the new school ID
-      queryClient.clear();
-      logger.info("Cleared query cache after updating onboarding data");
+      // Force reload of user metadata to ensure consistency
+      await user?.reload();
+      
+      // Selectively invalidate queries that depend on school ID
+      await queryClient.invalidateQueries({ queryKey: queryKeys.user.school() });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.courses.all });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.chats.all });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.documents.all });
+      
+      // Clear selected course since it's school-dependent
+      queryClient.setQueryData(queryKeys.user.selectedCourse(), null);
+      
+      logger.info({ schoolId: data.selectedSchool }, "Updated onboarding and invalidated school-dependent queries");
     },
-    onError: (error) => {
+    onError: (error, variables, context) => {
+      // Revert optimistic update on error
+      if (context?.previousSchool !== undefined) {
+        queryClient.setQueryData(queryKeys.user.school(), context.previousSchool);
+      }
       logger.error({ error }, "Failed to update onboarding");
     },
   });
