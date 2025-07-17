@@ -9,6 +9,7 @@ import { useUserSchool } from "./user"; // Import useUserSchool
 import { ICourse } from "@/features/courses/course.model";
 import logger from "@/lib/logger";
 import { RATE_LIMITS, rateLimiter } from "@/lib/utils/rate-limiter";
+import { UserSchool } from "@/features/auth/types";
 
 // Types
 interface CreateCourseRequest {
@@ -30,17 +31,31 @@ export function useCourses() {
   const { data: school, isLoading: isSchoolLoading } = useUserSchool();
   const schoolId = school?.id;
   const { isAuthenticated } = useAuthenticatedUser();
+  const queryClient = useQueryClient();
 
   return useQuery({
     queryKey: queryKeys.courses.list(schoolId),
     queryFn: async () => {
+      // Double-check that we still have the same school ID to prevent race conditions
+      const currentSchool = queryClient.getQueryData(queryKeys.user.school()) as UserSchool | null;
+      if (currentSchool?.id !== schoolId) {
+        throw new Error("School ID changed during fetch, aborting");
+      }
+      
       const response = await apiClient<{ courses: ICourse[] }>(
         "/courses",
       );
       return response.courses || [];
     },
     enabled: isAuthenticated && !!schoolId && !isSchoolLoading,
-    staleTime: 10 * 60 * 1000, // 10 minutes for course list
+    staleTime: 2 * 60 * 1000, // Reduced to 2 minutes to prevent stale data during school switches
+    retry: (failureCount, error) => {
+      // Don't retry if the error is due to school ID change
+      if (error.message?.includes("School ID changed during fetch")) {
+        return false;
+      }
+      return failureCount < 3;
+    },
   });
 }
 

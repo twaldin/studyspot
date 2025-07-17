@@ -20,19 +20,6 @@ import logger from "@/lib/logger";
 import { useUpdateOnboarding } from "@/hooks/api/";
 import type { School } from "@/features/auth/types";
 
-const schools = [
-  { id: "uw-madison", name: "University of Wisconsin-Madison" },
-  { id: "mit", name: "Massachusetts Institute of Technology" },
-  { id: "stanford", name: "Stanford University" },
-  { id: "harvard", name: "Harvard University" },
-  { id: "caltech", name: "California Institute of Technology" },
-  { id: "princeton", name: "Princeton University" },
-  { id: "yale", name: "Yale University" },
-  { id: "columbia", name: "Columbia University" },
-  { id: "uchicago", name: "University of Chicago" },
-  { id: "upenn", name: "University of Pennsylvania" },
-];
-
 export default function SelectSchoolPage() {
   const [selectedSchoolId, setSelectedSchoolId] = React.useState<string | null>(
     null,
@@ -44,6 +31,7 @@ export default function SelectSchoolPage() {
   const { user } = useUser();
   const listContainerRef = React.useRef<HTMLDivElement>(null);
   const keyboardNavigation = React.useRef(false);
+  const processingSchoolId = React.useRef<string | null>(null);
   const { data: schools = [], isLoading, error: schoolsError } = useSchools();
   const updateOnboardingMutation = useUpdateOnboarding();
 
@@ -98,58 +86,63 @@ export default function SelectSchoolPage() {
 
   const handleSelectSchool = async (school: School) => {
     if (isProcessing) return;
-    
+
+    // Prevent rapid successive selections of the same school
+    if (processingSchoolId.current === school.id) {
+      logger.warn({ schoolId: school.id }, "School selection already in progress, ignoring duplicate request");
+      return;
+    }
+
     setIsProcessing(true);
+    processingSchoolId.current = school.id;
+    
     try {
       // Trim the school name to remove any whitespace or newlines
       const cleanedSchoolName = school.name.trim();
 
+      // Store the school ID we're trying to set to detect race conditions
+      const targetSchoolId = school.id;
+
       await updateOnboardingMutation.mutateAsync({
-        selectedSchool: school.id,
+        selectedSchool: targetSchoolId,
         selectedSchoolName: cleanedSchoolName,
         selectedSchoolDomain: school.domain,
       });
-      
-      // Force reload of user metadata to ensure fresh data
-      await user?.reload();
-      
-      // Wait for metadata consistency - check that the selected school matches
-      let attempts = 0;
-      const maxAttempts = 10;
-      while (attempts < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 200));
-        await user?.reload();
+
+      // Only proceed with navigation if we're still processing the same school
+      if (processingSchoolId.current === targetSchoolId) {
+        logger.info(
+          { schoolId: targetSchoolId, schoolName: cleanedSchoolName },
+          "School selected and onboarding updated successfully",
+        );
         
-        if (user?.publicMetadata?.selectedSchool === school.id) {
-          logger.info(
-            { schoolId: school.id, attempts: attempts + 1 },
-            "Metadata consistency confirmed"
-          );
-          break;
-        }
-        attempts++;
-      }
-      
-      if (attempts >= maxAttempts) {
+        // Navigate to Canvas integration step
+        router.push("/onboarding/connect-canvas");
+      } else {
         logger.warn(
-          { schoolId: school.id, userMetadata: user?.publicMetadata },
-          "Metadata consistency check timed out, proceeding anyway"
+          { 
+            targetSchoolId, 
+            currentProcessingId: processingSchoolId.current 
+          },
+          "School selection changed during processing, skipping navigation"
         );
       }
-      
-      logger.info(
-        { schoolId: school.id, schoolName: cleanedSchoolName },
-        "School selected and onboarding updated successfully",
-      );
-      // Navigate to Canvas integration step instead of directly to courses
-      router.push("/onboarding/connect-canvas");
     } catch (e: any) {
       logger.error(
         { error: e, schoolId: school.id },
         "Failed to process school selection",
       );
+      
+      // Show user-friendly error message
+      if (e.message?.includes("School ID changed during fetch")) {
+        logger.warn("School selection changed during processing, user may have selected another school");
+      } else {
+        // Re-throw other errors to show generic error handling
+        throw e;
+      }
     } finally {
       setIsProcessing(false);
+      processingSchoolId.current = null;
     }
   };
   return (
@@ -251,4 +244,5 @@ export default function SelectSchoolPage() {
       </div>
     </div>
   );
-} 
+}
+
