@@ -262,6 +262,7 @@ export function CommandPalette() {
     .map(id => commands.find(cmd => cmd.id === id))
     .filter(Boolean)
     .filter(command => {
+      if (!command) return false
       // Hide developer tools from recent commands if user is not a developer
       if (command.group === "Developer Tools" && !isDeveloper) {
         return false

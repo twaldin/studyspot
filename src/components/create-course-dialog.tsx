@@ -16,9 +16,10 @@ import { SingleFileInput } from "@/components/ui/single-file-input"
 import { Loader2, ChevronDown, ChevronUp } from "lucide-react"
 import React, { useState, useCallback } from "react"
 import { useUploadThing } from '../uploadthing'
-import { useCreateCourse } from "@/hooks/api/courses"
+import { useCreateCourse, useJoinCourse, useSetSelectedCourse, useVerifyCourse } from "@/hooks/api/courses"
 import { useUserSchool } from "@/hooks/api/user"
 import toast from "react-hot-toast"
+import { useQueryClient } from "@tanstack/react-query"
 
 interface CreateCourseDialogProps {
   open: boolean
@@ -38,15 +39,22 @@ export function CreateCourseDialog({
   const [courseCode, setCourseCode] = useState("")
   const [courseTitle, setCourseTitle] = useState("")
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [uploadedFileUrl, setUploadedFileUrl] = useState<string | null>(null)
   const [showSyllabusUpload, setShowSyllabusUpload] = useState(false)
   const [isExtracting, setIsExtracting] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [extractionResult, setExtractionResult] = useState<CourseExtractionResult | null>(null)
   
+  const queryClient = useQueryClient()
+  const verifyCourseMutation = useVerifyCourse()
   const createCourseMutation = useCreateCourse()
+  const joinCourseMutation = useJoinCourse()
+  const setSelectedCourseMutation = useSetSelectedCourse()
   const { data: userSchool } = useUserSchool()
 
-  const handleFileSelect = useCallback(async (file: File | null) => {
+  const handleFileSelect = async (file: File | null) => {
     setSelectedFile(file)
+    setUploadedFileUrl(null)
     
     if (file) {
       // Start extraction process immediately when file is selected
@@ -54,15 +62,11 @@ export function CreateCourseDialog({
       
       try {
         // Upload the file first
-        const uploadResult = await new Promise<any>((resolve, reject) => {
-          startUpload([file], { courseId: 'temp' } as any, {
-            onClientUploadComplete: resolve,
-            onUploadError: reject
-          })
-        })
+        const uploadResult = await startUpload([file], { courseId: 'temp' } as any)
         
         if (uploadResult && uploadResult.length > 0) {
-          const fileUrl = uploadResult[0].ufsUrl
+          const fileUrl = uploadResult[0].url
+          setUploadedFileUrl(fileUrl)
           
           // Extract course info
           const response = await fetch('/api/courses/extract', {
@@ -98,7 +102,7 @@ export function CreateCourseDialog({
       // Clear extraction results when file is removed
       setExtractionResult(null)
     }
-  }, [])
+  }
   
   const { startUpload, isUploading } = useUploadThing(
     "courseMaterialUploader",
@@ -114,35 +118,68 @@ export function CreateCourseDialog({
     setCourseCode("")
     setCourseTitle("")
     setSelectedFile(null)
+    setUploadedFileUrl(null)
     setExtractionResult(null)
     setIsExtracting(false)
     setShowSyllabusUpload(false)
+    setIsSubmitting(false)
   }, [])
 
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = useCallback(async () => {
+    if (isSubmitting) return
+    setIsSubmitting(true)
+
     if (!courseCode.trim() || !courseTitle.trim()) {
       toast.error("Please enter both course code and title")
+      setIsSubmitting(false)
       return
     }
 
-    // Create course with or without file
-    createCourseMutation.mutate({
-      title: courseTitle,
-      code: courseCode,
-      uploadedFileUrl: selectedFile ? extractionResult ? 'temp' : undefined : undefined
-    }, {
-      onSuccess: () => {
-        toast.success("Course created successfully!")
+    try {
+      // Step 1: Create the course
+      const payload: any = {
+        title: courseTitle,
+        code: courseCode,
+      }
+      if (selectedFile && uploadedFileUrl) {
+        payload.uploadedFileUrl = uploadedFileUrl
+      }
+      const createData = await createCourseMutation.mutateAsync(payload)
+
+      if (createData) {
+        // Step 2: Join the course
+        await joinCourseMutation.mutateAsync(createData.id)
+
+        // Step 3: Set as selected
+        await setSelectedCourseMutation.mutateAsync(createData)
+
+        toast.success("Course created and selected successfully!")
+        queryClient.invalidateQueries({ queryKey: ['courses'] })
+        queryClient.invalidateQueries({ queryKey: ['joinedCourses'] })
         handleReset()
         onOpenChange(false)
-      },
-      onError: (error: any) => {
-        toast.error(error.message || "Failed to create course")
+      } else {
+        throw new Error("Failed to get course details after creation.")
       }
-    })
-  }, [courseCode, courseTitle, selectedFile, extractionResult, createCourseMutation, handleReset, onOpenChange])
+    } catch (error: any) {
+      toast.error(error.message || "An unexpected error occurred.")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }, [
+    isSubmitting,
+    courseCode,
+    courseTitle,
+    selectedFile,
+    uploadedFileUrl,
+    createCourseMutation,
+    joinCourseMutation,
+    setSelectedCourseMutation,
+    queryClient,
+    handleReset,
+    onOpenChange
+  ])
 
-  const isSubmitting = createCourseMutation.isPending
   const canSubmit = courseCode.trim() && courseTitle.trim() && !isSubmitting && !isExtracting
 
   return (

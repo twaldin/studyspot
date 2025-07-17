@@ -26,7 +26,15 @@ import { ICourse } from "@/features/courses/course.model";
 import { JoinedCourseList } from "@/features/courses/components/joined-course-list";
 import toast from "react-hot-toast";
 import { useChats, useSelectChatCourse, usePreloadChat, useSelectChatAndNavigate } from "@/hooks/api/chats";
+import { useAuthenticatedUser } from "@/hooks/api/base";
+import { useCreateChat } from "@/hooks/api/chats";
 import { useChatNavigation } from "@/features/chat/ChatNavigationContext";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { usePathname } from "next/navigation";
 
 import {
@@ -106,6 +114,7 @@ export function AppSidebar() {
   const preloadChat = usePreloadChat();
   const { handleChatSelect, handleNewChat, handleDeleteChat } = useChatNavigation();
   const pathname = usePathname();
+  const hasJoinedCourses = joinedCourseIds && joinedCourseIds.length > 0;
 
   // Filter courses to only show joined ones
   const joinedCourses = allCourses.filter((course) =>
@@ -148,6 +157,15 @@ export function AppSidebar() {
   };
 
   const onNewChatClick = () => {
+    if (!hasJoinedCourses) {
+      toast.error("You must join a course before starting a new chat.");
+      return;
+    }
+    if (!selectedCourse) {
+      toast.error("You must select a course before starting a new chat.");
+      router.push("/courses");
+      return;
+    }
     handleNewChat();
   };
 
@@ -214,17 +232,16 @@ export function AppSidebar() {
           )}
           <StudySpotLogo className="h-10 w-auto group-data-[collapsible=icon]:hidden" />
         </div>
-        <Link href="/" className="group-data-[collapsible=icon]:self-center">
-          <Button
-            className="w-full justify-start gap-2 group-data-[collapsible=icon]:w-fit group-data-[collapsible=icon]:justify-center"
-            variant="secondary"
-          >
-            <Plus className="h-4 w-4" />
-            <span className="group-data-[collapsible=icon]:hidden">
-              New Chat
-            </span>
-          </Button>
-        </Link>
+        <Button
+          className="w-full justify-start gap-2 group-data-[collapsible=icon]:w-fit group-data-[collapsible=icon]:justify-center"
+          variant="secondary"
+          onClick={onNewChatClick}
+        >
+          <Plus className="h-4 w-4" />
+          <span className="group-data-[collapsible=icon]:hidden">
+            New Chat
+          </span>
+        </Button>
       </SidebarHeader>
       <SidebarContent>
         {/* My Courses section - only show when right sidebar is collapsed (on screens smaller than lg) */}

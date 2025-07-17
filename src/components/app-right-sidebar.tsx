@@ -185,7 +185,7 @@ export function AppRightSidebar() {
     }
     
     prevSelectedCourse.current = selectedCourse?.id;
-  }, [selectedCourse?.id, pathname]);
+  }, [selectedCourse, pathname]);
 
   React.useEffect(() => {
     toast("We've just rolled out some exciting updates.", {
