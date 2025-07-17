@@ -141,11 +141,8 @@ export function useRemoveSchool() {
           logger.warn("Failed to clear backend user cache");
         });
       }
-      
-      // Clear ALL caches since school removal affects everything
-      queryClient.clear();
 
-      logger.info("Removed school and cleared all caches");
+      logger.info("Removed school");
     },
     onError: (error) => {
       logger.error({ error }, "Failed to remove school");

@@ -70,6 +70,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/hooks/api/base";
 
 // Custom hook to handle mobile sidebar closing
 const useMobileSidebarClose = () => {
@@ -123,6 +125,7 @@ export function AppSidebar() {
   const removeSchoolMutation = useRemoveSchool();
   const router = useRouter();
   const { user } = useUser();
+  const queryClient = useQueryClient();
 
   // Chat functionality
   const {
@@ -229,18 +232,32 @@ export function AppSidebar() {
     if (!confirmed) return;
 
     try {
-      // Use React Query mutation to remove school - this will automatically clear all caches
+      // Use React Query mutation to remove school
       await removeSchoolMutation.mutateAsync();
-
-      // Selected course clearing is now handled automatically by the remove school mutation
 
       // Force refresh the user object to get updated metadata
       if (user) {
         await user.reload();
       }
 
+      // Invalidate all queries that depend on the school
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.user.school(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.courses.all,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.chats.all,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.documents.all,
+        }),
+      ]);
+
       // Redirect to onboarding to select a new school
-      router.push("/onboarding");
+      router.push("/onboarding/select-school");
     } catch (error) {
       logger.error({ error }, "Error removing school");
       alert("Failed to remove school selection. Please try again.");
