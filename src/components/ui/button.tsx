@@ -73,9 +73,15 @@ function Button({
         variant={variant as "primary" | "secondary"}
         className={cn(
           {
-            [`shadow-[0_3px_0_0_var(--secondary-button-border-bottom),0_1px_2px_0_rgb(0_0_0/0.1)]${!props.disabled ? ' hover:shadow-[0_4px_0_0_var(--secondary-button-border-bottom),0_2px_3px_0_rgb(0_0_0/0.12)]' : ''}`]:
+            "shadow-[0_3px_0_0_var(--secondary-button-border-bottom),0_1px_2px_0_rgb(0_0_0/0.1)]":
               variant === "secondary",
-            [`shadow-[0_3px_0_0_var(--primary-button-border-bottom),0_1px_2px_0_rgb(0_0_0/0.1)]${!props.disabled ? ' hover:shadow-[0_4px_0_0_var(--primary-button-border-bottom),0_2px_3px_0_rgb(0_0_0/0.12)]' : ''}`]:
+            "shadow-[0_3px_0_0_var(--primary-button-border-bottom),0_1px_2px_0_rgb(0_0_0/0.1)]":
+              variant === "primary",
+          },
+          !props.disabled && {
+            "hover:shadow-[0_4px_0_0_var(--secondary-button-border-bottom),0_2px_3px_0_rgb(0_0_0/0.12)]":
+              variant === "secondary",
+            "hover:shadow-[0_4px_0_0_var(--primary-button-border-bottom),0_2px_3px_0_rgb(0_0_0/0.12)]":
               variant === "primary",
           },
           !props.disabled &&
