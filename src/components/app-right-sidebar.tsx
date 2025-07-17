@@ -38,7 +38,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import logger from "@/lib/logger";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 function CustomToaster() {
@@ -132,6 +132,7 @@ export function AppRightSidebar() {
   const { openUserProfile, signOut } = useClerk();
   const removeSchoolMutation = useRemoveSchool();
   const router = useRouter();
+  const pathname = usePathname();
 
   // React Query hooks for course data
   const { data: allCourses = [] } = useCourses();
@@ -153,13 +154,40 @@ export function AppRightSidebar() {
   };
 
   const handleCourseSelect = (course: ICourse) => {
+    // Check if we're currently in a chat page
+    const isInChat = pathname.startsWith('/chat/');
+    
     setSelectedCourseMutation.mutate(course, {
+      onSuccess: () => {
+        // If we're in a chat page, navigate to dashboard to switch course context
+        if (isInChat) {
+          router.push('/');
+          toast.success(`Switched to ${course.title || course.code}`);
+        }
+      },
       onError: (error: any) => {
         toast.error(error.message || "Failed to select course");
       },
     });
   };
   const { user } = useUser();
+  
+  // Track course changes to provide feedback when course switches due to chat selection
+  const prevSelectedCourse = React.useRef<string | undefined>(selectedCourse?.id);
+  React.useEffect(() => {
+    const isInChat = pathname.startsWith('/chat/');
+    
+    // If course changed while in a chat (likely due to chat selection), show feedback
+    if (isInChat && selectedCourse && prevSelectedCourse.current && 
+        selectedCourse.id !== prevSelectedCourse.current) {
+      toast.success(`Switched to ${selectedCourse.title || selectedCourse.code}`, {
+        duration: 3000,
+      });
+    }
+    
+    prevSelectedCourse.current = selectedCourse?.id;
+  }, [selectedCourse?.id, pathname]);
+
   React.useEffect(() => {
     toast("We've just rolled out some exciting updates.", {
       id: "welcome-toast",

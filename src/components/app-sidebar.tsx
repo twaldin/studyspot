@@ -21,6 +21,7 @@ import {
   useSelectedCourse,
   useSetSelectedCourse,
 } from "@/hooks/api/courses";
+import { useUserSchool } from "@/hooks/api/user";
 import { ICourse } from "@/features/courses/course.model";
 import { JoinedCourseList } from "@/features/courses/components/joined-course-list";
 import toast from "react-hot-toast";
@@ -91,6 +92,7 @@ export function AppSidebar() {
   const { data: joinedCourseIds = [] } = useJoinedCourses();
   const { data: selectedCourse } = useSelectedCourse();
   const setSelectedCourseMutation = useSetSelectedCourse();
+  const { data: userSchool } = useUserSchool();
   const { openUserProfile, signOut } = useClerk();
   const removeSchoolMutation = useRemoveSchool();
   const router = useRouter();
@@ -123,16 +125,14 @@ export function AppSidebar() {
     : null;
 
   const onChatSelect = (chatId: string) => {
-    // Use the combined mutation for faster navigation
+    // Navigate immediately for instant feel
+    handleChatSelect(chatId);
+    
+    // Update course selection in background
     selectChatAndNavigateMutation.mutate(chatId, {
-      onSuccess: () => {
-        // Navigate immediately after course selection
-        handleChatSelect(chatId);
-      },
       onError: (error) => {
         console.error("Failed to select chat course:", error);
-        // Navigate anyway, even if course selection fails
-        handleChatSelect(chatId);
+        // User has already navigated, so just log the error
       },
     });
   };
@@ -192,19 +192,25 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader className="flex flex-col gap-4 border-b border-sidebar-border p-4">
         <div className="flex items-center justify-start gap-4 group-data-[collapsible=icon]:justify-center">
-          <div className="relative h-12 w-auto shrink-0">
-            <Image
-              src="/uw-madison-logo.png"
-              alt="UW Madison Logo"
-              width={48}
-              height={48}
-              className="h-12 w-auto object-contain"
-            />
-          </div>
-          <Separator
-            orientation="vertical"
-            className="h-8 group-data-[collapsible=icon]:hidden"
-          />
+          {userSchool?.logo_url && (
+            <>
+              <Image
+                src={userSchool.logo_url}
+                alt={`${userSchool.name} Logo`}
+                width={52}
+                height={52}
+                className="mr-2 object-contain rounded-lg"
+                onError={(e) => {
+                  // Hide the image if it fails to load
+                  e.currentTarget.style.display = "none";
+                }}
+              />
+              <Separator
+                orientation="vertical"
+                className="h-8 group-data-[collapsible=icon]:hidden"
+              />
+            </>
+          )}
           <StudySpotLogo className="h-10 w-auto group-data-[collapsible=icon]:hidden" />
         </div>
         <Link href="/" className="group-data-[collapsible=icon]:self-center">

@@ -123,10 +123,10 @@ export function useSetSelectedCourse() {
       return { previousSelectedCourse };
     },
     onSuccess: (course) => {
-      // Ensure cache is set to server response
+      // Ensure cache is set to server response (but don't invalidate immediately)
       queryClient.setQueryData(queryKeys.user.selectedCourse(), course);
 
-      // Invalidate related caches
+      // Invalidate related caches but not the selected course itself
       queryClient.invalidateQueries({ queryKey: queryKeys.user.profile() });
       queryClient.invalidateQueries({
         queryKey: queryKeys.courses.suggestedQueries(course.id),

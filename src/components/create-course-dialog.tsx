@@ -12,102 +12,236 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { UploadCloud, File, X } from "lucide-react"
-import React from "react"
-
-// Mock file data for display
-const fileData = [
-  { name: "Syllabus.pdf", size: "1.2 MB" },
-  { name: "Lecture 1 slides.pptx", size: "3.4 MB" },
-]
+import { SingleFileInput } from "@/components/ui/single-file-input"
+import { Loader2, ChevronDown, ChevronUp } from "lucide-react"
+import React, { useState, useCallback } from "react"
+import { useUploadThing } from '../uploadthing'
+import { useCreateCourse } from "@/hooks/api/courses"
+import { useUserSchool } from "@/hooks/api/user"
+import toast from "react-hot-toast"
 
 interface CreateCourseDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
 }
 
+interface CourseExtractionResult {
+  courseCode: string
+  courseTitle: string
+  confidence: number
+}
+
 export function CreateCourseDialog({
   open,
   onOpenChange,
 }: CreateCourseDialogProps) {
+  const [courseCode, setCourseCode] = useState("")
+  const [courseTitle, setCourseTitle] = useState("")
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [showSyllabusUpload, setShowSyllabusUpload] = useState(false)
+  const [isExtracting, setIsExtracting] = useState(false)
+  const [extractionResult, setExtractionResult] = useState<CourseExtractionResult | null>(null)
+  
+  const createCourseMutation = useCreateCourse()
+  const { data: userSchool } = useUserSchool()
+
+  const handleFileSelect = useCallback(async (file: File | null) => {
+    setSelectedFile(file)
+    
+    if (file) {
+      // Start extraction process immediately when file is selected
+      setIsExtracting(true)
+      
+      try {
+        // Upload the file first
+        const uploadResult = await new Promise<any>((resolve, reject) => {
+          startUpload([file], { courseId: 'temp' } as any, {
+            onClientUploadComplete: resolve,
+            onUploadError: reject
+          })
+        })
+        
+        if (uploadResult && uploadResult.length > 0) {
+          const fileUrl = uploadResult[0].ufsUrl
+          
+          // Extract course info
+          const response = await fetch('/api/courses/extract', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fileUrl })
+          })
+          
+          const data = await response.json()
+          
+          if (response.ok) {
+            setExtractionResult({
+              courseCode: data.courseCode || "",
+              courseTitle: data.courseTitle || "",
+              confidence: data.confidence || 0
+            })
+            
+            // Auto-fill the form if extraction was successful
+            if (data.courseCode) setCourseCode(data.courseCode)
+            if (data.courseTitle) setCourseTitle(data.courseTitle)
+            
+            toast.success("Course information extracted successfully!")
+          } else {
+            toast.error(data.message || "Failed to extract course information")
+          }
+        }
+      } catch (error) {
+        toast.error("Failed to extract course information")
+      } finally {
+        setIsExtracting(false)
+      }
+    } else {
+      // Clear extraction results when file is removed
+      setExtractionResult(null)
+    }
+  }, [])
+  
+  const { startUpload, isUploading } = useUploadThing(
+    "courseMaterialUploader",
+    {
+      onUploadError: (error: Error) => {
+        toast.error(`Upload failed: ${error.message}`)
+        setIsExtracting(false)
+      }
+    }
+  )
+
+  const handleReset = useCallback(() => {
+    setCourseCode("")
+    setCourseTitle("")
+    setSelectedFile(null)
+    setExtractionResult(null)
+    setIsExtracting(false)
+    setShowSyllabusUpload(false)
+  }, [])
+
+  const handleSubmit = useCallback(() => {
+    if (!courseCode.trim() || !courseTitle.trim()) {
+      toast.error("Please enter both course code and title")
+      return
+    }
+
+    // Create course with or without file
+    createCourseMutation.mutate({
+      title: courseTitle,
+      code: courseCode,
+      uploadedFileUrl: selectedFile ? extractionResult ? 'temp' : undefined : undefined
+    }, {
+      onSuccess: () => {
+        toast.success("Course created successfully!")
+        handleReset()
+        onOpenChange(false)
+      },
+      onError: (error: any) => {
+        toast.error(error.message || "Failed to create course")
+      }
+    })
+  }, [courseCode, courseTitle, selectedFile, extractionResult, createCourseMutation, handleReset, onOpenChange])
+
+  const isSubmitting = createCourseMutation.isPending
+  const canSubmit = courseCode.trim() && courseTitle.trim() && !isSubmitting && !isExtracting
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[525px]">
         <DialogHeader>
           <DialogTitle>Create a new course</DialogTitle>
           <DialogDescription>
-            Create a new course to keep track of course material, chats, and
-            more. This will be accessible by anyone in UW Madison.
+            Create a new course to keep track of course material, chats, and more. This will be accessible by anyone in {userSchool?.name || 'your school'}.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-6">
+        
+        <div className="grid gap-4">
+          {/* Main form fields */}
           <div className="grid gap-2">
             <Label htmlFor="course-code">Course Code</Label>
-            <Input id="course-code" placeholder="e.g. CHEM 103" />
+            <Input 
+              id="course-code" 
+              placeholder="e.g. CHEM 103" 
+              value={courseCode}
+              onChange={(e) => setCourseCode(e.target.value)}
+              disabled={isSubmitting || isExtracting}
+            />
           </div>
+          
           <div className="grid gap-2">
             <Label htmlFor="course-title">Course Title</Label>
-            <Input id="course-title" placeholder="e.g. General Chemistry I" />
+            <Input 
+              id="course-title" 
+              placeholder="e.g. General Chemistry I" 
+              value={courseTitle}
+              onChange={(e) => setCourseTitle(e.target.value)}
+              disabled={isSubmitting || isExtracting}
+            />
           </div>
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <Label>Course Files</Label>
-              <p className="text-sm text-muted-foreground">
-                Initial files to build StudySpot's course knowledge. You can
-                always add to this.
-              </p>
-            </div>
-            <div className="flex flex-col items-center justify-center w-full">
-              <label
-                htmlFor="dropzone-file-create-course"
-                className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted hover:bg-muted/50"
-              >
-                <div className="flex flex-col items-center justify-center">
-                  <UploadCloud className="w-8 h-8 mb-2 text-muted-foreground" />
-                  <p className="mb-2 text-sm text-muted-foreground">
-                    Click to upload or drag and drop
-                  </p>
+
+          {/* Expand button for syllabus upload */}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setShowSyllabusUpload(!showSyllabusUpload)}
+            className="w-full justify-between"
+            disabled={isSubmitting || isExtracting}
+          >
+            Upload syllabus to extract course info (optional)
+            {showSyllabusUpload ? (
+              <ChevronUp className="w-4 h-4" />
+            ) : (
+              <ChevronDown className="w-4 h-4" />
+            )}
+          </Button>
+
+          {/* Expandable syllabus upload section */}
+          {showSyllabusUpload && (
+            <div className="space-y-4 border-t pt-4">
+              <div className="space-y-2">
+                <Label>Syllabus File</Label>
+                <p className="text-sm text-muted-foreground">
+                  Upload a PDF syllabus and we'll automatically extract the course code and title.
+                </p>
+                <SingleFileInput 
+                  acceptedFileTypes=".pdf"
+                  onFileSelect={handleFileSelect}
+                  placeholder="Upload syllabus PDF"
+                  disabled={isSubmitting || isExtracting}
+                />
+              </div>
+              
+              {isExtracting && (
+                <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span className="text-sm">Extracting course information...</span>
+                </div>
+              )}
+              
+              {extractionResult && (
+                <div className="space-y-2 p-3 bg-muted rounded-md">
+                  <h4 className="text-sm font-medium">Information extracted from syllabus</h4>
                   <p className="text-xs text-muted-foreground">
-                    PDF, DOCX, etc. (MAX. 10MB)
+                    Confidence: {Math.round(extractionResult.confidence * 100)}% • You can edit the fields above
                   </p>
                 </div>
-                <input
-                  id="dropzone-file-create-course"
-                  type="file"
-                  className="hidden"
-                  multiple
-                />
-              </label>
+              )}
             </div>
-            <div className="grid gap-3">
-              <Label>Files Added</Label>
-              <div className="space-y-2">
-                {fileData.map((file, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center justify-between p-2 border rounded-md"
-                  >
-                    <div className="flex items-center gap-2">
-                      <File className="w-4 h-4" />
-                      <span className="text-sm">{file.name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {file.size}
-                      </span>
-                    </div>
-                    <Button variant="ghost" size="icon" className="w-6 h-6">
-                      <X className="w-4 h-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+          )}
         </div>
+
         <DialogFooter>
           <DialogClose asChild>
-            <Button variant="secondary">Cancel</Button>
+            <Button variant="secondary" disabled={isSubmitting}>Cancel</Button>
           </DialogClose>
-          <Button type="submit" variant="primary">Add Course</Button>
+          <Button 
+            onClick={handleSubmit}
+            disabled={!canSubmit}
+            variant="primary"
+          >
+            {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            {isSubmitting ? "Creating..." : "Create Course"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
