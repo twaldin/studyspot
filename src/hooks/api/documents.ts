@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient, queryKeys, mutationKeys, useAuthenticatedUser } from './base';
 import { Document } from '@/features/document/document.service';

@@ -20,7 +20,7 @@ function ChatLoading() {
   )
 }
 
-export default function NewChatPage() {
+export default function ChatPage() {
   return (
     <Suspense fallback={<ChatLoading />}>
       <ChatPageContent />
