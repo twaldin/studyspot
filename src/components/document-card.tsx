@@ -18,7 +18,7 @@ export function DocumentCard({ url, file, fileType }: DocumentCardProps) {
           rel="noopener noreferrer"
           className="h-full text-blue-600"
         >
-    <Card className="h-fit">
+    <Card className="h-full">
       <CardHeader className="pb-3">
         <CardTitle className="text-sm leading-tight">  {(file.file_name || 'Untitled Document').substring(0, (file.file_name || 'Untitled Document').lastIndexOf('.')) || file.file_name || 'Untitled Document'}</CardTitle>
         <CardDescription className="text-xs">{fileType}</CardDescription>

@@ -141,9 +141,18 @@ const cardData = [
 ];
 
 export default function ContentPage() {
+  const searchInputRef = React.useRef<HTMLInputElement>(null);
+  
   const [showDocuments, setShowDocuments] = React.useState(true);
   const [showQuizzes, setShowQuizzes] = React.useState(true);
   const [showFlashcards, setShowFlashcards] = React.useState(true);
+
+  // Auto-focus the search input when component mounts
+  React.useEffect(() => {
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, []);
 
   return (
     <div className="mx-auto w-full max-w-3xl h-full flex flex-col p-6 gap-4 @container">
@@ -154,6 +163,7 @@ export default function ContentPage() {
         <div className="relative flex-1 min-w-[250px]">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
+            ref={searchInputRef}
             type="search"
             placeholder="Search all course content..."
             className="w-full rounded-lg bg-background pl-8"
