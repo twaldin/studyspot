@@ -3,29 +3,92 @@
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Zap, ArrowRight, Upload, MessagesSquare } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { FileUploadDialog } from "@/components/file-upload-dialog";
 import Link from "next/link";
 import { NewPostDialog } from "@/components/new-post-dialog";
 import { ChatInputBar } from "@/components/chat-input-bar";
 import { useRouter } from "next/navigation";
+import { useSuggestedQueries, useSelectedCourse } from "@/hooks/api/courses";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useCreateChat } from "@/hooks/api/chats";
 import { CardGrid } from "@/components/ui/card-grid";
-import { useSelectedCourse } from "@/hooks/api/courses";
+import logger from "@/lib/logger";
 
-const suggestions = [
-  "How do we use moles to solve stoichiometry problems?",
-  "Will the thermochemistry exam cover energy units?",
-];
 
 export default function Home() {
   const { data: selectedCourse, isLoading, error } = useSelectedCourse();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [isNewPostDialogOpen, setIsNewPostDialogOpen] = useState(false);
+  const [isCreatingChat, setIsCreatingChat] = useState(false);
   const router = useRouter();
+  const { data: suggestedQueries = [], isLoading: isLoadingSuggestedQueries } = useSuggestedQueries(selectedCourse?.id);
+  const createChatMutation = useCreateChat();
 
-  const handleFormSubmit = (values: { message: string }) => {
-    router.push(`/chat?message=${encodeURIComponent(values.message)}`);
+  // Auto-focus the textarea when component mounts
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, []);
+
+  const handleNewChat = async (messageContent: string) => {
+    if (!selectedCourse || isCreatingChat) {
+      return;
+    }
+    
+    setIsCreatingChat(true);
+    
+    try {
+      // Generate temporary chat ID for immediate navigation
+      const tempChatId = `temp-${Date.now()}`;
+      
+      // Store message and course data for immediate access
+      sessionStorage.setItem(`temp-message-${tempChatId}`, messageContent);
+      sessionStorage.setItem(`temp-course-${tempChatId}`, JSON.stringify(selectedCourse));
+      
+      // Navigate immediately with temp ID for perceived performance
+      logger.info('Navigating to temporary chat:', { tempChatId });
+      router.push(`/chat/${tempChatId}`);
+      
+      // Create real chat in background
+      const createRequest = {
+        initialMessages: [
+          { role: 'user', content: messageContent }
+        ]
+      };
+      
+      logger.info('Creating real chat in background');
+      const newChat = await createChatMutation.mutateAsync(createRequest);
+      
+      // Store initial message for real chat
+      sessionStorage.setItem(`initial-message-${newChat.id}`, messageContent);
+      
+      // Replace temp ID with real chat ID in URL without page reload
+      logger.info('Replacing URL with real chat ID:', { tempChatId, realChatId: newChat.id });
+      router.replace(`/chat/${newChat.id}`);
+      
+      // Clean up temp storage
+      sessionStorage.removeItem(`temp-message-${tempChatId}`);
+      sessionStorage.removeItem(`temp-course-${tempChatId}`);
+      
+    } catch (error) {
+      console.error('Failed to create chat:', error);
+      // Navigate back to dashboard on error
+      router.push('/');
+    } finally {
+      setIsCreatingChat(false);
+    }
+  };
+
+  const handleFormSubmit = async (values: { message: string }) => {
+    await handleNewChat(values.message);
+  };
+
+  const handleSuggestedQueryClick = async (query: string) => {
+    await handleNewChat(query);
   };
 
   return (
@@ -36,24 +99,32 @@ export default function Home() {
         </h2>
         <div className="w-full overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
           <div className="flex gap-2">
-            {suggestions.map((suggestion) => (
+          {isLoadingSuggestedQueries ? (
+            <>
+              <Skeleton className="h-8 w-32 rounded-full" />
+              <Skeleton className="h-8 w-40 rounded-full" />
+              <Skeleton className="h-8 w-24 rounded-full" />
+            </>
+          ) : (
+            suggestedQueries.map((suggestion) => (
               <Button
                 key={suggestion}
                 variant="outline"
                 className="whitespace-nowrap rounded-full"
-                onClick={() => handleFormSubmit({ message: suggestion })}
+                onClick={() => handleSuggestedQueryClick(suggestion)}
+                disabled={isCreatingChat}
               >
-                <Zap className="w-4 h-4" />
+                <Zap className="w-4 h-4 mr-1" />
                 {suggestion}
               </Button>
-            ))}
-          </div>
+            ))
+          )}
         </div>
-        <ChatInputBar onSubmit={handleFormSubmit} />
+        </div>
+        <ChatInputBar ref={textareaRef} onSubmit={handleFormSubmit} isSubmitting={isCreatingChat} />
 
         {/* Dynamic CardGrid section from 'dev' branch */}
         <div className="hidden @md:block">
-          {isLoading && <div>Loading course...</div>}
           {error && <div>Error loading course</div>}
           {selectedCourse && <CardGrid courseId={selectedCourse.id} viewAll={false} />}
         </div>

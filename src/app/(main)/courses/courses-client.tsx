@@ -36,6 +36,8 @@ import { useCourses, useJoinCourse, useLeaveCourse, useJoinedCourses } from "@/h
 
 
 export function CoursesPageContent() {
+  const searchInputRef = React.useRef<HTMLInputElement>(null);
+  
   const [isCreateCourseDialogOpen, setCreateCourseDialogOpen] = React.useState(
     false,
   );
@@ -46,6 +48,14 @@ export function CoursesPageContent() {
   const { data: joinedCourses = [], isLoading: isJoinedCoursesLoading } = useJoinedCourses();
   const joinCourseMutation = useJoinCourse();
   const leaveCourseMutation = useLeaveCourse();
+  
+  // Auto-focus the search input when component mounts
+  React.useEffect(() => {
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, []);
+  
   React.useEffect(() => {
     if (searchParams.get("onboarding") === "success") {
       setOnboardingSuccessDialogOpen(true);
@@ -98,6 +108,7 @@ export function CoursesPageContent() {
           <div className="relative flex-1 min-w-[250px]">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
+              ref={searchInputRef}
               type="search"
               placeholder="Search for courses..."
               className="w-full rounded-lg bg-background pl-8"

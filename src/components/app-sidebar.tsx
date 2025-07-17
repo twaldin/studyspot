@@ -10,6 +10,7 @@ import {
   Radical,
   Settings,
   User,
+  X,
 } from "lucide-react";
 import StudySpotLogo from "@/components/branding/studyspot-logo";
 import Image from "next/image";
@@ -23,6 +24,9 @@ import {
 import { ICourse } from "@/features/courses/course.model";
 import { JoinedCourseList } from "@/features/courses/components/joined-course-list";
 import toast from "react-hot-toast";
+import { useChats, useSelectChatCourse, usePreloadChat, useSelectChatAndNavigate } from "@/hooks/api/chats";
+import { useChatNavigation } from "@/features/chat/ChatNavigationContext";
+import { usePathname } from "next/navigation";
 
 import {
   Sidebar,
@@ -33,8 +37,10 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -50,6 +56,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+
+// Custom hook to handle mobile sidebar closing
+const useMobileSidebarClose = () => {
+  const { isMobile, setOpenMobile } = useSidebar();
+  
+  const closeMobileIfOpen = React.useCallback(() => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  }, [isMobile, setOpenMobile]);
+  
+  return { closeMobileIfOpen };
+};
 
 // Menu items.
 const items = [
@@ -91,6 +110,17 @@ export function AppSidebar() {
   const router = useRouter();
   const { user } = useUser();
 
+  // Chat functionality
+  const { data: chats = [], isLoading: isLoadingChats, error: chatsError } = useChats();
+  const selectChatCourseMutation = useSelectChatCourse();
+  const selectChatAndNavigateMutation = useSelectChatAndNavigate();
+  const preloadChat = usePreloadChat();
+  const { handleChatSelect, handleNewChat, handleDeleteChat } = useChatNavigation();
+  const pathname = usePathname();
+
+  // Mobile sidebar close functionality
+  const { closeMobileIfOpen } = useMobileSidebarClose();
+
   // Filter courses to only show joined ones
   const joinedCourses = allCourses.filter((course) =>
     joinedCourseIds.includes(course.id)
@@ -101,7 +131,50 @@ export function AppSidebar() {
       onError: (error: any) => {
         toast.error(error.message || "Failed to select course");
       },
+      onSuccess: () => {
+        // Close mobile sidebar after successful course selection
+        closeMobileIfOpen();
+      },
     });
+  };
+
+  // Get selected chat ID from URL for UI highlighting
+  const selectedChatId = pathname.startsWith("/chat/")
+    ? pathname.split("/")[2]
+    : null;
+
+  const onChatSelect = (chatId: string) => {
+    // Use the combined mutation for faster navigation
+    selectChatAndNavigateMutation.mutate(chatId, {
+      onSuccess: () => {
+        // Navigate immediately after course selection
+        handleChatSelect(chatId);
+        // Close mobile sidebar after successful navigation
+        closeMobileIfOpen();
+      },
+      onError: (error) => {
+        console.error("Failed to select chat course:", error);
+        // Navigate anyway, even if course selection fails
+        handleChatSelect(chatId);
+        // Close mobile sidebar even on error
+        closeMobileIfOpen();
+      },
+    });
+  };
+
+  const onChatHover = (chatId: string) => {
+    // Preload chat data on hover for faster perceived loading
+    preloadChat(chatId);
+  };
+
+  const onDeleteChat = (chatId: string) => {
+    handleDeleteChat(chatId);
+  };
+
+  const onNewChatClick = () => {
+    handleNewChat();
+    // Close mobile sidebar after navigation
+    closeMobileIfOpen();
   };
 
   const handleSignOut = () => {
@@ -161,17 +234,16 @@ export function AppSidebar() {
           />
           <StudySpotLogo className="h-10 w-auto group-data-[collapsible=icon]:hidden" />
         </div>
-        <Link href="/" className="group-data-[collapsible=icon]:self-center">
-          <Button
-            className="w-full justify-start gap-2 group-data-[collapsible=icon]:w-fit group-data-[collapsible=icon]:justify-center"
-            variant="secondary"
-          >
-            <Plus className="h-4 w-4" />
-            <span className="group-data-[collapsible=icon]:hidden">
-              New Chat
-            </span>
-          </Button>
-        </Link>
+        <Button
+          className="w-full justify-start gap-2 group-data-[collapsible=icon]:w-fit group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:self-center"
+          variant="secondary"
+          onClick={onNewChatClick}
+        >
+          <Plus className="h-4 w-4" />
+          <span className="group-data-[collapsible=icon]:hidden">
+            New Chat
+          </span>
+        </Button>
       </SidebarHeader>
       <SidebarContent>
         {/* My Courses section - only show when right sidebar is collapsed (on screens smaller than lg) */}
@@ -186,6 +258,7 @@ export function AppSidebar() {
                 selectedCourseId={selectedCourse?.id}
                 onCourseSelect={handleCourseSelect}
                 isLoading={setSelectedCourseMutation.isPending}
+                onAddMoreClick={closeMobileIfOpen}
               />
             </div>
           </SidebarGroupContent>
@@ -197,22 +270,60 @@ export function AppSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
+              {isLoadingChats && (
+                <div className="px-2 py-1 text-sm text-muted-foreground">
+                  Loading chats...
+                </div>
+              )}
+              
+              {chatsError && (
+                <div className="px-2 py-1 text-sm text-destructive">
+                  Failed to load chats
+                </div>
+              )}
+              
+              {!isLoadingChats && !chatsError && chats.length === 0 && (
+                <div className="px-2 py-1 text-sm text-muted-foreground">
+                  No chats yet. Start a new conversation!
+                </div>
+              )}
+              
+              {chats.map((chat) => (
                 <SidebarMenuItem
-                  key={item.title}
+                  key={chat.id}
                   className="group-data-[collapsible=icon]:hidden"
                 >
                   <SidebarMenuButton
                     asChild
                     className="group-data-[collapsible=icon]:justify-center"
+                    isActive={selectedChatId === chat.id}
                   >
-                    <a href={item.url}>
-                      <item.icon className="h-4 w-4 shrink-0" />
-                      <span className="group-data-[collapsible=icon]:hidden">
-                        {item.title}
+                    <a 
+                      href="#" 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        onChatSelect(chat.id);
+                      }}
+                      onMouseEnter={() => onChatHover(chat.id)}
+                    >
+                      <FlaskConical className="h-4 w-4 shrink-0" />
+                      <span className="group-data-[collapsible=icon]:hidden truncate min-w-0">
+                        {chat.title}
                       </span>
                     </a>
                   </SidebarMenuButton>
+                  <SidebarMenuAction
+                    showOnHover
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      onDeleteChat(chat.id);
+                    }}
+                    aria-label="Delete chat"
+                    className="opacity-0 group-hover/menu-item:opacity-100 cursor-pointer"
+                  >
+                    <X className="h-3 w-3" />
+                  </SidebarMenuAction>
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>

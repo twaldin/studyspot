@@ -12,6 +12,10 @@ export const setSelectedCourseForUser = async (
         selectedCourseId: courseId,
       },
     });
+    
+    // Clear cache after updating metadata
+    clearUserCache(userId);
+    
     logger.info(
       { userId, courseId },
       "Successfully set selected course for user",
@@ -33,6 +37,10 @@ export const clearSelectedCourseForUser = async (userId: string) => {
         selectedCourseId: null,
       },
     });
+    
+    // Clear cache after updating metadata
+    clearUserCache(userId);
+    
     logger.info({ userId }, "Successfully cleared selected course for user");
   } catch (error) {
     logger.error({ error, userId }, "Error clearing selected course for user");
@@ -40,10 +48,45 @@ export const clearSelectedCourseForUser = async (userId: string) => {
   }
 };
 
-export const getSelectedCourseForUser = async (userId: string) => {
+// Cache for user data to avoid redundant Clerk API calls
+const userDataCache = new Map<string, { user: any; timestamp: number }>();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+async function getCachedUser(userId: string) {
+  const cached = userDataCache.get(userId);
+  const now = Date.now();
+  
+  if (cached && (now - cached.timestamp) < CACHE_DURATION) {
+    return cached.user;
+  }
+  
   try {
     const client = await clerkClient();
     const user = await client.users.getUser(userId);
+    
+    // Cache the user data
+    userDataCache.set(userId, { user, timestamp: now });
+    
+    return user;
+  } catch (error) {
+    logger.error({ error, userId }, "Error fetching user from Clerk");
+    throw error;
+  }
+}
+
+// Clear cache for a specific user (useful when metadata is updated)
+export const clearUserCache = (userId: string) => {
+  userDataCache.delete(userId);
+};
+
+// Clear all cached user data
+export const clearAllUserCache = () => {
+  userDataCache.clear();
+};
+
+export const getSelectedCourseForUser = async (userId: string) => {
+  try {
+    const user = await getCachedUser(userId);
     return user.publicMetadata.selectedCourseId as string | undefined;
   } catch (error) {
     logger.error(
@@ -57,8 +100,7 @@ export const getSelectedCourseForUser = async (userId: string) => {
 
 export const getUserOnboardingStatus = async (userId: string) => {
   try {
-    const client = await clerkClient();
-    const user = await client.users.getUser(userId);
+    const user = await getCachedUser(userId);
 
     // Handle cases where metadata might be null or undefined during transitions
     const publicMetadata = user.publicMetadata || {};
@@ -86,13 +128,3 @@ export const getUserOnboardingStatus = async (userId: string) => {
   }
 };
 
-export const hasCanvasToken = async (userId: string) => {
-  try {
-    const client = await clerkClient();
-    const user = await client.users.getUser(userId);
-    return !!user.privateMetadata?.canvasToken;
-  } catch (error) {
-    logger.error({ error, userId }, "Error checking Canvas token status");
-    return false;
-  }
-};
