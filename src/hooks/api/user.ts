@@ -170,4 +170,18 @@ export function useAddToWaitlist() {
   });
 }
 
+// Developer mode query
+export function useIsDeveloper() {
+  const { user } = useAuthenticatedUser();
+  
+  return useQuery({
+    queryKey: queryKeys.user.isDeveloper(),
+    queryFn: () => {
+      return user?.publicMetadata?.role === "developer";
+    },
+    enabled: !!user,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+}
+
 // Canvas courses query

@@ -138,91 +138,59 @@ export class CourseService {
         return duplicateResult;
       }
 
-      // First, validate the course code pattern
-      const patternPrompt =
-        `You are a course verification assistant. Please verify if the course code "${params.courseCode}" follows valid academic course code patterns.
+      // Focus on content safety rather than course existence verification
+      const safetyPrompt =
+        `You are a content safety moderator for an educational platform. Analyze the course code "${params.courseCode}" and title (if provided) for any inappropriate, harmful, or non-academic content.
 
-Consider:
-1. Does the course code follow standard academic naming conventions?
-2. Is the department code (e.g., CS, MATH) a common academic department?
-3. Is the course number (e.g., 101, 202) within typical ranges (0-999)?
+Check for:
+1. Offensive, profane, or inappropriate language
+2. Non-academic or spam-like content
+3. Potentially harmful or misleading course names
+4. Basic format compliance (contains letters/numbers, reasonable length)
+
+DO NOT reject courses based on:
+- Whether the course exists at a specific school
+- Whether you recognize the department code
+- Obscure or new course offerings
+- Regional or specialized academic programs
 
 Respond with a JSON object containing:
 {
-  "isValid": boolean,
+  "isSafe": boolean,
   "confidence": number (0-1),
-  "reason": string (brief explanation)
+  "reason": string (brief explanation if unsafe, otherwise "Content appears appropriate for academic use")
 }`;
 
-      const patternResponse = await openAIService.chatCompletion([
-        { role: "user", content: patternPrompt },
+      const safetyResponse = await openAIService.chatCompletion([
+        { role: "user", content: safetyPrompt },
       ], {
         model: "gpt-3.5-turbo",
         temperature: 0,
         responseFormat: { type: "json_object" },
       });
 
-      if (!patternResponse.success || !patternResponse.data) {
-        throw new Error("Failed to validate course pattern");
+      if (!safetyResponse.success || !safetyResponse.data) {
+        throw new Error("Failed to validate course content safety");
       }
 
-      const patternResult = JSON.parse(patternResponse.data);
+      const safetyResult = JSON.parse(safetyResponse.data);
 
-      // If pattern is invalid, return early
-      if (!patternResult.isValid || patternResult.confidence < 0.7) {
+      // Only block if content is clearly unsafe with high confidence
+      if (!safetyResult.isSafe && safetyResult.confidence > 0.8) {
         return {
           verified: false,
-          message: `Invalid course code format. ${patternResult.reason}`,
-          confidence: patternResult.confidence,
-          type: "invalid_pattern",
+          message: `Course content blocked: ${safetyResult.reason}`,
+          confidence: safetyResult.confidence,
+          type: "content_unsafe",
         };
       }
 
-      // Next, verify if the course exists at the specific school
-      const searchPrompt =
-        `You are a course verification assistant. Please verify if the course "${params.courseCode}" exists at ${params.schoolName} (${params.schoolDomain}).
-
-Use your knowledge to determine:
-1. Is this a real course offered at this specific school?
-2. Does this course align with the school's typical course offerings?
-3. Is this course code commonly used at this institution?
-
-Respond with a JSON object containing:
-{
-  "exists": boolean,
-  "confidence": number (0-1),
-  "reason": string (brief explanation)
-}`;
-
-      const searchResponse = await openAIService.chatCompletion([
-        { role: "user", content: searchPrompt },
-      ], {
-        model: "gpt-3.5-turbo",
-        temperature: 0,
-        responseFormat: { type: "json_object" },
-      });
-
-      if (!searchResponse.success || !searchResponse.data) {
-        throw new Error("Failed to verify course existence");
-      }
-
-      const searchResult = JSON.parse(searchResponse.data);
-
-      if (searchResult.exists && searchResult.confidence > 0.7) {
-        return {
-          verified: true,
-          message: "Course verified successfully",
-          confidence: searchResult.confidence,
-          reason: searchResult.reason,
-        };
-      }
-
+      // Allow all courses that pass basic safety checks
       return {
-        verified: false,
-        message:
-          `Could not verify course ${params.courseCode} at ${params.schoolName}. ${searchResult.reason}`,
-        confidence: searchResult.confidence,
-        type: "not_found",
+        verified: true,
+        message: "Course verified for academic use",
+        confidence: safetyResult.confidence,
+        reason: safetyResult.reason,
       };
     } catch (error) {
       logger.error({ error, params }, "Failed to verify course");

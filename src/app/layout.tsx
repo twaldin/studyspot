@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ClerkThemeProvider } from "@/components/clerk-theme-provider";
 import { cn } from "@/lib/utils";
 import { QueryProvider } from "@/lib/providers/query-provider";
+import { DeveloperModeProvider } from "@/contexts/developer-mode-context";
 
 const crimsonText = Crimson_Text({
   weight: ["400", "600", "700"],
@@ -33,7 +34,9 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             <ClerkThemeProvider>
-              {children}
+              <DeveloperModeProvider>
+                {children}
+              </DeveloperModeProvider>
             </ClerkThemeProvider>
           </ThemeProvider>
         </QueryProvider>

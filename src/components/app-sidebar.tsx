@@ -49,6 +49,7 @@ import { useClerk, useUser } from "@clerk/nextjs";
 import { useRemoveSchool } from "@/hooks/api";
 import { useRouter } from "next/navigation";
 import logger from "@/lib/logger";
+import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -299,7 +300,10 @@ export function AppSidebar() {
                       onDeleteChat(chat.id);
                     }}
                     aria-label="Delete chat"
-                    className="opacity-0 group-hover/menu-item:opacity-100 cursor-pointer"
+                    className={cn(
+                      "cursor-pointer opacity-0 group-hover/menu-item:opacity-100",
+                      selectedChatId === chat.id && "!opacity-0",
+                    )}
                   >
                     <X className="h-3 w-3" />
                   </SidebarMenuAction>

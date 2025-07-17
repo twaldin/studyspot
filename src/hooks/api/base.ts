@@ -1,4 +1,5 @@
 import { useUser } from '@clerk/nextjs';
+import { rateLimiter, RATE_LIMITS } from '@/lib/utils/rate-limiter';
 
 // Base API configuration and utilities
 export const API_BASE_URL = process.env.NODE_ENV === 'production' ? '' : '';
@@ -16,11 +17,16 @@ export class APIError extends Error {
   }
 }
 
-// Generic API fetch function with error handling
+// Generic API fetch function with error handling and rate limiting
 export async function apiClient<T = any>(
   endpoint: string,
   options?: RequestInit
 ): Promise<T> {
+  // Apply rate limiting to API calls
+  if (rateLimiter.checkRateLimit(endpoint, RATE_LIMITS.API_CALLS)) {
+    throw new APIError(429, "Too Many Requests", "Rate limit exceeded", { endpoint });
+  }
+  
   const url = `${API_BASE_URL}/api${endpoint}`;
   
   const config: RequestInit = {
@@ -82,6 +88,7 @@ export const queryKeys = {
     joinedCourses: () => [...queryKeys.user.all, 'joinedCourses'] as const,
     school: () => [...queryKeys.user.all, 'school'] as const,
     onboardingStatus: () => [...queryKeys.user.all, 'onboardingStatus'] as const,
+    isDeveloper: () => [...queryKeys.user.all, 'isDeveloper'] as const,
   },
   
   // Course-related queries

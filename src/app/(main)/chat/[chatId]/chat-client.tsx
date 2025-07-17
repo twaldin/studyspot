@@ -9,6 +9,7 @@ import { useChat, useCreateChat, useUpdateChat } from "@/hooks/api/chats"
 import { useSelectedCourse } from "@/hooks/api/courses"
 import { Message } from "@/features/chat/chat.types"
 import { Skeleton } from "@/components/ui/skeleton"
+import { ScrollToBottomButton } from "@/components/scroll-to-bottom"
 import { chatStateService } from "@/features/chat/services/chat-state.service"
 import { chatStreamingService } from "@/features/chat/services/chat-streaming.service"
 import logger from "@/lib/logger"
@@ -37,6 +38,9 @@ export function ChatPageContent() {
   const [messages, setMessages] = useState<Message[]>([])
   const [isReplying, setIsReplying] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isAtBottom, setIsAtBottom] = useState(true)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const chatContainerRef = useRef<HTMLDivElement>(null)
 
   // Custom streaming processor for temporary chats that captures the response
   const processTemporaryStreamingResponse = useCallback(async (response: Response, context: any) => {
@@ -131,9 +135,31 @@ export function ChatPageContent() {
     }
   }, [initialMessage, updateChatMutation, setPendingStreamResponse, setMessages, setIsReplying]);
 
+  // Scroll to bottom function
+  const scrollToBottom = useCallback(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'end'
+      })
+    }
+  }, [])
+
+  // Check if user is near bottom of chat
+  const handleScroll = useCallback(() => {
+    if (chatContainerRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current
+      const isAtBottom = scrollHeight - scrollTop - clientHeight < 100 // 100px threshold
+      setIsAtBottom(isAtBottom)
+    }
+  }, [])
+
   // Handle chat ID changes and initialize state
   useEffect(() => {
     if (!chatId) return;
+
+    // Clear messages when chat changes
+    setMessages([])
     
     if (chatId.startsWith('temp-')) {
       // Handle temporary chat
@@ -207,14 +233,14 @@ export function ChatPageContent() {
     });
   }, [chatId, pendingStreamResponse, initialMessage, updateChatMutation])
 
-  // Load chat data when available
+  // Load chat data when available, but only if messages are not already populated
   useEffect(() => {
-    if (chat && chat.chats) {
+    if (chat && chat.chats && messages.length === 0) {
       const convertedMessages = chatStateService.loadChatFromDatabase(chat)
       setMessages(convertedMessages)
       setError(null)
     }
-  }, [chat])
+  }, [chat, messages.length])
 
   // Handle immediate streaming for temporary chats
   useEffect(() => {
@@ -408,14 +434,18 @@ export function ChatPageContent() {
   const showEmptyState = !isTemporaryChat && !isLoadingChat && !chat;
 
   return (
-    <div className="mx-auto w-full max-w-3xl h-full flex flex-col p-6 gap-4">
+    <div className="mx-auto w-full max-w-3xl h-full flex flex-col p-6 gap-4 relative">
       {error && (
         <div className="bg-destructive/15 text-destructive px-4 py-2 rounded-md text-sm">
           {error}
         </div>
       )}
       
-      <div className="flex-1 overflow-y-auto">
+      <div 
+        ref={chatContainerRef}
+        className="flex-1 overflow-y-auto"
+        onScroll={handleScroll}
+      >
         <div className="flex flex-col gap-4">
           {showLoadingMessages ? (
             // Show message skeletons while loading
@@ -447,8 +477,14 @@ export function ChatPageContent() {
               )
             )
           )}
+          <div ref={messagesEndRef} />
         </div>
       </div>
+
+      <ScrollToBottomButton
+        isAtBottom={isAtBottom}
+        scrollToBottom={scrollToBottom}
+      />
       
       <div>
         {showThinkingIndicator && (
