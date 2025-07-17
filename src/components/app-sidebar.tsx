@@ -19,13 +19,17 @@ import {
   useCourses,
   useJoinedCourses,
   useSelectedCourse,
-  useSetSelectedCourse,
 } from "@/hooks/api/courses";
 import { useUserSchool } from "@/hooks/api/user";
 import { ICourse } from "@/features/courses/course.model";
 import { JoinedCourseList } from "@/features/courses/components/joined-course-list";
 import toast from "react-hot-toast";
-import { useChats, useSelectChatCourse, usePreloadChat, useSelectChatAndNavigate } from "@/hooks/api/chats";
+import {
+  useChats,
+  usePreloadChat,
+  useSelectChatAndNavigate,
+  useSelectChatCourse,
+} from "@/hooks/api/chats";
 import { useAuthenticatedUser } from "@/hooks/api/base";
 import { useCreateChat } from "@/hooks/api/chats";
 import { useChatNavigation } from "@/features/chat/ChatNavigationContext";
@@ -70,13 +74,13 @@ import {
 // Custom hook to handle mobile sidebar closing
 const useMobileSidebarClose = () => {
   const { isMobile, setOpenMobile } = useSidebar();
-  
+
   const closeMobileIfOpen = React.useCallback(() => {
     if (isMobile) {
       setOpenMobile(false);
     }
   }, [isMobile, setOpenMobile]);
-  
+
   return { closeMobileIfOpen };
 };
 
@@ -114,7 +118,6 @@ export function AppSidebar() {
   const { data: allCourses = [] } = useCourses();
   const { data: joinedCourseIds = [] } = useJoinedCourses();
   const { data: selectedCourse } = useSelectedCourse();
-  const setSelectedCourseMutation = useSetSelectedCourse();
   const { data: userSchool } = useUserSchool();
   const { openUserProfile, signOut } = useClerk();
   const removeSchoolMutation = useRemoveSchool();
@@ -122,13 +125,31 @@ export function AppSidebar() {
   const { user } = useUser();
 
   // Chat functionality
-  const { data: chats = [], isLoading: isLoadingChats, error: chatsError } = useChats();
+  const {
+    data: chats = [],
+    isLoading: isLoadingChats,
+    error: chatsError,
+    refetch: refetchChats,
+  } = useChats();
   const selectChatCourseMutation = useSelectChatCourse();
   const selectChatAndNavigateMutation = useSelectChatAndNavigate();
   const preloadChat = usePreloadChat();
-  const { handleChatSelect, handleNewChat, handleDeleteChat } = useChatNavigation();
+  const { handleChatSelect, handleNewChat, handleDeleteChat } =
+    useChatNavigation();
   const pathname = usePathname();
   const hasJoinedCourses = joinedCourseIds && joinedCourseIds.length > 0;
+
+  // Refresh chats when joined courses change
+  const joinedCoursesString = React.useMemo(
+    () => joinedCourseIds?.join(",") || "",
+    [joinedCourseIds],
+  );
+
+  React.useEffect(() => {
+    if (joinedCoursesString) {
+      refetchChats();
+    }
+  }, [joinedCoursesString, refetchChats]);
 
   // Mobile sidebar close functionality
   const { closeMobileIfOpen } = useMobileSidebarClose();
@@ -138,18 +159,6 @@ export function AppSidebar() {
     joinedCourseIds.includes(course.id)
   );
 
-  const handleCourseSelect = (course: ICourse) => {
-    setSelectedCourseMutation.mutate(course, {
-      onError: (error: any) => {
-        toast.error(error.message || "Failed to select course");
-      },
-      onSuccess: () => {
-        // Close mobile sidebar after successful course selection
-        closeMobileIfOpen();
-      },
-    });
-  };
-
   // Get selected chat ID from URL for UI highlighting
   const selectedChatId = pathname.startsWith("/chat/")
     ? pathname.split("/")[2]
@@ -158,7 +167,7 @@ export function AppSidebar() {
   const onChatSelect = (chatId: string) => {
     // Navigate immediately for instant feel
     handleChatSelect(chatId);
-    
+
     // Update course selection in background
     selectChatAndNavigateMutation.mutate(chatId, {
       onSuccess: () => {
@@ -223,8 +232,7 @@ export function AppSidebar() {
       // Use React Query mutation to remove school - this will automatically clear all caches
       await removeSchoolMutation.mutateAsync();
 
-      // Clear selected course using React Query mutation
-      //await clearSelectedCourseMutation.mutateAsync();
+      // Selected course clearing is now handled automatically by the remove school mutation
 
       // Force refresh the user object to get updated metadata
       if (user) {
@@ -248,8 +256,8 @@ export function AppSidebar() {
               <Image
                 src={userSchool.logo_url}
                 alt={`${userSchool.name} Logo`}
-                width={52}
-                height={52}
+                width={48}
+                height={48}
                 className="mr-2 object-contain rounded-lg"
                 onError={(e) => {
                   // Hide the image if it fails to load
@@ -266,7 +274,6 @@ export function AppSidebar() {
         </div>
         <Button
           className="w-full justify-start gap-2 group-data-[collapsible=icon]:w-fit group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:self-center"
-
           variant="secondary"
           onClick={onNewChatClick}
         >
@@ -287,8 +294,6 @@ export function AppSidebar() {
               <JoinedCourseList
                 courses={joinedCourses}
                 selectedCourseId={selectedCourse?.id}
-                onCourseSelect={handleCourseSelect}
-                isLoading={setSelectedCourseMutation.isPending}
                 onAddMoreClick={closeMobileIfOpen}
               />
             </div>
@@ -306,19 +311,19 @@ export function AppSidebar() {
                   Loading chats...
                 </div>
               )}
-              
+
               {chatsError && (
                 <div className="px-2 py-1 text-sm text-destructive">
                   Failed to load chats
                 </div>
               )}
-              
+
               {!isLoadingChats && !chatsError && chats.length === 0 && (
                 <div className="px-2 py-1 text-sm text-muted-foreground">
                   No chats yet. Start a new conversation!
                 </div>
               )}
-              
+
               {chats.map((chat) => (
                 <SidebarMenuItem
                   key={chat.id}
@@ -329,8 +334,8 @@ export function AppSidebar() {
                     className="group-data-[collapsible=icon]:justify-center"
                     isActive={selectedChatId === chat.id}
                   >
-                    <a 
-                      href="#" 
+                    <a
+                      href="#"
                       onClick={(e) => {
                         e.preventDefault();
                         onChatSelect(chat.id);
@@ -389,7 +394,7 @@ export function AppSidebar() {
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4 shrink-0" />
                     <span className="group-data-[collapsible=icon]:hidden">
-                      {user?.fullName || ''}
+                      {user?.fullName || ""}
                     </span>
                   </div>
                 </SidebarMenuButton>
@@ -403,7 +408,9 @@ export function AppSidebar() {
                 Change Schools
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleSignOut}>Sign Out</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleSignOut}>
+                Sign Out
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </SidebarMenu>
@@ -411,4 +418,3 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
-

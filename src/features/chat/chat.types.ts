@@ -13,6 +13,7 @@ export interface Chat {
   id: string;
   title: string;
   created_at: string;
+  course_id: string;
   chats: Array<{
     role: 'user' | 'assistant';
     content: string;
@@ -26,4 +27,5 @@ export interface ChatSummary {
   title: string;
   created_at: string;
   updated_at: string;
+  course_id: string;
 }

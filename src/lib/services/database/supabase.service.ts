@@ -72,42 +72,22 @@ export class SupabaseService {
         });
       }
 
-      // Get token and validate it
       const token = await getToken({ template: "supabase" });
-      if (!token || !this.isTokenValid(token)) {
-        // Clear any stale cached clients for this user
-        this.clearUserCache(userId);
+      if (!token) {
         throw errorService.createAuthError("unauthorized", {
           operation: "createAuthenticatedClient",
           userId,
         });
       }
 
-      // Create user-specific cache key with token fingerprint
-      const tokenFingerprint = this.getTokenFingerprint(token);
-      const cacheKey = `auth_${userId}_${tokenFingerprint}`;
-
-      // Check cache first
-      if (this.clientCache.has(cacheKey)) {
-        const cachedClient = this.clientCache.get(cacheKey)!;
-        logger.debug(
-          LogContext.database("cache_hit", undefined, {
-            cacheKey,
-            type: "authenticated",
-          }),
-          "Using cached Supabase client",
-        );
-        return cachedClient;
-      }
-
-      // Create new client
+      // Create new client without caching
       const client = createClient<Database>(
         this.getSupabaseUrl(),
         this.getSupabaseAnonKey(),
         {
-          accessToken: async () => await getToken({ template: "supabase" }),
           global: {
             headers: {
+              Authorization: `Bearer ${token}`,
               "x-request-timeout": (options.timeout || this.DEFAULT_TIMEOUT)
                 .toString(),
             },
@@ -118,22 +98,11 @@ export class SupabaseService {
         },
       );
 
-      // Cache the client (with TTL handled by cleanup)
-      this.clientCache.set(cacheKey, client);
-
-      // Schedule cleanup after 5 minutes (matches our cache key rounding)
-      setTimeout(() => {
-        this.clientCache.delete(cacheKey);
-      }, 5 * 60 * 1000);
-
       logger.debug(
-        LogContext.database("cache_miss", undefined, {
-          cacheKey,
-          timeout: options.timeout,
+        LogContext.database("create_client", undefined, {
           type: "authenticated",
-          cacheSize: this.clientCache.size,
         }),
-        "Created new Supabase client (cache miss)",
+        "Created new authenticated Supabase client",
       );
       return client;
     } catch (error) {

@@ -28,13 +28,11 @@ import { OnboardingSuccessDialog } from "@/components/onboarding-success-dialog"
 import Link from "next/link";
 import toast from "react-hot-toast";
 import {
-  useClearSelectedCourse,
   useCourses,
   useJoinCourse,
   useJoinedCourses,
   useLeaveCourse,
   useSelectedCourse,
-  useSetSelectedCourse,
 } from "@/hooks/api/courses";
 import { ICourse } from "@/features/courses/course.model";
 
@@ -54,8 +52,6 @@ export function CoursesPageContent() {
   const { data: selectedCourse } = useSelectedCourse();
   const joinCourseMutation = useJoinCourse();
   const leaveCourseMutation = useLeaveCourse();
-  const setSelectedCourseMutation = useSetSelectedCourse();
-  const clearSelectedCourseMutation = useClearSelectedCourse();
 
   
   // Auto-focus the search input when component mounts
@@ -86,16 +82,9 @@ export function CoursesPageContent() {
   };
 
   const handleJoinCourse = (course: ICourse) => {
-    joinCourseMutation.mutate(course.id, {
+    joinCourseMutation.mutate({ courseId: course.id, courseData: course }, {
       onSuccess: () => {
-        setSelectedCourseMutation.mutate(course, {
-          onSuccess: () => {
-            toast.success(`Successfully joined ${course.code}`);
-          },
-          onError: (error: any) => {
-            toast.error(error.message || "Failed to select course");
-          },
-        });
+        toast.success(`Successfully joined ${course.code}`);
       },
       onError: (error: any) => {
         toast.error(error.message || "Failed to join course");
@@ -110,33 +99,16 @@ export function CoursesPageContent() {
       return;
     }
     
-    // If a different course is selected, first select this course then navigate
-    setSelectedCourseMutation.mutate(course, {
-      onSuccess: () => {
-        router.push("/");
-      },
-      onError: (error: any) => {
-        toast.error(error.message || "Failed to select course");
-      },
-    });
+    // Course selection is now handled automatically by join/leave operations
+    // If the course is not selected, it means it's not in joined courses - this should not happen
+    console.warn('Attempting to enter course that is not selected:', course.id);
+    router.push("/");
   };
 
   const handleLeaveCourse = (courseId: string) => {
     leaveCourseMutation.mutate(courseId, {
       onSuccess: () => {
-        console.log("Successfully left course:", courseId);
-        console.log("Current selected course:", selectedCourse);
-        // Always clear the selected course when leaving any course for now
-        clearSelectedCourseMutation.mutate(undefined, {
-          onSuccess: () => {
-            console.log("Successfully cleared selected course");
-            toast.success("Successfully left course");
-          },
-          onError: (error: any) => {
-            console.error("Failed to clear selected course:", error);
-            toast.error(error.message || "Failed to clear selected course");
-          },
-        });
+        toast.success("Successfully left course");
       },
       onError: (error: any) => {
         toast.error(error.message || "Failed to leave course");
@@ -280,11 +252,11 @@ export function CoursesPageContent() {
                               className="w-full gap-2"
                               onClick={() => handleJoinCourse(course)}
                               disabled={joinCourseMutation.isPending &&
-                                joinCourseMutation.variables === course.id}
+                                joinCourseMutation.variables?.courseId === course.id}
                             >
                               <PlusCircle className="h-4 w-4" />
                               {joinCourseMutation.isPending &&
-                                  joinCourseMutation.variables === course.id
+                                  joinCourseMutation.variables?.courseId === course.id
                                 ? "Joining..."
                                 : "Join Course"}
                             </Button>

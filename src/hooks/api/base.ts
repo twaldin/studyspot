@@ -136,6 +136,7 @@ export const mutationKeys = {
     leaveCourse: ['user', 'leaveCourse'] as const,
     updateOnboarding: ['user', 'updateOnboarding'] as const,
     removeSchool: ['user', 'removeSchool'] as const,
+    clearCourses: ['user', 'clearCourses'] as const,
   },
   
   courses: {

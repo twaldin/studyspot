@@ -38,17 +38,21 @@ export async function DELETE(request: Request) {
     const auth = await authService.validateAuth();
     logger.info({ userId: auth.userId }, '[User School] Removing school selection');
 
-    // Clear the user's school selection by removing all onboarding metadata
     const client = await clerkClient();
+    const user = await client.users.getUser(auth.userId);
+
+    const newPublicMetadata = {
+      ...user.publicMetadata,
+      hasCompletedOnboarding: false,
+      selectedSchool: null,
+      selectedSchoolName: null,
+      selectedSchoolDomain: null,
+      selectedCourseId: null,
+      onboardingCompletedAt: null,
+    };
+
     await client.users.updateUserMetadata(auth.userId, {
-      publicMetadata: {
-        hasCompletedOnboarding: false,
-        selectedSchool: null,
-        selectedSchoolName: null,
-        selectedSchoolDomain: null,
-        selectedCourseId: null,
-        onboardingCompletedAt: null,
-      },
+      publicMetadata: newPublicMetadata,
       privateMetadata: {},
     });
 
