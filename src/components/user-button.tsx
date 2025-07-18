@@ -15,12 +15,12 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { useClerk, useUser } from "@clerk/nextjs";
-import { useRemoveSchool, useClearUserCourses } from "@/hooks/api";
+import { useRemoveSchool } from "@/hooks/api";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { queryKeys } from "@/hooks/api/base";
 import logger from "@/lib/logger";
 import toast from "react-hot-toast";
+import { CacheManager } from "@/lib/utils/cache-manager";
 
 interface UserButtonProps {
   variant?: "sidebar" | "right-sidebar";
@@ -31,7 +31,6 @@ export function UserButton({ variant = "right-sidebar", className }: UserButtonP
   const { openUserProfile, signOut } = useClerk();
   const { user } = useUser();
   const removeSchoolMutation = useRemoveSchool();
-  const clearUserCoursesMutation = useClearUserCourses();
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -44,71 +43,37 @@ export function UserButton({ variant = "right-sidebar", className }: UserButtonP
   };
 
   const handleRemoveSchool = async () => {
-    if (removeSchoolMutation.isPending || clearUserCoursesMutation.isPending) {
+    if (removeSchoolMutation.isPending) {
       return;
     }
 
     const confirmed = window.confirm(
-      variant === "sidebar" 
-        ? "Are you sure you want to remove your school selection? You will be redirected to select a new school. Your chats will be preserved and available when you return to this school."
-        : "Are you sure you want to switch schools? Your course enrollments will be cleared, but your chats will be preserved and available if you return to this school."
+      "Are you sure you want to switch schools? This will clear all your current data and redirect you to select a new school."
     );
 
     if (!confirmed) return;
 
     try {
-      if (variant === "right-sidebar") {
-        // Clear joined and selected courses from user metadata
-        await clearUserCoursesMutation.mutateAsync();
-      }
+      logger.info({ userId: user?.id }, "Starting school switch flow");
 
-      // Remove the school association from the user
+      // Step 1: Clear ALL caches completely
+      await CacheManager.clearAllCaches(user?.id, queryClient);
+
+      // Step 2: Remove school from backend (this also clears courses)
       await removeSchoolMutation.mutateAsync();
 
-      // Clear backend user cache
-      if (user?.id) {
-        await fetch('/api/user/cache', {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: user.id })
-        }).catch(() => {
-          logger.warn("Failed to clear backend user cache during school removal");
-        });
-      }
-
-      // Force refresh the user object to get updated metadata
+      // Step 3: Force user reload to get fresh JWT 
       await user?.reload();
-
-      if (variant === "sidebar") {
-        // Invalidate all queries that depend on the school
-        await Promise.all([
-          queryClient.invalidateQueries({
-            queryKey: queryKeys.user.school(),
-          }),
-          queryClient.invalidateQueries({
-            queryKey: queryKeys.courses.all,
-          }),
-          queryClient.invalidateQueries({
-            queryKey: queryKeys.chats.all,
-          }),
-          queryClient.invalidateQueries({
-            queryKey: queryKeys.documents.all,
-          }),
-        ]);
-      } else {
-        // Clear the entire react-query cache to ensure no stale data
-        await queryClient.clear();
-      }
-
-      // Redirect to school selection
+      
+      // Step 4: Small delay to ensure reload completes before navigation
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Step 5: Navigate to school selection 
       router.push("/onboarding/select-school");
+
     } catch (error) {
-      logger.error({ error }, variant === "sidebar" ? "Error removing school" : "Error switching schools");
-      if (variant === "sidebar") {
-        alert("Failed to remove school selection. Please try again.");
-      } else {
-        toast.error("Failed to switch schools. Please try again.");
-      }
+      logger.error({ error }, "Error during school switch");
+      toast.error("Failed to switch schools. Please try again.");
     }
   };
 

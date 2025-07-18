@@ -119,7 +119,7 @@ export default function SelectSchoolPage() {
           "School selected and onboarding updated successfully",
         );
 
-        // Navigate to Canvas integration step
+        // Navigate to canvas onboarding page
         router.push("/onboarding/connect-canvas");
       } else {
         logger.warn(
