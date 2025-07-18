@@ -29,15 +29,28 @@ import {
 import React from "react";
 import { CardGrid } from "@/components/ui/card-grid";
 import { useSelectedCourse } from "@/hooks/api/courses";
+import { useDocuments } from "@/hooks/api/documents";
 
 export default function ContentPage() {
   const searchInputRef = React.useRef<HTMLInputElement>(null);
+  const [searchQuery, setSearchQuery] = React.useState("");
   
   const [showDocuments, setShowDocuments] = React.useState(true);
   const [showQuizzes, setShowQuizzes] = React.useState(true);
   const [showFlashcards, setShowFlashcards] = React.useState(true);
-  const { data: selectedCourse, isLoading, error } = useSelectedCourse();
+  const { data: selectedCourse, isLoading: courseLoading, error: courseError } = useSelectedCourse();
+  const { data: documents, isLoading: documentsLoading, error: documentsError } = useDocuments(selectedCourse?.id);
 
+  // Filter documents based on search query
+  const filteredDocuments = React.useMemo(() => {
+    if (!documents || !searchQuery.trim()) {
+      return documents;
+    }
+    
+    return documents.filter(doc => 
+      doc.file_name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [documents, searchQuery]);
 
   // Auto-focus the search input when component mounts
   React.useEffect(() => {
@@ -45,6 +58,10 @@ export default function ContentPage() {
       searchInputRef.current.focus();
     }
   }, []);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+  };
 
   return (
     <div className="mx-auto w-full max-w-3xl h-full flex flex-col p-6 gap-4 @container">
@@ -59,6 +76,8 @@ export default function ContentPage() {
             type="search"
             placeholder="Search all course content..."
             className="w-full rounded-lg bg-background pl-8"
+            value={searchQuery}
+            onChange={handleSearchChange}
           />
         </div>
         <div className="flex items-center gap-2">
@@ -104,9 +123,17 @@ export default function ContentPage() {
       </div>
       <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
         <div className="hidden @md:block">
-        {isLoading && <div>Loading course...</div>}
-        {error && <div>Error loading course</div>}
-        {selectedCourse && <CardGrid courseId={selectedCourse.id} viewAll={true} />}
+        {courseLoading && <div>Loading course...</div>}
+        {courseError && <div>Error loading course</div>}
+        {documentsLoading && <div>Loading documents...</div>}
+        {documentsError && <div>Error loading documents</div>}
+        {selectedCourse && !documentsLoading && !documentsError && (
+          <CardGrid 
+            courseId={selectedCourse.id} 
+            viewAll={true} 
+            documents={filteredDocuments}
+          />
+        )}
       </div>
     </div>
     </div>
