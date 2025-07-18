@@ -196,25 +196,26 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="flex flex-col gap-4 border-b border-sidebar-border p-4">
-        <div className="flex items-center justify-start gap-4 group-data-[collapsible=icon]:justify-center">
+        <div className="flex items-center justify-start group-data-[collapsible=icon]:justify-center">
           {userSchool?.logo_url && (
-            <>
-              <Image
-                src={userSchool.logo_url}
-                alt={`${userSchool.name} Logo`}
-                width={48}
-                height={48}
-                className="mr-2 object-contain rounded-lg"
-                onError={(e) => {
-                  // Hide the image if it fails to load
-                  e.currentTarget.style.display = "none";
-                }}
-              />
-              <Separator
-                orientation="vertical"
-                className="h-8 group-data-[collapsible=icon]:hidden"
-              />
-            </>
+            <Image
+              src={userSchool.logo_url}
+              alt={`${userSchool.name} Logo`}
+              width={0}
+              height={0}
+              sizes="56px"
+              className="object-contain h-14 w-auto group-data-[collapsible=icon]:h-8 group-data-[collapsible=icon]:w-8"
+              onError={(e) => {
+                // Hide the image if it fails to load
+                e.currentTarget.style.display = "none";
+              }}
+            />
+          )}
+          {userSchool?.logo_url && (
+            <Separator
+              orientation="vertical"
+              className="h-2 mx-4 group-data-[collapsible=icon]:hidden"
+            />
           )}
           <StudySpotLogo className="h-10 w-auto group-data-[collapsible=icon]:hidden" />
         </div>
