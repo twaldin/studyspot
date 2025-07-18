@@ -1,17 +1,18 @@
-import logger from '@/lib/logger';// --- 3. Generate Embeddings Function (from assistant/utils/embed.text.ts) ---
-import OpenAI from 'openai';
+import logger from "@/lib/logger"; // --- 3. Generate Embeddings Function (from assistant/utils/embed.text.ts) ---
+import OpenAI from "openai";
+import { GenerateEmbeddingsParams } from "@/lib/types/DocumentTypes";
 
 // Initialize OpenAI client - ensure OPENAI_API_KEY is in .env
 const openai = new OpenAI(); // API key is read from process.env.OPENAI_API_KEY by default
 
-interface GenerateEmbeddingsParams {
-  nodeTexts: string[];
-  fileKey: string; // Added for logging context
-}
-
-export async function generateEmbeddings({ nodeTexts, fileKey }: GenerateEmbeddingsParams): Promise<number[][] | null> {
+export async function generateEmbeddings(
+  { nodeTexts, fileKey }: GenerateEmbeddingsParams,
+): Promise<number[][] | null> {
   if (!process.env.OPENAI_API_KEY) {
-    logger.error({ fileKey }, "Document Ingestion: OPENAI_API_KEY is not set. Cannot proceed with embedding.");
+    logger.error(
+      { fileKey },
+      "Document Ingestion: OPENAI_API_KEY is not set. Cannot proceed with embedding.",
+    );
     return null;
   }
 
@@ -20,7 +21,10 @@ export async function generateEmbeddings({ nodeTexts, fileKey }: GenerateEmbeddi
     return [];
   }
 
-  logger.info({ fileKey, numToEmbed: nodeTexts.length }, "Document Ingestion: Starting batch embedding with OpenAI API.");
+  logger.info(
+    { fileKey, numToEmbed: nodeTexts.length },
+    "Document Ingestion: Starting batch embedding with OpenAI API.",
+  );
 
   try {
     const embeddingResponse = await openai.embeddings.create({
@@ -28,16 +32,23 @@ export async function generateEmbeddings({ nodeTexts, fileKey }: GenerateEmbeddi
       input: nodeTexts,
     });
 
-    const embeddings = embeddingResponse.data.map((item: { embedding: number[] }) => item.embedding);
+    const embeddings = embeddingResponse.data.map((
+      item: { embedding: number[] },
+    ) => item.embedding);
 
     if (embeddings.length !== nodeTexts.length) {
-      logger.error({ fileKey, expected: nodeTexts.length, received: embeddings.length }, "Document Ingestion: Mismatch in number of embeddings received from OpenAI.");
+      logger.error(
+        { fileKey, expected: nodeTexts.length, received: embeddings.length },
+        "Document Ingestion: Mismatch in number of embeddings received from OpenAI.",
+      );
       return null;
     }
 
-    logger.info({ fileKey, numEmbedded: embeddings.length }, "Document Ingestion: OpenAI API embedding complete.");
+    logger.info(
+      { fileKey, numEmbedded: embeddings.length },
+      "Document Ingestion: OpenAI API embedding complete.",
+    );
     return embeddings;
-
   } catch (error) {
     if (error instanceof OpenAI.APIError) {
       logger.error({
@@ -45,12 +56,17 @@ export async function generateEmbeddings({ nodeTexts, fileKey }: GenerateEmbeddi
         errorName: error.name,
         statusCode: error.status,
         errorMessage: error.message,
-        errorHeaders: error.headers
+        errorHeaders: error.headers,
       }, "Document Ingestion: OpenAI API error during embedding.");
     } else if (error instanceof Error) {
-      logger.error({ error: { message: error.message, name: error.name, stack: error.stack }, fileKey }, "Document Ingestion: Error during embedding generation.");
+      logger.error({
+        error: { message: error.message, name: error.name, stack: error.stack },
+        fileKey,
+      }, "Document Ingestion: Error during embedding generation.");
     } else {
-      logger.error({ error, fileKey }, "Document Ingestion: An unknown error occurred during embedding generation."
+      logger.error(
+        { error, fileKey },
+        "Document Ingestion: An unknown error occurred during embedding generation.",
       );
     }
     return null;
