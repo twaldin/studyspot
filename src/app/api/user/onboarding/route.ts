@@ -36,6 +36,7 @@ export async function POST(request: Request) {
         hasCompletedOnboarding: true,
         onboardingCompletedAt: new Date().toISOString(),
         selectedCourseId: undefined, // Clear selected course when changing schools
+        joinedCourses: [], // Clear joined courses when changing schools
       },
     };
 
