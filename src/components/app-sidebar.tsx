@@ -195,21 +195,23 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="flex flex-col gap-4 border-b border-sidebar-border p-4">
+      <SidebarHeader className="flex flex-col gap-4 border-b border-sidebar-border p-4 group-data-[collapsible=icon]:p-2">
         <div className="flex items-center justify-start group-data-[collapsible=icon]:justify-center">
           {userSchool?.logo_url && (
-            <Image
-              src={userSchool.logo_url}
-              alt={`${userSchool.name} Logo`}
-              width={0}
-              height={0}
-              sizes="56px"
-              className="object-contain h-14 w-auto group-data-[collapsible=icon]:h-8 group-data-[collapsible=icon]:w-8"
-              onError={(e) => {
-                // Hide the image if it fails to load
-                e.currentTarget.style.display = "none";
-              }}
-            />
+            <div className="h-14 w-auto flex-shrink-0 group-data-[collapsible=icon]:h-12 group-data-[collapsible=icon]:w-12">
+              <Image
+                src={userSchool.logo_url}
+                alt={`${userSchool.name} Logo`}
+                width={0}
+                height={0}
+                sizes="56px"
+                className="object-contain h-full w-full"
+                onError={(e) => {
+                  // Hide the image if it fails to load
+                  e.currentTarget.style.display = "none";
+                }}
+              />
+            </div>
           )}
           {userSchool?.logo_url && (
             <Separator
