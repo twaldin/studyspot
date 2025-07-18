@@ -140,6 +140,18 @@ export function useSetSelectedCourse() {
       queryClient.invalidateQueries({ queryKey: queryKeys.chats.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.documents.all });
       queryClient.setQueryData(queryKeys.user.selectedCourse(), course);
+      
+      // Set timestamp for course selection to help middleware handle propagation delays
+      if (typeof window !== 'undefined') {
+        const timestamp = Date.now().toString();
+        document.cookie = `course-selection-timestamp=${timestamp}; path=/; max-age=45`;
+        
+        // Clean up the timestamp after metadata should have propagated
+        setTimeout(() => {
+          document.cookie = 'course-selection-timestamp=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+        }, 45000); // 45 seconds
+      }
+      
       logger.info({ courseId: course.id }, "Set selected course");
     },
     onError: (error, course, context) => {
@@ -299,6 +311,18 @@ export function useJoinCourse() {
       queryClient.invalidateQueries({ queryKey: queryKeys.courses.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.chats.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.documents.all });
+      
+      // Set timestamp for course selection to help middleware handle propagation delays
+      if (typeof window !== 'undefined') {
+        const timestamp = Date.now().toString();
+        document.cookie = `course-selection-timestamp=${timestamp}; path=/; max-age=45`;
+        
+        // Clean up the timestamp after metadata should have propagated
+        setTimeout(() => {
+          document.cookie = 'course-selection-timestamp=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+        }, 45000); // 45 seconds
+      }
+      
       setTimeout(() => {
         queryClient.invalidateQueries({ 
           predicate: (query) => {
