@@ -6,33 +6,23 @@ import {
   Info,
   LoaderCircle,
   PartyPopper,
-  Settings,
-  User,
   X,
   XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import toast, { useToaster } from "react-hot-toast";
-import { useClerk, useUser } from "@clerk/nextjs";
-import { useRemoveSchool, useClearUserCourses } from "@/hooks/api";
+import { useUser } from "@clerk/nextjs";
 import {
   useCourses,
   useJoinedCourses,
   useSelectedCourse,
 } from "@/hooks/api/courses";
 import { JoinedCourseList } from "@/features/courses/components/joined-course-list";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import logger from "@/lib/logger";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useQueryClient } from "@tanstack/react-query";
+import { UserButton } from "@/components/user-button";
+import { SettingsButton } from "@/components/settings-button";
 
 function CustomToaster() {
   const { toasts, handlers } = useToaster();
@@ -124,12 +114,8 @@ function CustomToaster() {
 }
 
 export function AppRightSidebar() {
-  const { openUserProfile, signOut } = useClerk();
-  const removeSchoolMutation = useRemoveSchool();
-  const clearUserCoursesMutation = useClearUserCourses();
-  const queryClient = useQueryClient();
-  const router = useRouter();
   const pathname = usePathname();
+  const { user } = useUser();
 
   // React Query hooks for course data
   const { data: allCourses = [] } = useCourses();
@@ -140,16 +126,6 @@ export function AppRightSidebar() {
   const joinedCourses = allCourses.filter((course) =>
     joinedCourseIds.includes(course.id),
   );
-
-  const handleSignOut = () => {
-    signOut();
-  };
-
-  const handleManageAccount = () => {
-    openUserProfile();
-  };
-
-  const { user } = useUser();
 
   // Track course changes to provide feedback when course switches due to chat selection
   const prevSelectedCourse = React.useRef<string | undefined>(
@@ -185,77 +161,14 @@ export function AppRightSidebar() {
     } as any);
   }, []);
 
-  const handleRemoveSchool = async () => {
-    if (removeSchoolMutation.isPending || clearUserCoursesMutation.isPending) {
-      return;
-    }
-
-    const confirmed = window.confirm(
-      "Are you sure you want to switch schools? Your course enrollments will be cleared, but your chats will be preserved and available if you return to this school.",
-    );
-
-    if (!confirmed) return;
-
-    try {
-      // Clear joined and selected courses from user metadata
-      await clearUserCoursesMutation.mutateAsync();
-
-      // Remove the school association from the user
-      await removeSchoolMutation.mutateAsync();
-
-      // Clear backend user cache
-      if (user?.id) {
-        await fetch('/api/user/cache', {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: user.id })
-        }).catch(() => {
-          logger.warn("Failed to clear backend user cache during school removal");
-        });
-      }
-
-      // Force a reload of the user object to ensure metadata is fresh
-      await user?.reload();
-
-      // Clear the entire react-query cache to ensure no stale data
-      await queryClient.clear();
-
-      // Redirect to school selection
-      router.push("/onboarding/select-school");
-    } catch (error) {
-      logger.error({ error }, "Error switching schools");
-      toast.error("Failed to switch schools. Please try again.");
-    }
-  };
 
   return (
     <>
       <div className="hidden lg:flex flex-col w-72 border-l border-sidebar-border">
         <div className="border-b border-sidebar-border flex flex-col gap-4 p-4">
           <div className="flex items-center justify-end gap-2">
-            <Button variant="secondary" size="icon">
-              <Settings className="h-4 w-4" />
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="secondary" className="gap-2">
-                  <User className="h-4 w-4" />
-                  {user?.fullName || ""}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={handleManageAccount}>
-                  Manage Account
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleRemoveSchool}>
-                  Change Schools
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleSignOut}>
-                  Sign Out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <SettingsButton variant="right-sidebar" />
+            <UserButton variant="right-sidebar" />
           </div>
         </div>
         <div className="p-4 space-y-4">

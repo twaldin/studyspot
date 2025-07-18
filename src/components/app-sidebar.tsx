@@ -8,8 +8,6 @@ import {
   Plus,
   PlusCircle,
   Radical,
-  Settings,
-  User,
   X,
 } from "lucide-react";
 import StudySpotLogo from "@/components/branding/studyspot-logo";
@@ -58,18 +56,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import React from "react";
-import { useClerk, useUser } from "@clerk/nextjs";
-import { useRemoveSchool } from "@/hooks/api";
 import { useRouter } from "next/navigation";
-import logger from "@/lib/logger";
 import { cn } from "@/lib/utils";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { UserButton } from "@/components/user-button";
+import { SettingsButton } from "@/components/settings-button";
 
 // Custom hook to handle mobile sidebar closing
 const useMobileSidebarClose = () => {
@@ -119,10 +109,7 @@ export function AppSidebar() {
   const { data: joinedCourseIds = [] } = useJoinedCourses();
   const { data: selectedCourse } = useSelectedCourse();
   const { data: userSchool } = useUserSchool();
-  const { openUserProfile, signOut } = useClerk();
-  const removeSchoolMutation = useRemoveSchool();
   const router = useRouter();
-  const { user } = useUser();
 
   // Chat functionality
   const {
@@ -165,23 +152,18 @@ export function AppSidebar() {
     : null;
 
   const onChatSelect = (chatId: string) => {
-    // Navigate immediately for instant feel
+    // Navigate immediately for instant feel (optimistic navigation)
     handleChatSelect(chatId);
+    
+    // Close mobile sidebar immediately
+    closeMobileIfOpen();
 
-    // Update course selection in background
+    // Update course selection in background with optimistic update
     selectChatAndNavigateMutation.mutate(chatId, {
-      onSuccess: () => {
-        // Navigate immediately after course selection
-        handleChatSelect(chatId);
-        // Close mobile sidebar after successful navigation
-        closeMobileIfOpen();
-      },
       onError: (error) => {
         console.error("Failed to select chat course:", error);
-        // Navigate anyway, even if course selection fails
-        handleChatSelect(chatId);
-        // Close mobile sidebar even on error
-        closeMobileIfOpen();
+        toast.error("Failed to update course selection");
+        // The optimistic update will be rolled back automatically by React Query
       },
     });
   };
@@ -210,42 +192,6 @@ export function AppSidebar() {
     closeMobileIfOpen();
   };
 
-  const handleSignOut = () => {
-    signOut();
-  };
-
-  const handleManageAccount = () => {
-    openUserProfile();
-  };
-
-  const handleRemoveSchool = async () => {
-    if (removeSchoolMutation.isPending) return;
-
-    // Confirm before removing school
-    const confirmed = window.confirm(
-      "Are you sure you want to remove your school selection? You will be redirected to select a new school. Your chats will be preserved and available when you return to this school.",
-    );
-
-    if (!confirmed) return;
-
-    try {
-      // Use React Query mutation to remove school - this will automatically clear all caches
-      await removeSchoolMutation.mutateAsync();
-
-      // Selected course clearing is now handled automatically by the remove school mutation
-
-      // Force refresh the user object to get updated metadata
-      if (user) {
-        await user.reload();
-      }
-
-      // Redirect to onboarding to select a new school
-      router.push("/onboarding");
-    } catch (error) {
-      logger.error({ error }, "Error removing school");
-      alert("Failed to remove school selection. Please try again.");
-    }
-  };
 
   return (
     <Sidebar collapsible="icon">
@@ -373,46 +319,8 @@ export function AppSidebar() {
       {/* Footer with settings and user options - only show when right sidebar is collapsed */}
       <SidebarFooter className="border-t border-sidebar-border p-2 lg:hidden">
         <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={handleManageAccount}
-              className="group-data-[collapsible=icon]:justify-center"
-            >
-              <Settings className="h-4 w-4 shrink-0" />
-              <span className="group-data-[collapsible=icon]:hidden">
-                Settings
-              </span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  className="group-data-[collapsible=icon]:justify-center w-full"
-                >
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 shrink-0" />
-                    <span className="group-data-[collapsible=icon]:hidden">
-                      {user?.fullName || ""}
-                    </span>
-                  </div>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-48 mb-2" side="top" align="start">
-              <DropdownMenuItem onClick={handleManageAccount}>
-                Manage Account
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleRemoveSchool}>
-                Change Schools
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleSignOut}>
-                Sign Out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <SettingsButton variant="sidebar" />
+          <UserButton variant="sidebar" />
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
