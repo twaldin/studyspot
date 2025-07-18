@@ -38,20 +38,20 @@ export function JoinedCourseList({
   onAddMoreClick,
 }: JoinedCourseListProps) {
   const setSelectedCourseMutation = useSetSelectedCourse();
-  
+
   const handleAddMoreClick = () => {
     // Call the optional callback if provided (for mobile sidebar closing)
     if (onAddMoreClick) {
       onAddMoreClick();
     }
   };
-  
+
   const handleCourseClick = (course: ICourse) => {
     if (selectedCourseId === course.id) {
       // Course is already selected, no need to do anything
       return;
     }
-    
+
     setSelectedCourseMutation.mutate(course, {
       onSuccess: () => {
         toast.success(`Switched to ${course.code}`);
@@ -66,7 +66,12 @@ export function JoinedCourseList({
     return (
       <div className="text-center text-muted-foreground py-4">
         <p className="text-sm mb-2">No courses joined yet</p>
-        <Button asChild variant="ghost" className="gap-2" onClick={handleAddMoreClick}>
+        <Button
+          asChild
+          variant="ghost"
+          className="gap-2"
+          onClick={handleAddMoreClick}
+        >
           <Link href="/courses">
             <PlusCircle className="h-4 w-4" />
             Join Courses
@@ -86,12 +91,11 @@ export function JoinedCourseList({
           <button
             key={course.id}
             onClick={() => handleCourseClick(course)}
-            disabled={setSelectedCourseMutation.isPending}
             className={cn(
               "flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors hover:bg-accent hover:text-accent-foreground disabled:opacity-50",
-              isSelected 
-                ? "bg-secondary text-secondary-foreground" 
-                : "text-muted-foreground"
+              isSelected
+                ? "bg-secondary text-secondary-foreground"
+                : "text-muted-foreground",
             )}
           >
             <IconComponent className="h-4 w-4" />
@@ -99,7 +103,12 @@ export function JoinedCourseList({
           </button>
         );
       })}
-      <Button asChild variant="ghost" className="gap-2" onClick={handleAddMoreClick}>
+      <Button
+        asChild
+        variant="ghost"
+        className="gap-2"
+        onClick={handleAddMoreClick}
+      >
         <Link href="/courses">
           <PlusCircle className="h-4 w-4" />
           Add More
@@ -108,3 +117,4 @@ export function JoinedCourseList({
     </>
   );
 }
+

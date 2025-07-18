@@ -7,6 +7,7 @@ import {
 } from "./base";
 import { UserSchool } from "@/features/auth/types";
 import logger from "@/lib/logger";
+import { CacheManager } from "@/lib/utils/cache-manager";
 
 // Types
 interface UserProfile {
@@ -79,7 +80,9 @@ export function useUserSchool() {
       return response.school;
     },
     enabled: isAuthenticated,
-    staleTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 1 * 60 * 1000, // Reduced to 1 minute to prevent stale data during rapid school switches
+    gcTime: 5 * 60 * 1000, // 5 minutes garbage collection
+    refetchOnWindowFocus: true, // Refetch when window gains focus to ensure fresh data
   });
 }
 
@@ -97,24 +100,48 @@ export function useUpdateOnboarding() {
       });
       return data;
     },
-    onSuccess: async () => {
-      // Clear the backend user cache to ensure fresh data
-      if (user?.id) {
-        await fetch('/api/user/cache', {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: user.id })
-        }).catch(() => {
-          // If cache clearing fails, continue anyway
-          logger.warn("Failed to clear backend user cache");
-        });
-      }
+    onMutate: async (data) => {
+      // Optimistically update the user school data
+      await queryClient.cancelQueries({ queryKey: queryKeys.user.school() });
       
-      // Clear the entire react-query cache to ensure all queries are refetched with the new school ID
-      queryClient.clear();
-      logger.info("Cleared query cache after updating onboarding data");
+      const previousSchool = queryClient.getQueryData(queryKeys.user.school());
+      
+      // Set the new school data optimistically
+      queryClient.setQueryData(queryKeys.user.school(), {
+        id: data.selectedSchool,
+        name: data.selectedSchoolName,
+        domain: data.selectedSchoolDomain,
+      });
+      
+      return { previousSchool };
     },
-    onError: (error) => {
+    onSuccess: async (data, variables, context) => {
+      const targetSchoolId = data.selectedSchool;
+      
+      try {
+        logger.info({ schoolId: targetSchoolId }, "Starting school selection flow");
+
+        // Step 1: Clear ALL caches to ensure fresh data
+        await CacheManager.clearAllCaches(user?.id, queryClient);
+
+        // Step 2: Force user reload to get fresh JWT with new school context
+        await user?.reload();
+
+        // Step 3: Refresh auth clients to clear any cached tokens
+        await CacheManager.refreshAuthClients(user?.id || '');
+
+        logger.info({ schoolId: targetSchoolId }, "School selection completed successfully");
+        
+      } catch (error) {
+        logger.error({ error, schoolId: targetSchoolId }, "Error in school selection flow");
+        // Don't throw - let the navigation continue
+      }
+    },
+    onError: (error, variables, context) => {
+      // Revert optimistic update on error
+      if (context?.previousSchool !== undefined) {
+        queryClient.setQueryData(queryKeys.user.school(), context.previousSchool);
+      }
       logger.error({ error }, "Failed to update onboarding");
     },
   });
@@ -141,11 +168,8 @@ export function useRemoveSchool() {
           logger.warn("Failed to clear backend user cache");
         });
       }
-      
-      // Clear ALL caches since school removal affects everything
-      queryClient.clear();
 
-      logger.info("Removed school and cleared all caches");
+      logger.info("Removed school");
     },
     onError: (error) => {
       logger.error({ error }, "Failed to remove school");
