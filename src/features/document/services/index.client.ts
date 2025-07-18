@@ -1,12 +1,12 @@
 // Client-safe document services exports
 // Only includes services that can run on the client-side
 
-export { 
-  FileUploadService, 
-  fileUploadService,
-  type FileWithValidation,
+export {
   type CanvasFileData,
+  FileUploadService,
+  fileUploadService,
   type FileValidationResult,
-  type UploadProgress
-} from './file-upload.service';
-export type * from '../types/DocumentTypes';
+  type FileWithValidation,
+  type UploadProgress,
+} from "./file-upload.service";
+export type * from "@/lib/types/DocumentTypes";
