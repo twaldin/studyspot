@@ -506,11 +506,11 @@ export function ChatPageContent() {
         {showThinkingIndicator && (
           <div className="mx-auto w-full max-w-3xl flex justify-start mb-4">
             <div className="py-0 max-w-xl">
-              <div className="flex items-center space-x-2 text-gray-500">
+              <div className="flex items-center space-x-2 text-primary">
                 <div className="flex space-x-1">
-                  <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                  <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                  <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></div>
+                  <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                  <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                  <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce"></div>
                 </div>
                 <span className="text-sm">StudySpot is thinking...</span>
               </div>

@@ -12,15 +12,15 @@ export function CardGrid({ courseId, viewAll }: CardGridProps) {
   const { data: documents, isLoading, error } = useDocuments(courseId);
 
   if (isLoading) {
-    return <div className="text-center py-4">Loading documents...</div>;
+    return <div className="text-center py-4 text-sm text-foreground">Loading documents...</div>;
   }
 
   if (error) {
-    return <div className="text-center py-4 text-red-500">Error loading documents</div>;
+    return <div className="text-center py-4 text-red-500 text-sm">Error loading documents</div>;
   }
 
   if (!documents || documents.length === 0) {
-    return <div className="text-center py-4 text-gray-500">No documents found</div>;
+    return <div className="text-center py-4 text-sm text-foreground">No documents found</div>;
   }
   const limitedDocuments = viewAll === false ? documents.slice(0, 6) : documents;
 
