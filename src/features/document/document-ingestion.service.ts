@@ -15,15 +15,9 @@ import {
 import { cleanupFailedIngestion } from "@/lib/services/file";
 import { sanitizeText } from "./sanitize-text";
 
-// --- 5. New Ingestion Process Function ---
-interface IngestDocumentParams {
-  fileKey: string;
-  fileName: string;
-  fileUrl: string;
-  fileType: string;
-  courseId: string;
-}
+import { IngestDocumentParams } from "@/lib/types/DocumentTypes";
 
+// --- 5. New Ingestion Process Function ---
 /**
  * Ingests a document into the system by downloading, validating, extracting content, checking relevance, generating embeddings, and storing the results in the database.
  *

@@ -1,6 +1,3 @@
-import { Database } from '@/lib/database.types';
-
-// Base document type from database with additional computed fields
 export interface Document {
   id: string;
   file_name: string;
@@ -8,18 +5,30 @@ export interface Document {
   file_type: string;
   course_id: string;
   created_at: string;
-  file_hash?: string | null;
-  course_provided?: boolean | null;
-  // Computed fields (not in database)
   is_starred?: boolean;
+  report_count: number;
   has_reported?: boolean;
-  report_count?: number;
 }
 
+export interface GenerateEmbeddingsParams {
+  nodeTexts: string[];
+  fileKey: string; // Added for logging context
+}
+
+export interface IngestDocumentParams {
+  fileKey: string;
+  fileName: string;
+  fileUrl: string;
+  fileType: string;
+  courseId: string;
+}
+
+import { Database } from "@/lib/database.types";
+
 // Database types for documents
-export type DbDocument = Database['public']['Tables']['docs']['Row'];
-export type DbDocumentInsert = Database['public']['Tables']['docs']['Insert'];
-export type DbDocumentUpdate = Database['public']['Tables']['docs']['Update'];
+export type DbDocument = Database["public"]["Tables"]["docs"]["Row"];
+export type DbDocumentInsert = Database["public"]["Tables"]["docs"]["Insert"];
+export type DbDocumentUpdate = Database["public"]["Tables"]["docs"]["Update"];
 
 // Document chunk type
 export interface DocumentChunk {
@@ -31,19 +40,19 @@ export interface DocumentChunk {
   chunk_count?: number;
 }
 
-export type DbChunk = Database['public']['Tables']['chunks']['Row'];
-export type DbChunkInsert = Database['public']['Tables']['chunks']['Insert'];
+export type DbChunk = Database["public"]["Tables"]["chunks"]["Row"];
+export type DbChunkInsert = Database["public"]["Tables"]["chunks"]["Insert"];
 
 // Document processing status
 export enum DocumentProcessingStatus {
-  PENDING = 'pending',
-  PROCESSING = 'processing',
-  COMPLETED = 'completed',
-  FAILED = 'failed',
-  DUPLICATE = 'duplicate',
-  NOT_RELEVANT = 'not_relevant',
-  EXTRACTION_FAILED = 'extraction_failed',
-  EMBEDDING_FAILED = 'embedding_failed'
+  PENDING = "pending",
+  PROCESSING = "processing",
+  COMPLETED = "completed",
+  FAILED = "failed",
+  DUPLICATE = "duplicate",
+  NOT_RELEVANT = "not_relevant",
+  EXTRACTION_FAILED = "extraction_failed",
+  EMBEDDING_FAILED = "embedding_failed",
 }
 
 // Document processing result
@@ -98,8 +107,8 @@ export interface DocumentSearchParams {
   courseProvided?: boolean;
   limit?: number;
   offset?: number;
-  sortBy?: 'created_at' | 'file_name';
-  sortOrder?: 'asc' | 'desc';
+  sortBy?: "created_at" | "file_name";
+  sortOrder?: "asc" | "desc";
   searchTerm?: string;
 }
 
@@ -146,7 +155,7 @@ export interface DocumentReportParams {
 // Batch operation parameters
 export interface BatchDocumentOperation<T = any> {
   documentIds: string[];
-  operation: 'star' | 'unstar' | 'report' | 'delete' | 'update';
+  operation: "star" | "unstar" | "report" | "delete" | "update";
   params?: T;
 }
 
@@ -240,19 +249,19 @@ export interface DocumentAnalytics {
 
 // Error types specific to document operations
 export enum DocumentErrorType {
-  NOT_FOUND = 'DOCUMENT_NOT_FOUND',
-  UNAUTHORIZED = 'DOCUMENT_UNAUTHORIZED',
-  PROCESSING_FAILED = 'DOCUMENT_PROCESSING_FAILED',
-  UPLOAD_FAILED = 'DOCUMENT_UPLOAD_FAILED',
-  EXTRACTION_FAILED = 'DOCUMENT_EXTRACTION_FAILED',
-  EMBEDDING_FAILED = 'DOCUMENT_EMBEDDING_FAILED',
-  VALIDATION_FAILED = 'DOCUMENT_VALIDATION_FAILED',
-  DUPLICATE_CONTENT = 'DOCUMENT_DUPLICATE_CONTENT',
-  NOT_RELEVANT = 'DOCUMENT_NOT_RELEVANT',
-  STORAGE_ERROR = 'DOCUMENT_STORAGE_ERROR',
-  DATABASE_ERROR = 'DOCUMENT_DATABASE_ERROR',
-  EXTERNAL_API_ERROR = 'DOCUMENT_EXTERNAL_API_ERROR',
-  BATCH_OPERATION_FAILED = 'DOCUMENT_BATCH_OPERATION_FAILED'
+  NOT_FOUND = "DOCUMENT_NOT_FOUND",
+  UNAUTHORIZED = "DOCUMENT_UNAUTHORIZED",
+  PROCESSING_FAILED = "DOCUMENT_PROCESSING_FAILED",
+  UPLOAD_FAILED = "DOCUMENT_UPLOAD_FAILED",
+  EXTRACTION_FAILED = "DOCUMENT_EXTRACTION_FAILED",
+  EMBEDDING_FAILED = "DOCUMENT_EMBEDDING_FAILED",
+  VALIDATION_FAILED = "DOCUMENT_VALIDATION_FAILED",
+  DUPLICATE_CONTENT = "DOCUMENT_DUPLICATE_CONTENT",
+  NOT_RELEVANT = "DOCUMENT_NOT_RELEVANT",
+  STORAGE_ERROR = "DOCUMENT_STORAGE_ERROR",
+  DATABASE_ERROR = "DOCUMENT_DATABASE_ERROR",
+  EXTERNAL_API_ERROR = "DOCUMENT_EXTERNAL_API_ERROR",
+  BATCH_OPERATION_FAILED = "DOCUMENT_BATCH_OPERATION_FAILED",
 }
 
 export class DocumentError extends Error {
@@ -260,10 +269,10 @@ export class DocumentError extends Error {
     public type: DocumentErrorType,
     public message: string,
     public documentId?: string,
-    public details?: Record<string, any>
+    public details?: Record<string, any>,
   ) {
     super(message);
-    this.name = 'DocumentError';
+    this.name = "DocumentError";
   }
 }
 
@@ -291,7 +300,7 @@ export interface DocumentMetadata {
   embeddedAt?: string;
   lastProcessed?: string;
   processingVersion?: string;
-  quality?: 'high' | 'medium' | 'low';
+  quality?: "high" | "medium" | "low";
   tags?: string[];
 }
 
