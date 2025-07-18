@@ -29,9 +29,18 @@ export async function apiClient<T = any>(
   
   const url = `${API_BASE_URL}/api${endpoint}`;
   
+  // Check if this is a recent school switch to add helpful headers
+  let schoolSwitchTimestamp = null;
+  if (typeof window !== 'undefined') {
+    schoolSwitchTimestamp = sessionStorage.getItem('school-switch-timestamp');
+  }
+  
   const config: RequestInit = {
     headers: {
       'Content-Type': 'application/json',
+      ...(schoolSwitchTimestamp && {
+        'X-School-Switch-Timestamp': schoolSwitchTimestamp
+      }),
       ...options?.headers,
     },
     ...options,

@@ -115,6 +115,9 @@ export function useUpdateOnboarding() {
       return { previousSchool };
     },
     onSuccess: async (data, variables, context) => {
+      const isProduction = process.env.NODE_ENV === 'production';
+      const targetSchoolId = data.selectedSchool;
+      
       // Clear the backend user cache to ensure fresh data
       if (user?.id) {
         await fetch('/api/user/cache', {
@@ -127,19 +130,75 @@ export function useUpdateOnboarding() {
         });
       }
       
-      // Force reload of user metadata to ensure consistency
+      // Force reload of user metadata with retry logic for production
       await user?.reload();
       
-      // Selectively invalidate queries that depend on school ID
-      await queryClient.invalidateQueries({ queryKey: queryKeys.user.school() });
-      await queryClient.invalidateQueries({ queryKey: queryKeys.courses.all });
-      await queryClient.invalidateQueries({ queryKey: queryKeys.chats.all });
-      await queryClient.invalidateQueries({ queryKey: queryKeys.documents.all });
+      // In production, add retry logic for metadata consistency
+      if (isProduction && user) {
+        let attempts = 0;
+        const maxAttempts = 8;
+        const retryDelay = 1500; // 1.5 seconds between retries
+        
+        while (attempts < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, retryDelay));
+          await user.reload();
+          
+          const currentSelectedSchool = user.publicMetadata?.selectedSchool;
+          if (currentSelectedSchool === targetSchoolId) {
+            logger.info(
+              { schoolId: targetSchoolId, attempts: attempts + 1 },
+              "Metadata consistency confirmed in production"
+            );
+            break;
+          }
+          
+          attempts++;
+          if (attempts >= maxAttempts) {
+            logger.warn(
+              { 
+                schoolId: targetSchoolId, 
+                currentSchool: currentSelectedSchool,
+                userMetadata: user.publicMetadata 
+              },
+              "Metadata consistency check timed out in production, proceeding anyway"
+            );
+          }
+        }
+      }
+      
+      // Aggressively clear all school-dependent data
+      queryClient.removeQueries({ queryKey: queryKeys.user.school() });
+      queryClient.removeQueries({ queryKey: queryKeys.courses.all });
+      queryClient.removeQueries({ queryKey: queryKeys.chats.all });
+      queryClient.removeQueries({ queryKey: queryKeys.documents.all });
       
       // Clear selected course since it's school-dependent
       queryClient.setQueryData(queryKeys.user.selectedCourse(), null);
       
-      logger.info({ schoolId: data.selectedSchool }, "Updated onboarding and invalidated school-dependent queries");
+      // Force refetch of critical queries
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: queryKeys.user.school() });
+        queryClient.invalidateQueries({ queryKey: queryKeys.courses.all });
+        queryClient.invalidateQueries({ queryKey: queryKeys.chats.all });
+      }, isProduction ? 2000 : 100);
+      
+      // Set a timestamp for recent school switch to help middleware handle propagation delays
+      if (typeof window !== 'undefined') {
+        const timestamp = Date.now().toString();
+        sessionStorage.setItem('school-switch-timestamp', timestamp);
+        
+        // Also set it as a cookie that middleware can read (60 second expiry)
+        document.cookie = `school-switch-timestamp=${timestamp}; path=/; max-age=60`;
+        
+        // Clean up the timestamp after metadata should have propagated
+        setTimeout(() => {
+          sessionStorage.removeItem('school-switch-timestamp');
+          // Clear the cookie by setting expiry to past
+          document.cookie = 'school-switch-timestamp=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+        }, isProduction ? 60000 : 10000); // 60s in prod, 10s in dev
+      }
+      
+      logger.info({ schoolId: targetSchoolId }, "Updated onboarding with production-safe metadata handling");
     },
     onError: (error, variables, context) => {
       // Revert optimistic update on error
