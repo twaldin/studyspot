@@ -84,17 +84,46 @@ export default clerkMiddleware(async (auth, req) => {
           const timeSinceSwitch = schoolSwitchCookie ? 
             Date.now() - parseInt(schoolSwitchCookie.value) : Infinity;
           
-          // If no selected course and it's not a recent switch, redirect to courses
+          // If no selected course, check for grace periods before redirecting
           if (!selectedCourseId) {
-            // In production, allow 30 seconds grace period for metadata propagation
+            // Check for recent school switch (30 second window)
             if (isProduction && timeSinceSwitch < 30000) {
               logger.info(
                 { userId, timeSinceSwitch },
-                "Allowing through during metadata propagation window"
+                "Allowing through during school switch metadata propagation window"
               );
               return NextResponse.next();
             }
             
+            // Check for recent course selection (allow navigation to main page after "Enter Course")
+            const courseSelectionCookie = req.cookies.get('course-selection-timestamp');
+            const timeSinceCourseSelection = courseSelectionCookie ? 
+              Date.now() - parseInt(courseSelectionCookie.value) : Infinity;
+            
+            if (isProduction && timeSinceCourseSelection < 15000) {
+              logger.info(
+                { userId, timeSinceCourseSelection },
+                "Allowing through during course selection metadata propagation window"
+              );
+              return NextResponse.next();
+            }
+            
+            // If we're navigating to the home page and it's recent activity, be more lenient
+            if (req.nextUrl.pathname === "/" && isProduction) {
+              const recentActivity = Math.min(timeSinceSwitch, timeSinceCourseSelection);
+              if (recentActivity < 45000) { // 45 second grace period for home page
+                logger.info(
+                  { userId, recentActivity, pathname: req.nextUrl.pathname },
+                  "Allowing home page navigation during recent activity"
+                );
+                return NextResponse.next();
+              }
+            }
+            
+            logger.info(
+              { userId, selectedCourseId, timeSinceSwitch, timeSinceCourseSelection, pathname: req.nextUrl.pathname },
+              "No selected course found, redirecting to courses page"
+            );
             return NextResponse.redirect(new URL("/courses", req.url));
           }
         } catch (error) {
