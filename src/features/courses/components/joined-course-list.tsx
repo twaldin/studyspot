@@ -64,7 +64,7 @@ export function JoinedCourseList({
 
   if (courses.length === 0) {
     return (
-      <div className="text-center text-muted-foreground py-4">
+      <div className="text-center py-4">
         <p className="text-sm mb-2">No courses joined yet</p>
         <Button
           asChild
@@ -93,9 +93,7 @@ export function JoinedCourseList({
             onClick={() => handleCourseClick(course)}
             className={cn(
               "flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors hover:bg-accent hover:text-accent-foreground disabled:opacity-50",
-              isSelected
-                ? "bg-secondary text-secondary-foreground"
-                : "text-muted-foreground",
+              isSelected && "bg-secondary",
             )}
           >
             <IconComponent className="h-4 w-4" />
