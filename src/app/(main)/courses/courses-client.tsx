@@ -33,7 +33,6 @@ import {
   useJoinedCourses,
   useLeaveCourse,
   useSelectedCourse,
-  useSetSelectedCourse,
 } from "@/hooks/api/courses";
 import { ICourse } from "@/features/courses/course.model";
 
@@ -53,7 +52,6 @@ export function CoursesPageContent() {
   const { data: selectedCourse } = useSelectedCourse();
   const joinCourseMutation = useJoinCourse();
   const leaveCourseMutation = useLeaveCourse();
-  const setSelectedCourseMutation = useSetSelectedCourse();
 
   
   // Auto-focus the search input when component mounts
@@ -101,16 +99,10 @@ export function CoursesPageContent() {
       return;
     }
     
-    // Navigate immediately for instant feel (optimistic navigation)
+    // Course selection is now handled automatically by join/leave operations
+    // If the course is not selected, it means it's not in joined courses - this should not happen
+    console.warn('Attempting to enter course that is not selected:', course.id);
     router.push("/");
-    
-    // Update course selection in background with optimistic update
-    setSelectedCourseMutation.mutate(course, {
-      onError: (error: any) => {
-        toast.error(error.message || "Failed to select course");
-        // The optimistic update will be rolled back automatically by React Query
-      },
-    });
   };
 
   const handleLeaveCourse = (courseId: string) => {

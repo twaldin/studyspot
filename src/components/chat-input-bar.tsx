@@ -73,11 +73,7 @@ export const ChatInputBar = React.forwardRef<HTMLTextAreaElement, ChatInputBarPr
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && !e.shiftKey) {
                           e.preventDefault();
-                          // Only submit if there's a non-empty message (same validation as button)
-                          const messageValue = form.getValues("message")?.trim();
-                          if (messageValue && !isSubmitting) {
-                            handleSubmit(handleFormSubmit)();
-                          }
+                          handleSubmit(handleFormSubmit)();
                         }
                       }}
                     />
@@ -91,7 +87,7 @@ export const ChatInputBar = React.forwardRef<HTMLTextAreaElement, ChatInputBarPr
             variant="default"
             size="sm"
             className="absolute bottom-2 right-2"
-            disabled={isSubmitting || !form.watch("message")?.trim()}
+            disabled={isSubmitting || !formState.isValid}
           >
             <MoveRight className="size-6" />
             <span className="sr-only">Submit</span>
