@@ -96,6 +96,7 @@ export function useCreateChat() {
   const queryClient = useQueryClient();
   const { data: school } = useUserSchool();
   const schoolId = school?.id;
+  const { joinedCourses } = useAuthenticatedUser();
   
   return useMutation({
     mutationKey: mutationKeys.chats.create,
@@ -111,16 +112,20 @@ export function useCreateChat() {
       return response;
     },
     onSuccess: (newChat) => {
-      queryClient.setQueryData(queryKeys.chats.list(schoolId), (old: ChatSummary[] | undefined) => {
+      // Update chat list cache with correct query key
+      const chatListQueryKey = [...queryKeys.chats.list(schoolId), 'joined-courses', joinedCourses];
+      
+      queryClient.setQueryData<ChatSummary[]>(chatListQueryKey, (old = []) => {
         const chatSummary: ChatSummary = {
           id: newChat.id,
           title: newChat.title,
           created_at: newChat.created_at,
           course_id: newChat.course_id,
         };
-        return [chatSummary, ...(old || [])];
+        return [chatSummary, ...old];
       });
       
+      // Set individual chat data
       queryClient.setQueryData(queryKeys.chats.detail(newChat.id), newChat);
       
       logger.info({ chatId: newChat.id }, 'Created new chat');

@@ -44,8 +44,14 @@ export function ChatList({
     ? pathname.split("/")[2]
     : null;
 
-  // Get pending chats that are currently streaming
-  const pendingChats = streamingChats.filter(chat => chat.isStreaming);
+  // Get streaming chats that are currently active
+  const activeStreamingChats = streamingChats.filter(chat => chat.isStreaming);
+  const streamingChatIds = new Set(activeStreamingChats.map(chat => chat.chatId));
+  
+  // Get temporary chats that don't exist in the actual chat list yet (e.g., during creation)
+  const temporaryChats = activeStreamingChats.filter(streamingChat => 
+    !chats.some(chat => chat.id === streamingChat.chatId)
+  );
 
   return (
     <SidebarMenu>
@@ -61,40 +67,38 @@ export function ChatList({
         </div>
       )}
 
-      {!isLoading && !error && chats.length === 0 && pendingChats.length === 0 && (
+      {!isLoading && !error && chats.length === 0 && streamingChatIds.size === 0 && (
         <div className="px-2 py-1 text-sm text-muted-foreground">
           No chats yet. Start a new conversation!
         </div>
       )}
 
-      {/* Render pending/temporary chats first - only show chats that don't exist in regular chats */}
-      {pendingChats
-        .filter(pendingChat => !chats.some(chat => chat.id === pendingChat.chatId))
-        .map((pendingChat) => (
-          <SidebarMenuItem
-            key={`pending-${pendingChat.chatId}`}
-            className="group-data-[collapsible=icon]:hidden"
+      {/* Render temporary chats first (e.g., during creation) */}
+      {temporaryChats.map((tempChat) => (
+        <SidebarMenuItem
+          key={`temp-${tempChat.chatId}`}
+          className="group-data-[collapsible=icon]:hidden"
+        >
+          <SidebarMenuButton
+            asChild
+            className="group-data-[collapsible=icon]:justify-center"
+            isActive={selectedChatId === tempChat.chatId}
           >
-            <SidebarMenuButton
-              asChild
-              className="group-data-[collapsible=icon]:justify-center"
-              isActive={selectedChatId === pendingChat.chatId}
+            <a
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                // Don't navigate to temporary chats, they're just for visual feedback
+              }}
             >
-              <a
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  onChatSelect(pendingChat.chatId);
-                }}
-              >
-                <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
-                <span className="group-data-[collapsible=icon]:hidden truncate min-w-0">
-                  {pendingChat.title}
-                </span>
-              </a>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        ))}
+              <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+              <span className="group-data-[collapsible=icon]:hidden truncate min-w-0">
+                {tempChat.title}
+              </span>
+            </a>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      ))}
 
       {/* Render actual chats */}
       {chats.map((chat) => (
@@ -115,7 +119,7 @@ export function ChatList({
               }}
               onMouseEnter={() => onChatHover(chat.id)}
             >
-              {isStreaming(chat.id) ? (
+              {streamingChatIds.has(chat.id) ? (
                 <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
               ) : (
                 <FlaskConical className="h-4 w-4 shrink-0" />

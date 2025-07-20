@@ -7,12 +7,13 @@ export interface StreamingContext {
   messageContent: string;
   conversationHistory: Array<{ role: string; content: string; linkedDocumentIds?: string[] }>;
   isNewChat: boolean;
-  chatId?: string; // Optional for temporary chats
+  chatId?: string; // Chat ID for database operations
   createChatMutation: any;
   updateChatMutation: any;
   router: any;
   selectedCourse: any;
   setIsReplying: React.Dispatch<React.SetStateAction<boolean>>;
+  updateStreamingMessage?: (chatId: string, partialMessage: string, linkedDocumentIds?: string[]) => void;
 }
 
 export interface StreamingResponse {
@@ -77,12 +78,22 @@ export class ChatStreamingService {
               if (data.chunk) {
                 fullResponse += data.chunk;
                 this.updateAssistantMessage(context.setMessages, fullResponse);
+                
+                // Update streaming context for navigation persistence
+                if (context.chatId && context.updateStreamingMessage) {
+                  context.updateStreamingMessage(context.chatId, fullResponse);
+                }
               } else if (data.done) {
                 console.info({ 
                   finalResponseLength: fullResponse.length 
                 }, 'Received done signal from server');
                 linkedDocumentIds = data.linkedDocumentIds || [];
                 this.updateAssistantMessageWithDocuments(context.setMessages, linkedDocumentIds);
+                
+                // Update streaming context with final linked documents
+                if (context.chatId && context.updateStreamingMessage) {
+                  context.updateStreamingMessage(context.chatId, fullResponse, linkedDocumentIds);
+                }
                 break;
               } else if (data.error) {
                 throw new Error(data.error);
@@ -94,7 +105,7 @@ export class ChatStreamingService {
         }
       }
 
-      // Update chat with complete conversation after streaming is complete (skip for temporary chats)
+      // Update chat with complete conversation after streaming is complete
       if (context.chatId) {
         await this.finalizeChat(context, fullResponse, linkedDocumentIds, context.chatId);
       }

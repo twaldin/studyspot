@@ -1,0 +1,12 @@
+{
+  "pages": {},
+  "app": {
+    "[project]/apps/web/app/(main)/chat/page": [
+      "static/media/wlp2gwHKFkZgtmSR3NB0oRJfbwhTIfFd3A-s.p.50c9d529.woff2",
+      "static/media/wlppgwHKFkZgtmSR3NB0oRJXsCxGDNNQ9rJPfw-s.p.75e441a8.woff2",
+      "static/media/wlppgwHKFkZgtmSR3NB0oRJX1C1GDNNQ9rJPfw-s.p.8c75f6b9.woff2"
+    ]
+  },
+  "appUsingSizeAdjust": true,
+  "pagesUsingSizeAdjust": false
+}

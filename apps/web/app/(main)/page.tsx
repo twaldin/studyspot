@@ -43,54 +43,41 @@ export default function Home() {
     
     setIsCreatingChat(true);
     
-    // Generate temporary chat ID for immediate navigation
-    const tempChatId = `temp-${Date.now()}`;
+    // Generate a temporary ID for immediate UI feedback
+    const tempChatId = `temp-creating-${Date.now()}`;
     
     try {
-      // Store message and course data for immediate access
-      sessionStorage.setItem(`temp-message-${tempChatId}`, messageContent);
-      sessionStorage.setItem(`temp-course-${tempChatId}`, JSON.stringify(selectedCourse));
+      logger.info('Creating real chat immediately');
       
-      // Register temporary chat with streaming context
-      setStreamingStatus(tempChatId, "New Chat", true);
-      logger.info('Registered temporary chat:', { tempChatId });
+      // Immediately show creating state in sidebar
+      setStreamingStatus(tempChatId, 'Creating chat...', true);
       
-      // Navigate immediately with temp ID for perceived performance
-      logger.info('Navigating to temporary chat:', { tempChatId });
-      router.push(`/chat/${tempChatId}`);
-      
-      // Create real chat in background
+      // Create real chat with just the user message
       const createRequest = {
         initialMessages: [
           { role: 'user', content: messageContent }
         ]
       };
       
-      logger.info('Creating real chat in background');
       const newChat = await createChatMutation.mutateAsync(createRequest);
-      
-      // Store initial message for real chat
-      sessionStorage.setItem(`initial-message-${newChat.id}`, messageContent);
-      
-      // Replace temp ID with real chat ID in URL without page reload
-      logger.info('Replacing URL with real chat ID:', { tempChatId, realChatId: newChat.id });
+      logger.info('Created real chat:', { chatId: newChat.id, title: newChat.title });
       
       // Transfer streaming status from temp to real chat
-      setStreamingStatus(newChat.id, newChat.title, true);
-      setStreamingStatus(tempChatId, "New Chat", false); // Remove temp chat
+      setStreamingStatus(tempChatId, 'Creating chat...', false); // Remove temp
+      setStreamingStatus(newChat.id, newChat.title, true); // Add real with streaming
       
-      router.replace(`/chat/${newChat.id}`);
+      // Store initial message for the streaming logic
+      sessionStorage.setItem(`initial-message-${newChat.id}`, messageContent);
       
-      // Clean up temp storage
-      sessionStorage.removeItem(`temp-message-${tempChatId}`);
-      sessionStorage.removeItem(`temp-course-${tempChatId}`);
+      // Navigate to the real chat immediately
+      logger.info('Navigating to real chat:', { chatId: newChat.id });
+      router.push(`/chat/${newChat.id}`);
       
     } catch (error) {
       console.error('Failed to create chat:', error);
-      // Clean up temporary chat on error
-      setStreamingStatus(tempChatId, "New Chat", false);
-      // Navigate back to dashboard on error
-      router.push('/');
+      // Clean up temp streaming status on error
+      setStreamingStatus(tempChatId, 'Creating chat...', false);
+      // Stay on dashboard and show error (could add toast here)
     } finally {
       setIsCreatingChat(false);
     }
