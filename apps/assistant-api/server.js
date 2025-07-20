@@ -141,8 +141,14 @@ const server = createServer(async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3001;
-server.listen(PORT, () => {
-  console.log(`🚀 Assistant API server running on http://localhost:${PORT}`);
-  console.log(`   Health check: http://localhost:${PORT}/api/health`);
-  console.log(`   Stream endpoint: http://localhost:${PORT}/api/chat/stream`);
+const HOST = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost';
+
+server.listen(PORT, HOST, () => {
+  const baseUrl = process.env.NODE_ENV === 'production' 
+    ? `https://${process.env.RENDER_EXTERNAL_HOSTNAME || 'your-app.onrender.com'}`
+    : `http://localhost:${PORT}`;
+    
+  console.log(`🚀 Assistant API server running on ${baseUrl}`);
+  console.log(`   Health check: ${baseUrl}/api/health`);
+  console.log(`   Stream endpoint: ${baseUrl}/api/chat/stream`);
 });
