@@ -1,0 +1,14 @@
+{
+  "/(main)/chat/[chatId]/page": "app/(main)/chat/[chatId]/page.js",
+  "/(main)/page": "app/(main)/page.js",
+  "/api/assistant/route": "app/api/assistant/route.js",
+  "/api/chats/[chatId]/route": "app/api/chats/[chatId]/route.js",
+  "/api/chats/[chatId]/select/route": "app/api/chats/[chatId]/select/route.js",
+  "/api/chats/route": "app/api/chats/route.js",
+  "/api/courses/route": "app/api/courses/route.js",
+  "/api/docs/route": "app/api/docs/route.js",
+  "/api/suggested-queries/route": "app/api/suggested-queries/route.js",
+  "/api/uploadthing/route": "app/api/uploadthing/route.js",
+  "/api/user/school/route": "app/api/user/school/route.js",
+  "/api/user/selected-course/route": "app/api/user/selected-course/route.js"
+}
