@@ -7,7 +7,7 @@
     "dev": "echo 'WebSocket server ready - will start with vercel dev'",
     "dev:vercel": "pnpm build && node server.js",
     "dev:render": "pnpm build && node server.js",
-    "build": "tsc",
+    "build": "tsc && tsc-alias -p tsconfig.json --resolve-full-paths",
     "start": "node server.js",
     "lint": "eslint .",
     "test": "jest",
@@ -16,6 +16,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.56.0",
     "@llamaindex/anthropic": "^0.3.16",
+    "@llamaindex/google": "^0.3.14",
     "@llamaindex/readers": "^3.1.13",
     "@supabase/supabase-js": "^2.51.0",
     "@types/uuid": "^10.0.0",
@@ -26,6 +27,7 @@
     "openai": "^5.9.0",
     "pdf2json": "^3.1.6",
     "pino": "^9.7.0",
+    "pino-pretty": "^13.0.0",
     "uuid": "^11.1.0",
     "ws": "^8.18.0",
     "yauzl": "^3.2.0",
@@ -38,6 +40,7 @@
     "eslint": "^9.31.0",
     "jest": "^29.7.0",
     "ts-node": "^10.9.2",
+    "tsc-alias": "^1.8.16",
     "typescript": "^5",
     "vercel": "^44.5.0"
   }

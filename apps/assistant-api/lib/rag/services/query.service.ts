@@ -1,4 +1,4 @@
-import { Anthropic } from '@llamaindex/anthropic';
+import { geminiService } from '@/lib/ai/gemini.service';
 import type { ChatMessage, MessageType } from '@/lib/utils/llamaindex-imports';
 import { z } from 'zod';
 import logger from '@/lib/utils/logger';
@@ -13,13 +13,9 @@ export const ReformulationResponseSchema = z.object({
 export type ReformulationResponse = z.infer<typeof ReformulationResponseSchema>;
 
 /**
- * Service responsible for query analysis and reformulation (no model selection)
+ * Service responsible for query analysis and reformulation using Gemini Flash
  */
 export class QueryService {
-  private static readonly claudeModel = new Anthropic({
-    apiKey: process.env.ANTHROPIC_API_KEY,
-    model: 'claude-3-sonnet-latest',
-  });
 
   /**
    * Formats the current date and time for context
@@ -79,20 +75,20 @@ Do NOT answer the question. Only output the JSON object.`;
     fullConversation.unshift({ role: 'system' as MessageType, content: systemPrompt });
 
     try {
-      const response = await this.claudeModel.chat({ messages: fullConversation });
+      const messages = fullConversation.map(msg => ({
+        role: msg.role === 'memory' ? 'system' : msg.role as 'system' | 'user' | 'assistant',
+        content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)
+      }));
 
-      const rawContent = response.message.content;
-      let jsonString: string;
+      const response = await geminiService.chat(messages);
 
-      if (typeof rawContent === 'string') {
-        jsonString = rawContent;
-      } else if (Array.isArray(rawContent) && rawContent.length > 0 && "text" in rawContent[0]) {
-        jsonString = (rawContent[0] as any).text;
-      } else {
-        throw new Error("Unexpected LLM response content structure during reformulation.");
+      if (!response.success || !response.data) {
+        throw new Error("Failed to get response from Gemini");
       }
 
-      // Claude might wrap the JSON in ```json ... ```, so we need to extract it.
+      let jsonString = response.data;
+
+      // Gemini might wrap the JSON in ```json ... ```, so we need to extract it.
       const jsonMatch = jsonString.match(/```json\n([\s\S]*?)\n```/);
       if (jsonMatch && jsonMatch[1]) {
         jsonString = jsonMatch[1];
@@ -101,11 +97,11 @@ Do NOT answer the question. Only output the JSON object.`;
       const parsedJson = JSON.parse(jsonString);
       const structuredOutput = ReformulationResponseSchema.parse(parsedJson);
 
-      logger.debug({ structuredOutput }, "[QueryService - reformulateQuestion] Successfully parsed structured response from Claude.");
+      logger.debug({ structuredOutput }, "[QueryService - reformulateQuestion] Successfully parsed structured response from Gemini.");
       return structuredOutput;
 
     } catch (error) {
-      logger.error({ error, question }, "[QueryService - reformulateQuestion] Failed to get/parse structured response from Claude. Defaulting to RAG needed.");
+      logger.error({ error, question }, "[QueryService - reformulateQuestion] Failed to get/parse structured response from Gemini. Defaulting to RAG needed.");
       // Fallback in case of any error
       return {
         ragNeeded: true,

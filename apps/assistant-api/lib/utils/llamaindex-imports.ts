@@ -9,6 +9,7 @@ export type { ChatMessage, MessageType, Metadata } from "llamaindex";
 
 // Re-export specialized packages
 export { Anthropic } from "@llamaindex/anthropic";
+export { Gemini, GEMINI_MODEL } from "@llamaindex/google";
 
 // Readers - re-export to ensure single import path
 export { CSVReader } from "@llamaindex/readers/csv";

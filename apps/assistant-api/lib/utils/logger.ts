@@ -1,10 +1,8 @@
 import pino from "pino";
 
 const isDevelopment = process.env.NODE_ENV !== "production";
-// NEXT_RUNTIME is set by Next.js in its server environments (e.g., 'nodejs', 'edge').
-// We avoid pino-pretty transport in these Next.js server environments due to worker thread issues.
-const shouldUsePrettyTransport = isDevelopment &&
-  typeof process.env.NEXT_RUNTIME === "undefined";
+// For standalone server, use pretty transport in development only
+const shouldUsePrettyTransport = isDevelopment;
 
 const logger = pino({
   level: isDevelopment ? "debug" : "info",
