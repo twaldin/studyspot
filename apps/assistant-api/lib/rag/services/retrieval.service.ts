@@ -2,6 +2,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '@/lib/types/database';
 import logger from '@/lib/utils/logger';
 import { EmbeddingService } from './embedding.service';
+import { API_CONSTANTS } from '@/lib/utils/constants';
 
 /**
  * Interface for retrieved documents

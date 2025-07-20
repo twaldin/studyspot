@@ -1,4 +1,5 @@
-import { Anthropic, FunctionTool } from '@llamaindex/anthropic';
+import { Anthropic } from '@llamaindex/anthropic';
+import { FunctionTool } from '@/lib/utils/llamaindex-imports';
 import type { ChatMessage, MessageType } from '@/lib/utils/llamaindex-imports';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '@/lib/types/database';

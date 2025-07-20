@@ -1,6 +1,6 @@
-import { Anthropic } from "@/lib/llamaindex-imports";
+import { Anthropic } from "@/lib/utils/llamaindex-imports";
 import { AIMessage, AIResponse, ClaudeConfig } from "@/lib/types/AITypes";
-import logger from "@/lib/logger";
+import logger from "@/lib/utils/logger";
 
 class AnthropicService {
   private client: Anthropic;

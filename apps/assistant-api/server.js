@@ -72,7 +72,7 @@ const server = createServer(async (req, res) => {
       res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
       // Import RAG service
-      const { getFullRagResponseStream } = await import('./lib/rag/rag.service.js');
+      const { getFullRagResponseStream } = await import('./dist/lib/rag/rag.service.js');
       const { createClient } = await import('@supabase/supabase-js');
 
       // Initialize Supabase client

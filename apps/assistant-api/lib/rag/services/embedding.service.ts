@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import logger from '@/lib/utils/logger';
+import { API_CONSTANTS } from '@/lib/utils/constants';
 
 /**
  * Interface for embedding results

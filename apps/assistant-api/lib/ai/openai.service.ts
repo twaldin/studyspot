@@ -5,8 +5,8 @@ import {
   OpenAIConfig,
   OpenAIEmbeddingParams,
 } from "@/lib/types/AITypes";
-import { API_CONSTANTS } from "@/lib/constants";
-import logger from "@/lib/logger";
+import { API_CONSTANTS } from "@/lib/utils/constants";
+import logger from "@/lib/utils/logger";
 
 class OpenAIService {
   private client: OpenAI;

@@ -184,7 +184,7 @@ export class ChatStreamingService {
   }
 
   /**
-   * Sends a message to the assistant API (microservice or local)
+   * Sends a message to the assistant API microservice
    */
   async sendMessage(
     messageContent: string,
@@ -198,47 +198,20 @@ export class ChatStreamingService {
       timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     };
 
-    // Check if we should use the microservice or local API
-    const useMicroservice = process.env.NEXT_PUBLIC_USE_MICROSERVICE === 'true';
+    const apiUrl = process.env.NEXT_PUBLIC_ASSISTANT_API_URL || 'http://localhost:3001';
+    logger.info('Using assistant API at', apiUrl);
     
-    logger.info('Environment check:', {
-      NEXT_PUBLIC_USE_MICROSERVICE: process.env.NEXT_PUBLIC_USE_MICROSERVICE,
-      useMicroservice,
-      NEXT_PUBLIC_ASSISTANT_API_URL: process.env.NEXT_PUBLIC_ASSISTANT_API_URL
+    const response = await fetch(`${apiUrl}/api/chat/stream`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody),
     });
-    
-    if (useMicroservice) {
-      // Use the microservice
-      const apiUrl = process.env.NEXT_PUBLIC_ASSISTANT_API_URL || 'http://localhost:3001';
-      logger.info('Using microservice API at', apiUrl);
-      
-      const response = await fetch(`${apiUrl}/api/chat/stream`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody),
-      });
 
-      if (!response.ok) {
-        throw new Error(`Microservice error! status: ${response.status}`);
-      }
-
-      return response;
-    } else {
-      // Use the local API (current implementation)
-      logger.info('Using local assistant API');
-      
-      const response = await fetch('/api/assistant', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Local API error! status: ${response.status}`);
-      }
-
-      return response;
+    if (!response.ok) {
+      throw new Error(`Assistant API error! status: ${response.status}`);
     }
+
+    return response;
   }
 }
 

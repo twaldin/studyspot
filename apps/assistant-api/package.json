@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "echo 'WebSocket server ready - will start with vercel dev'",
-    "dev:vercel": "node server.js",
+    "dev:vercel": "pnpm build && node server.js",
     "build": "tsc",
     "start": "node dist/index.js",
     "lint": "eslint .",
