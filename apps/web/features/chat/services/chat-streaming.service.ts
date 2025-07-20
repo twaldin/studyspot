@@ -116,7 +116,7 @@ export class ChatStreamingService {
     setMessages(prevMessages => {
       const newMessages = [...prevMessages];
       const lastMessage = newMessages[newMessages.length - 1];
-      if (lastMessage.type === 'assistant') {
+      if (lastMessage && lastMessage.type === 'assistant') {
         lastMessage.content = content;
       }
       return newMessages;
@@ -133,7 +133,7 @@ export class ChatStreamingService {
     setMessages(prevMessages => {
       const newMessages = [...prevMessages];
       const lastMessage = newMessages[newMessages.length - 1];
-      if (lastMessage.type === 'assistant') {
+      if (lastMessage && lastMessage.type === 'assistant') {
         lastMessage.linkedDocumentIds = linkedDocumentIds;
       }
       return newMessages;

@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useCreateChat } from "@/hooks/api/chats";
 import { CardGrid } from "@/components/ui/card-grid";
 import logger from "@/lib/logger";
+import { useStreamingChats } from "@/features/chat/PendingChatContext";
 
 
 export default function Home() {
@@ -26,6 +27,7 @@ export default function Home() {
   const router = useRouter();
   const { data: suggestedQueries = [], isLoading: isLoadingSuggestedQueries } = useSuggestedQueries(selectedCourse?.id);
   const createChatMutation = useCreateChat();
+  const { setStreamingStatus } = useStreamingChats();
 
   // Auto-focus the textarea when component mounts
   useEffect(() => {
@@ -49,6 +51,10 @@ export default function Home() {
       sessionStorage.setItem(`temp-message-${tempChatId}`, messageContent);
       sessionStorage.setItem(`temp-course-${tempChatId}`, JSON.stringify(selectedCourse));
       
+      // Register temporary chat with streaming context
+      setStreamingStatus(tempChatId, "New Chat", true);
+      logger.info('Registered temporary chat:', { tempChatId });
+      
       // Navigate immediately with temp ID for perceived performance
       logger.info('Navigating to temporary chat:', { tempChatId });
       router.push(`/chat/${tempChatId}`);
@@ -68,6 +74,11 @@ export default function Home() {
       
       // Replace temp ID with real chat ID in URL without page reload
       logger.info('Replacing URL with real chat ID:', { tempChatId, realChatId: newChat.id });
+      
+      // Transfer streaming status from temp to real chat
+      setStreamingStatus(newChat.id, newChat.title, true);
+      setStreamingStatus(tempChatId, "New Chat", false); // Remove temp chat
+      
       router.replace(`/chat/${newChat.id}`);
       
       // Clean up temp storage
@@ -76,6 +87,8 @@ export default function Home() {
       
     } catch (error) {
       console.error('Failed to create chat:', error);
+      // Clean up temporary chat on error
+      setStreamingStatus(tempChatId, "New Chat", false);
       // Navigate back to dashboard on error
       router.push('/');
     } finally {

@@ -1,5 +1,6 @@
 {
   "/(main)/chat/[chatId]/page": "app/(main)/chat/[chatId]/page.js",
+  "/(main)/courses/page": "app/(main)/courses/page.js",
   "/(main)/page": "app/(main)/page.js",
   "/api/assistant/route": "app/api/assistant/route.js",
   "/api/chats/[chatId]/route": "app/api/chats/[chatId]/route.js",

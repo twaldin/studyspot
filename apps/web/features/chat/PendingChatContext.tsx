@@ -67,6 +67,7 @@ export const StreamingChatProvider: React.FC<{ children: React.ReactNode }> = ({
     return chat?.title;
   }, [streamingChats]);
 
+
   // Legacy methods for backward compatibility
   const addPendingChat = useCallback((chatId: string, title: string) => {
     setStreamingStatus(chatId, title, true);

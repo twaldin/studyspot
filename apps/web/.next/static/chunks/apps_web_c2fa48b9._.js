@@ -730,9 +730,11 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$components$2f
 var __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$hooks$2f$api$2f$chats$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/apps/web/hooks/api/chats.ts [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$components$2f$ui$2f$card$2d$grid$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/apps/web/components/ui/card-grid.tsx [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$logger$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/apps/web/lib/logger.ts [app-client] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$features$2f$chat$2f$PendingChatContext$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/apps/web/features/chat/PendingChatContext.tsx [app-client] (ecmascript)");
 ;
 var _s = __turbopack_context__.k.signature();
 "use client";
+;
 ;
 ;
 ;
@@ -757,6 +759,7 @@ function Home() {
     const router = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$3$2e$4_$40$babel$2b$core$40$7$2e$28$2e$0_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$navigation$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRouter"])();
     const { data: suggestedQueries = [], isLoading: isLoadingSuggestedQueries } = (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$hooks$2f$api$2f$courses$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useSuggestedQueries"])(selectedCourse?.id);
     const createChatMutation = (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$hooks$2f$api$2f$chats$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useCreateChat"])();
+    const { setStreamingStatus } = (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$features$2f$chat$2f$PendingChatContext$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useStreamingChats"])();
     // Auto-focus the textarea when component mounts
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$3$2e$4_$40$babel$2b$core$40$7$2e$28$2e$0_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
         "Home.useEffect": ()=>{
@@ -776,6 +779,11 @@ function Home() {
             // Store message and course data for immediate access
             sessionStorage.setItem(`temp-message-${tempChatId}`, messageContent);
             sessionStorage.setItem(`temp-course-${tempChatId}`, JSON.stringify(selectedCourse));
+            // Register temporary chat with streaming context
+            setStreamingStatus(tempChatId, "New Chat", true);
+            __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$logger$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].info('Registered temporary chat:', {
+                tempChatId
+            });
             // Navigate immediately with temp ID for perceived performance
             __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$logger$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].info('Navigating to temporary chat:', {
                 tempChatId
@@ -799,12 +807,17 @@ function Home() {
                 tempChatId,
                 realChatId: newChat.id
             });
+            // Transfer streaming status from temp to real chat
+            setStreamingStatus(newChat.id, newChat.title, true);
+            setStreamingStatus(tempChatId, "New Chat", false); // Remove temp chat
             router.replace(`/chat/${newChat.id}`);
             // Clean up temp storage
             sessionStorage.removeItem(`temp-message-${tempChatId}`);
             sessionStorage.removeItem(`temp-course-${tempChatId}`);
         } catch (error) {
             console.error('Failed to create chat:', error);
+            // Clean up temporary chat on error
+            setStreamingStatus(tempChatId, "New Chat", false);
             // Navigate back to dashboard on error
             router.push('/');
         } finally{
@@ -828,7 +841,7 @@ function Home() {
                         children: "What are we learning today?"
                     }, void 0, false, {
                         fileName: "[project]/apps/web/app/(main)/page.tsx",
-                        lineNumber: 97,
+                        lineNumber: 110,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$3$2e$4_$40$babel$2b$core$40$7$2e$28$2e$0_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -841,21 +854,21 @@ function Home() {
                                         className: "h-8 w-32 rounded-full"
                                     }, void 0, false, {
                                         fileName: "[project]/apps/web/app/(main)/page.tsx",
-                                        lineNumber: 104,
+                                        lineNumber: 117,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$3$2e$4_$40$babel$2b$core$40$7$2e$28$2e$0_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$components$2f$ui$2f$skeleton$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Skeleton"], {
                                         className: "h-8 w-40 rounded-full"
                                     }, void 0, false, {
                                         fileName: "[project]/apps/web/app/(main)/page.tsx",
-                                        lineNumber: 105,
+                                        lineNumber: 118,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$3$2e$4_$40$babel$2b$core$40$7$2e$28$2e$0_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$components$2f$ui$2f$skeleton$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Skeleton"], {
                                         className: "h-8 w-24 rounded-full"
                                     }, void 0, false, {
                                         fileName: "[project]/apps/web/app/(main)/page.tsx",
-                                        lineNumber: 106,
+                                        lineNumber: 119,
                                         columnNumber: 15
                                     }, this)
                                 ]
@@ -869,24 +882,24 @@ function Home() {
                                             className: "w-4 h-4 mr-1"
                                         }, void 0, false, {
                                             fileName: "[project]/apps/web/app/(main)/page.tsx",
-                                            lineNumber: 117,
+                                            lineNumber: 130,
                                             columnNumber: 17
                                         }, this),
                                         suggestion
                                     ]
                                 }, suggestion, true, {
                                     fileName: "[project]/apps/web/app/(main)/page.tsx",
-                                    lineNumber: 110,
+                                    lineNumber: 123,
                                     columnNumber: 15
                                 }, this))
                         }, void 0, false, {
                             fileName: "[project]/apps/web/app/(main)/page.tsx",
-                            lineNumber: 101,
+                            lineNumber: 114,
                             columnNumber: 11
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/apps/web/app/(main)/page.tsx",
-                        lineNumber: 100,
+                        lineNumber: 113,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$3$2e$4_$40$babel$2b$core$40$7$2e$28$2e$0_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$components$2f$chat$2d$input$2d$bar$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["ChatInputBar"], {
@@ -895,7 +908,7 @@ function Home() {
                         isSubmitting: isCreatingChat
                     }, void 0, false, {
                         fileName: "[project]/apps/web/app/(main)/page.tsx",
-                        lineNumber: 124,
+                        lineNumber: 137,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$3$2e$4_$40$babel$2b$core$40$7$2e$28$2e$0_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -905,7 +918,7 @@ function Home() {
                                 children: "Error loading course"
                             }, void 0, false, {
                                 fileName: "[project]/apps/web/app/(main)/page.tsx",
-                                lineNumber: 128,
+                                lineNumber: 141,
                                 columnNumber: 21
                             }, this),
                             selectedCourse && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$3$2e$4_$40$babel$2b$core$40$7$2e$28$2e$0_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$components$2f$ui$2f$card$2d$grid$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["CardGrid"], {
@@ -913,13 +926,13 @@ function Home() {
                                 viewAll: false
                             }, void 0, false, {
                                 fileName: "[project]/apps/web/app/(main)/page.tsx",
-                                lineNumber: 129,
+                                lineNumber: 142,
                                 columnNumber: 30
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/apps/web/app/(main)/page.tsx",
-                        lineNumber: 127,
+                        lineNumber: 140,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$3$2e$4_$40$babel$2b$core$40$7$2e$28$2e$0_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -936,14 +949,14 @@ function Home() {
                                                 className: "w-4 h-4"
                                             }, void 0, false, {
                                                 fileName: "[project]/apps/web/app/(main)/page.tsx",
-                                                lineNumber: 136,
+                                                lineNumber: 149,
                                                 columnNumber: 15
                                             }, this),
                                             "Upload Files"
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/apps/web/app/(main)/page.tsx",
-                                        lineNumber: 135,
+                                        lineNumber: 148,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$3$2e$4_$40$babel$2b$core$40$7$2e$28$2e$0_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$components$2f$ui$2f$separator$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Separator"], {
@@ -951,7 +964,7 @@ function Home() {
                                         className: "data-[orientation=vertical]:h-4"
                                     }, void 0, false, {
                                         fileName: "[project]/apps/web/app/(main)/page.tsx",
-                                        lineNumber: 139,
+                                        lineNumber: 152,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$3$2e$4_$40$babel$2b$core$40$7$2e$28$2e$0_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
@@ -962,20 +975,20 @@ function Home() {
                                                 className: "w-4 h-4"
                                             }, void 0, false, {
                                                 fileName: "[project]/apps/web/app/(main)/page.tsx",
-                                                lineNumber: 144,
+                                                lineNumber: 157,
                                                 columnNumber: 15
                                             }, this),
                                             "New Post"
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/apps/web/app/(main)/page.tsx",
-                                        lineNumber: 143,
+                                        lineNumber: 156,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/apps/web/app/(main)/page.tsx",
-                                lineNumber: 134,
+                                lineNumber: 147,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$3$2e$4_$40$babel$2b$core$40$7$2e$28$2e$0_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$3$2e$4_$40$babel$2b$core$40$7$2e$28$2e$0_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
@@ -989,30 +1002,30 @@ function Home() {
                                             className: "w-4 h-4"
                                         }, void 0, false, {
                                             fileName: "[project]/apps/web/app/(main)/page.tsx",
-                                            lineNumber: 151,
+                                            lineNumber: 164,
                                             columnNumber: 15
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/apps/web/app/(main)/page.tsx",
-                                    lineNumber: 149,
+                                    lineNumber: 162,
                                     columnNumber: 13
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/apps/web/app/(main)/page.tsx",
-                                lineNumber: 148,
+                                lineNumber: 161,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/apps/web/app/(main)/page.tsx",
-                        lineNumber: 133,
+                        lineNumber: 146,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/apps/web/app/(main)/page.tsx",
-                lineNumber: 96,
+                lineNumber: 109,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$3$2e$4_$40$babel$2b$core$40$7$2e$28$2e$0_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$3$2e$4_$40$babel$2b$core$40$7$2e$28$2e$0_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
@@ -1026,18 +1039,18 @@ function Home() {
                             className: "w-4 h-4"
                         }, void 0, false, {
                             fileName: "[project]/apps/web/app/(main)/page.tsx",
-                            lineNumber: 161,
+                            lineNumber: 174,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/apps/web/app/(main)/page.tsx",
-                    lineNumber: 159,
+                    lineNumber: 172,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/apps/web/app/(main)/page.tsx",
-                lineNumber: 158,
+                lineNumber: 171,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$3$2e$4_$40$babel$2b$core$40$7$2e$28$2e$0_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$components$2f$file$2d$upload$2d$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FileUploadDialog"], {
@@ -1045,7 +1058,7 @@ function Home() {
                 onOpenChange: setIsUploadDialogOpen
             }, void 0, false, {
                 fileName: "[project]/apps/web/app/(main)/page.tsx",
-                lineNumber: 165,
+                lineNumber: 178,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$3$2e$4_$40$babel$2b$core$40$7$2e$28$2e$0_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$components$2f$new$2d$post$2d$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["NewPostDialog"], {
@@ -1053,22 +1066,23 @@ function Home() {
                 onOpenChange: setIsNewPostDialogOpen
             }, void 0, false, {
                 fileName: "[project]/apps/web/app/(main)/page.tsx",
-                lineNumber: 169,
+                lineNumber: 182,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/apps/web/app/(main)/page.tsx",
-        lineNumber: 95,
+        lineNumber: 108,
         columnNumber: 5
     }, this);
 }
-_s(Home, "aoxsYWGNfaEd7wp5W5CxS+7xleA=", false, function() {
+_s(Home, "JFFMR8ACBrlEc1tSgNTP2F6vz4w=", false, function() {
     return [
         __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$hooks$2f$api$2f$courses$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useSelectedCourse"],
         __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$3$2e$4_$40$babel$2b$core$40$7$2e$28$2e$0_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$navigation$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRouter"],
         __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$hooks$2f$api$2f$courses$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useSuggestedQueries"],
-        __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$hooks$2f$api$2f$chats$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useCreateChat"]
+        __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$hooks$2f$api$2f$chats$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useCreateChat"],
+        __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$features$2f$chat$2f$PendingChatContext$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useStreamingChats"]
     ];
 });
 _c = Home;

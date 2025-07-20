@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { ScrollToBottomButton } from "@/components/scroll-to-bottom"
 import { chatStateService } from "@/features/chat/services/chat-state.service"
 import { chatStreamingService } from "@/features/chat/services/chat-streaming.service"
+import { useStreamingChats } from "@/features/chat/PendingChatContext"
 import logger from "@/lib/logger"
 
 export function ChatPageContent() {
@@ -34,6 +35,7 @@ export function ChatPageContent() {
   const { data: selectedCourse } = useSelectedCourse()
   const createChatMutation = useCreateChat()
   const updateChatMutation = useUpdateChat()
+  const { setStreamingStatus } = useStreamingChats()
   
   const [messages, setMessages] = useState<Message[]>([])
   const [isReplying, setIsReplying] = useState(false)
@@ -73,7 +75,7 @@ export function ChatPageContent() {
                 setMessages(prev => {
                   const newMessages = [...prev];
                   const lastMessage = newMessages[newMessages.length - 1];
-                  if (lastMessage.type === 'assistant') {
+                  if (lastMessage && lastMessage.type === 'assistant') {
                     lastMessage.content = fullResponse;
                   }
                   return newMessages;
@@ -84,7 +86,7 @@ export function ChatPageContent() {
                 setMessages(prev => {
                   const newMessages = [...prev];
                   const lastMessage = newMessages[newMessages.length - 1];
-                  if (lastMessage.type === 'assistant') {
+                  if (lastMessage && lastMessage.type === 'assistant') {
                     lastMessage.linkedDocumentIds = linkedDocumentIds;
                   }
                   return newMessages;
@@ -133,8 +135,12 @@ export function ChatPageContent() {
       reader.releaseLock();
       setIsReplying(false);
       
+      // Update streaming status - streaming is complete
+      if (chatId) {
+        setStreamingStatus(chatId, 'Chat', false);
+      }
     }
-  }, [initialMessage, updateChatMutation, setPendingStreamResponse, setMessages, setIsReplying]);
+  }, [initialMessage, updateChatMutation, setPendingStreamResponse, setMessages, setIsReplying, chatId, setStreamingStatus]);
 
   // Scroll to bottom function
   const scrollToBottom = useCallback(() => {
@@ -250,6 +256,11 @@ export function ChatPageContent() {
       tempStreamingStarted.current = true // Prevent re-execution
       setIsReplying(true)
       
+      // Update streaming status - streaming is starting
+      if (chatId) {
+        setStreamingStatus(chatId, 'New Chat', true);
+      }
+      
       // Immediately show user message and start streaming
       const userMessage: Message = {
         id: Date.now().toString() + '-user',
@@ -291,6 +302,10 @@ export function ChatPageContent() {
           
         } catch (error) {
           console.error('Failed to start immediate streaming:', error)
+          // Update streaming status - streaming failed
+          if (chatId) {
+            setStreamingStatus(chatId, 'New Chat', false);
+          }
           chatStateService.handleMessageError(
             { messages: [], setMessages, setIsReplying, setError },
             error instanceof Error ? error : new Error('Failed to start streaming')
@@ -300,7 +315,7 @@ export function ChatPageContent() {
       
       startImmediateStreaming()
     }
-  }, [isTemporaryChat, initialMessage, tempCourse, isReplying, createChatMutation, updateChatMutation, router, processTemporaryStreamingResponse])
+  }, [isTemporaryChat, initialMessage, tempCourse, isReplying, createChatMutation, updateChatMutation, router, processTemporaryStreamingResponse, chatId, setStreamingStatus])
 
   // Handle initial message streaming for real chats
   useEffect(() => {
@@ -313,6 +328,10 @@ export function ChatPageContent() {
       if (shouldStartStreaming) {
         setIsReplying(true)
         
+        // Update streaming status for real chat
+        if (chatId) {
+          setStreamingStatus(chatId, 'Chat', true);
+        }
         
         const startStreaming = async () => {
           try {
@@ -348,6 +367,10 @@ export function ChatPageContent() {
             
           } catch (error) {
             console.error('Failed to start streaming:', error)
+            // Update streaming status - streaming failed
+            if (chatId) {
+              setStreamingStatus(chatId, 'Chat', false);
+            }
             chatStateService.handleMessageError(
               { messages, setMessages, setIsReplying, setError },
               error instanceof Error ? error : new Error('Failed to start streaming')
@@ -358,7 +381,7 @@ export function ChatPageContent() {
         startStreaming()
       }
     }
-  }, [isTemporaryChat, initialMessage, selectedCourse, chat, chatId, isReplying, messages, createChatMutation, updateChatMutation, router])
+  }, [isTemporaryChat, initialMessage, selectedCourse, chat, chatId, isReplying, messages, createChatMutation, updateChatMutation, router, setStreamingStatus])
 
   // Handle chat loading errors
   useEffect(() => {
@@ -381,6 +404,10 @@ export function ChatPageContent() {
     setIsReplying(true)
     setError(null)
     
+    // Update streaming status - new message streaming
+    if (chatId) {
+      setStreamingStatus(chatId, 'Chat', true);
+    }
 
     try {
       // Create initial messages
@@ -418,12 +445,16 @@ export function ChatPageContent() {
 
     } catch (error) {
       console.error('Failed to send message:', error)
+      // Update streaming status - streaming failed
+      if (chatId) {
+        setStreamingStatus(chatId, 'Chat', false);
+      }
       chatStateService.handleMessageError(
         { messages, setMessages, setIsReplying, setError },
         error instanceof Error ? error : new Error('Failed to send message')
       )
     }
-  }, [chatId, isTemporaryChat, tempCourse, selectedCourse, messages, createChatMutation, updateChatMutation, router])
+  }, [chatId, isTemporaryChat, tempCourse, selectedCourse, messages, createChatMutation, updateChatMutation, router, setStreamingStatus])
 
   if (!chatId) {
     return (

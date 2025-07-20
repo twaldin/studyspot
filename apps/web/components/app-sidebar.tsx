@@ -28,15 +28,8 @@ import {
   useSelectChatCourse,
 } from "@/hooks/api/chats";
 import { useAuthenticatedUser } from "@/hooks/api/base";
-import { useCreateChat } from "@/hooks/api/chats";
 import { useChatNavigation } from "@/features/chat/ChatNavigationContext";
-import { useStreamingChats } from "@/features/chat/PendingChatContext";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { ChatList } from "@/components/chat-list";
 import { usePathname } from "next/navigation";
 
 import {
@@ -48,16 +41,12 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
-  SidebarMenuAction,
-  SidebarMenuButton,
-  SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import React from "react";
 import { useRouter } from "next/navigation";
-import { cn } from "@/lib/utils";
 import { UserButton } from "@/components/user-button";
 import { SettingsButton } from "@/components/settings-button";
 
@@ -123,17 +112,8 @@ export function AppSidebar() {
   const preloadChat = usePreloadChat();
   const { handleChatSelect, handleNewChat, handleDeleteChat } =
     useChatNavigation();
-  const { streamingChats, isStreaming } = useStreamingChats();
   const pathname = usePathname();
   const hasJoinedCourses = joinedCourseIds && joinedCourseIds.length > 0;
-
-  // Debug logging
-  React.useEffect(() => {
-    console.log('Sidebar: streaming chats updated:', streamingChats);
-  }, [streamingChats]);
-
-  // Get pending chats for backward compatibility
-  const pendingChats = streamingChats.filter(chat => chat.isStreaming);
 
   // Refresh chats when joined courses change
   const joinedCoursesString = React.useMemo(
@@ -154,11 +134,6 @@ export function AppSidebar() {
   const joinedCourses = allCourses.filter((course) =>
     joinedCourseIds.includes(course.id)
   );
-
-  // Get selected chat ID from URL for UI highlighting
-  const selectedChatId = pathname.startsWith("/chat/")
-    ? pathname.split("/")[2]
-    : null;
 
   const onChatSelect = (chatId: string) => {
     // Navigate immediately for instant feel (optimistic navigation)
@@ -260,101 +235,14 @@ export function AppSidebar() {
             Past Chats
           </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
-              {isLoadingChats && (
-                <div className="px-2 py-1 text-sm text-muted-foreground">
-                  Loading chats...
-                </div>
-              )}
-
-              {chatsError && (
-                <div className="px-2 py-1 text-sm text-destructive">
-                  Failed to load chats
-                </div>
-              )}
-
-              {!isLoadingChats && !chatsError && chats.length === 0 && pendingChats.length === 0 && (
-                <div className="px-2 py-1 text-sm text-muted-foreground">
-                  No chats yet. Start a new conversation!
-                </div>
-              )}
-
-              {/* Render pending chats first - only show chats that don't exist in regular chats */}
-              {pendingChats
-                .filter(pendingChat => !chats.some(chat => chat.id === pendingChat.chatId))
-                .map((pendingChat) => (
-                <SidebarMenuItem
-                  key={`pending-${pendingChat.chatId}`}
-                  className="group-data-[collapsible=icon]:hidden"
-                >
-                  <SidebarMenuButton
-                    asChild
-                    className="group-data-[collapsible=icon]:justify-center"
-                    isActive={selectedChatId === pendingChat.chatId}
-                  >
-                    <a
-                      href="#"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        onChatSelect(pendingChat.chatId);
-                      }}
-                    >
-                      <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
-                      <span className="group-data-[collapsible=icon]:hidden truncate min-w-0">
-                        {pendingChat.title}
-                      </span>
-                    </a>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-
-              {/* Render actual chats */}
-              {chats.map((chat) => (
-                <SidebarMenuItem
-                  key={chat.id}
-                  className="group-data-[collapsible=icon]:hidden"
-                >
-                  <SidebarMenuButton
-                    asChild
-                    className="group-data-[collapsible=icon]:justify-center"
-                    isActive={selectedChatId === chat.id}
-                  >
-                    <a
-                      href="#"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        onChatSelect(chat.id);
-                      }}
-                      onMouseEnter={() => onChatHover(chat.id)}
-                    >
-                      {isStreaming(chat.id) ? (
-                        <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
-                      ) : (
-                        <FlaskConical className="h-4 w-4 shrink-0" />
-                      )}
-                      <span className="group-data-[collapsible=icon]:hidden truncate min-w-0">
-                        {chat.title}
-                      </span>
-                    </a>
-                  </SidebarMenuButton>
-                  <SidebarMenuAction
-                    showOnHover
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
-                      onDeleteChat(chat.id);
-                    }}
-                    aria-label="Delete chat"
-                    className={cn(
-                      "cursor-pointer opacity-0 group-hover/menu-item:opacity-100",
-                      selectedChatId === chat.id && "!opacity-0",
-                    )}
-                  >
-                    <X className="h-3 w-3" />
-                  </SidebarMenuAction>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
+            <ChatList
+              chats={chats}
+              isLoading={isLoadingChats}
+              error={chatsError}
+              onChatSelect={onChatSelect}
+              onChatHover={onChatHover}
+              onDeleteChat={onDeleteChat}
+            />
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
