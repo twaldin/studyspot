@@ -1,12 +1,15 @@
-import { Anthropic } from '@llamaindex/anthropic';
-import AnthropicSDK from '@anthropic-ai/sdk';
-import type { ChatMessage, MessageType } from '@/lib/utils/llamaindex-imports';
-import { SupabaseClient } from '@supabase/supabase-js';
-import { Database } from '@/lib/types/database';
-import { RetrievalService, RetrievedDocument } from './services/retrieval.service';
-import { QueryService } from './services/query.service';
-import { ToolManager } from './tools/tool-manager';
-import logger from '@/lib/utils/logger';
+import { Anthropic } from "@llamaindex/anthropic";
+import AnthropicSDK from "@anthropic-ai/sdk";
+import type { ChatMessage, MessageType } from "@/lib/utils/llamaindex-imports";
+import { SupabaseClient } from "@supabase/supabase-js";
+import { Database } from "@/lib/types/database";
+import {
+  RetrievalService,
+  RetrievedDocument,
+} from "./services/retrieval.service";
+import { QueryService } from "./services/query.service";
+import { ToolManager } from "./tools/tool-manager";
+import logger from "@/lib/utils/logger";
 
 export interface StreamingAgentResponse {
   chunk?: string;
@@ -40,7 +43,7 @@ export class StreamingAgentService {
     this.supabase = supabase;
     this.claudeModel = new Anthropic({
       apiKey: process.env.ANTHROPIC_API_KEY!,
-      model: 'claude-3-7-sonnet-latest',
+      model: "claude-3-7-sonnet-latest",
     });
     this.directAnthropicClient = new AnthropicSDK({
       apiKey: process.env.ANTHROPIC_API_KEY!,
@@ -48,22 +51,26 @@ export class StreamingAgentService {
     this.toolManager = new ToolManager(supabase);
   }
 
-  async* executeRAGWithTools(
+  async *executeRAGWithTools(
     originalQuestion: string,
     conversationHistory: any[] = [],
     courseId?: string,
-    timeZone?: string
+    timeZone?: string,
   ): AsyncGenerator<StreamingAgentResponse> {
     try {
-      logger.info({ question: originalQuestion, courseId }, '[StreamingAgentService] Starting RAG with tools');
+      logger.info(
+        { question: originalQuestion, courseId },
+        "[StreamingAgentService] Starting RAG with tools",
+      );
 
       // 1. Reformulate question and decide if RAG is needed
       const reformulationResult = await QueryService.reformulateQuestion(
-        originalQuestion, 
-        conversationHistory, 
-        timeZone
+        originalQuestion,
+        conversationHistory,
+        timeZone,
       );
-      const { ragNeeded, question: reformulatedQuestion, search_query } = reformulationResult;
+      const { ragNeeded, question: reformulatedQuestion, search_query } =
+        reformulationResult;
 
       // 2. Retrieve documents if needed
       let retrievedDocuments: RetrievedDocument[] = [];
@@ -73,14 +80,14 @@ export class StreamingAgentService {
           search_query, // Use the descriptive search query for retrieval
           courseId,
           {},
-          reformulatedQuestion // Pass the original question for ranking
+          reformulatedQuestion, // Pass the original question for ranking
         );
 
         if (Array.isArray(ragResult)) {
           retrievedDocuments = ragResult;
-          logger.info({ 
-            documentsFound: retrievedDocuments.length 
-          }, '[StreamingAgentService] Documents retrieved successfully');
+          logger.info({
+            documentsFound: retrievedDocuments.length,
+          }, "[StreamingAgentService] Documents retrieved successfully");
         }
       }
 
@@ -89,20 +96,20 @@ export class StreamingAgentService {
         originalQuestion,
         retrievedDocuments,
         courseId,
-        timeZone
+        timeZone,
       );
 
       // VERBOSE LOGGING: Log the exact prompts being sent
-      logger.info({ 
+      logger.info({
         systemPromptLength: systemPrompt.length,
         userMessageLength: userMessage.length,
-        systemPromptPreview: systemPrompt.substring(0, 300) + '...',
-        userMessagePreview: userMessage.substring(0, 300) + '...'
-      }, '[StreamingAgentService] VERBOSE: Prompts constructed');
+        systemPromptPreview: systemPrompt.substring(0, 300) + "...",
+        userMessagePreview: userMessage.substring(0, 300) + "...",
+      }, "[StreamingAgentService] VERBOSE: Prompts constructed");
 
       const messages: ChatMessage[] = [
-        { role: 'system', content: systemPrompt } as ChatMessage,
-        { role: 'user', content: userMessage } as ChatMessage
+        { role: "system", content: systemPrompt } as ChatMessage,
+        { role: "user", content: userMessage } as ChatMessage,
       ];
 
       // 4. Execute conversation with tool support
@@ -112,161 +119,187 @@ export class StreamingAgentService {
       let toolCallCount = 0;
 
       // VERBOSE LOGGING: Log the exact messages being sent to Claude
-      logger.info({ 
+      logger.info({
         messageCount: conversationMessages.length,
-        messages: conversationMessages.map(msg => ({
+        messages: conversationMessages.map((msg) => ({
           role: msg.role,
           contentType: typeof msg.content,
-          contentPreview: typeof msg.content === 'string' 
-            ? msg.content.substring(0, 200) + '...' 
-            : JSON.stringify(msg.content).substring(0, 200) + '...'
+          contentPreview: typeof msg.content === "string"
+            ? msg.content.substring(0, 200) + "..."
+            : JSON.stringify(msg.content).substring(0, 200) + "...",
         })),
-        toolsAvailable: this.toolManager.getTools().map(tool => tool.metadata?.name || 'unknown')
-      }, '[StreamingAgentService] VERBOSE: Messages being sent to Claude');
+        toolsAvailable: this.toolManager.getTools().map((tool) =>
+          tool.metadata?.name || "unknown"
+        ),
+      }, "[StreamingAgentService] VERBOSE: Messages being sent to Claude");
 
       while (toolCallCount < maxToolCalls) {
         try {
-          logger.debug({ 
+          logger.debug({
             messageCount: conversationMessages.length,
-            toolCallCount 
-          }, '[StreamingAgentService] Starting Claude conversation');
+            toolCallCount,
+          }, "[StreamingAgentService] Starting Claude conversation");
 
           // EXPERIMENT: Try using direct Anthropic SDK for better tool call handling
-          logger.info({}, '[StreamingAgentService] VERBOSE: Using direct Anthropic SDK for tool calls');
-          
+          logger.info(
+            {},
+            "[StreamingAgentService] VERBOSE: Using direct Anthropic SDK for tool calls",
+          );
+
           // Convert LlamaIndex tools to Anthropic format
-          const anthropicTools = this.toolManager.getTools().map(tool => ({
+          const anthropicTools = this.toolManager.getTools().map((tool) => ({
             name: tool.metadata.name,
             description: tool.metadata.description,
-            input_schema: tool.metadata.parameters
+            input_schema: tool.metadata.parameters,
           }));
-          
+
           // Separate the system prompt from the rest of the messages
-          const systemPromptMessage = conversationMessages.find(msg => msg.role === 'system');
-          const otherMessages = conversationMessages.filter(msg => msg.role !== 'system');
+          const systemPromptMessage = conversationMessages.find((msg) =>
+            msg.role === "system"
+          );
+          const otherMessages = conversationMessages.filter((msg) =>
+            msg.role !== "system"
+          );
 
           // Convert LlamaIndex messages to Anthropic format
-          const anthropicMessages = otherMessages.map(msg => ({
+          const anthropicMessages = otherMessages.map((msg) => ({
             role: msg.role,
-            content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)
+            content: typeof msg.content === "string"
+              ? msg.content
+              : JSON.stringify(msg.content),
           }));
-          
-          logger.info({ 
+
+          logger.info({
             toolCount: anthropicTools.length,
             messageCount: anthropicMessages.length,
-            tools: anthropicTools
-          }, '[StreamingAgentService] VERBOSE: Converted to Anthropic format');
+            tools: anthropicTools,
+          }, "[StreamingAgentService] VERBOSE: Converted to Anthropic format");
 
           // Use direct Anthropic SDK for streaming with tools
           const stream = await this.directAnthropicClient.messages.stream({
-            model: 'claude-3-5-sonnet-20241022',
+            model: "claude-3-5-sonnet-20241022",
             max_tokens: 4000,
-            system: systemPromptMessage ? String(systemPromptMessage.content) : undefined,
+            system: systemPromptMessage
+              ? String(systemPromptMessage.content)
+              : undefined,
             messages: anthropicMessages as any,
-            tools: anthropicTools
+            tools: anthropicTools,
           });
 
-          let fullResponse = '';
+          let fullResponse = "";
           let currentToolCall: ToolCall | null = null;
-          let toolInputBuffer = '';
+          let toolInputBuffer = "";
           let toolCallsInResponse: ToolCall[] = [];
           let chunkCount = 0;
 
-          logger.info({}, '[StreamingAgentService] VERBOSE: Starting to process stream chunks from direct Anthropic SDK');
+          logger.info(
+            {},
+            "[StreamingAgentService] VERBOSE: Starting to process stream chunks from direct Anthropic SDK",
+          );
 
           // Process the stream using async iteration (not events)
           for await (const chunk of stream) {
             chunkCount++;
-            
-            // VERBOSE LOGGING: Log every chunk from direct SDK
-            logger.info({ 
-              chunkCount,
-              chunkType: chunk.type,
-              chunkData: chunk
-            }, '[StreamingAgentService] VERBOSE: Direct SDK chunk received');
 
             // Handle different chunk types from direct Anthropic SDK
-            if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
+            if (
+              chunk.type === "content_block_delta" &&
+              chunk.delta.type === "text_delta"
+            ) {
               fullResponse += chunk.delta.text;
-              logger.debug({
-                textLength: chunk.delta.text.length,
-                textPreview: chunk.delta.text.substring(0, 50) + '...'
-              }, '[StreamingAgentService] VERBOSE: Text delta from direct SDK');
+
               yield { chunk: chunk.delta.text };
             }
 
-            if (chunk.type === 'content_block_start' && chunk.content_block.type === 'tool_use') {
+            if (
+              chunk.type === "content_block_start" &&
+              chunk.content_block.type === "tool_use"
+            ) {
               currentToolCall = {
                 id: chunk.content_block.id,
                 name: chunk.content_block.name,
-                input: {}
+                input: {},
               };
-              toolInputBuffer = '';
-              
-              logger.info({ 
-                toolName: currentToolCall.name,
-                toolId: currentToolCall.id
-              }, '[StreamingAgentService] VERBOSE: Tool call started from direct SDK');
-              
+              toolInputBuffer = "";
+
+              logger.info(
+                {
+                  toolName: currentToolCall.name,
+                  toolId: currentToolCall.id,
+                },
+                "[StreamingAgentService] VERBOSE: Tool call started from direct SDK",
+              );
+
               yield {
                 toolCall: {
                   name: currentToolCall.name,
                   args: {},
-                  id: currentToolCall.id
-                }
+                  id: currentToolCall.id,
+                },
               };
             }
 
-            if (chunk.type === 'content_block_delta' && chunk.delta.type === 'input_json_delta') {
+            if (
+              chunk.type === "content_block_delta" &&
+              chunk.delta.type === "input_json_delta"
+            ) {
               toolInputBuffer += chunk.delta.partial_json;
-              logger.info({ 
-                partialJson: chunk.delta.partial_json,
-                totalBuffer: toolInputBuffer
-              }, '[StreamingAgentService] VERBOSE: Tool input accumulating from direct SDK');
+              logger.info(
+                {
+                  partialJson: chunk.delta.partial_json,
+                  totalBuffer: toolInputBuffer,
+                },
+                "[StreamingAgentService] VERBOSE: Tool input accumulating from direct SDK",
+              );
             }
 
-            if (chunk.type === 'content_block_stop' && currentToolCall) {
+            if (chunk.type === "content_block_stop" && currentToolCall) {
               try {
                 currentToolCall.input = JSON.parse(toolInputBuffer);
                 toolCallsInResponse.push(currentToolCall);
-                
-                logger.info({ 
-                  toolName: currentToolCall.name,
-                  toolId: currentToolCall.id,
-                  input: currentToolCall.input 
-                }, '[StreamingAgentService] VERBOSE: Tool call completed from direct SDK');
-                
+
+                logger.info(
+                  {
+                    toolName: currentToolCall.name,
+                    toolId: currentToolCall.id,
+                    input: currentToolCall.input,
+                  },
+                  "[StreamingAgentService] VERBOSE: Tool call completed from direct SDK",
+                );
               } catch (error) {
-                logger.error({ 
-                  error, 
-                  toolId: currentToolCall.id,
-                  buffer: toolInputBuffer 
-                }, '[StreamingAgentService] VERBOSE: Failed to parse tool input from direct SDK');
+                logger.error(
+                  {
+                    error,
+                    toolId: currentToolCall.id,
+                    buffer: toolInputBuffer,
+                  },
+                  "[StreamingAgentService] VERBOSE: Failed to parse tool input from direct SDK",
+                );
               }
               currentToolCall = null;
-              toolInputBuffer = '';
+              toolInputBuffer = "";
             }
           }
 
-          logger.info({ 
+          logger.info({
             chunkCount,
             fullResponseLength: fullResponse.length,
             toolCallsFound: toolCallsInResponse.length,
-            responsePreview: fullResponse.substring(0, 200) + '...'
-          }, '[StreamingAgentService] VERBOSE: Stream processing completed');
+            responsePreview: fullResponse.substring(0, 200) + "...",
+          }, "[StreamingAgentService] VERBOSE: Stream processing completed");
 
           // If no tool calls were made, we're done
           if (toolCallsInResponse.length === 0) {
             const allDocumentIds = [
               ...new Set([
-                ...retrievedDocuments.map(doc => doc.doc_id),
-                ...usedDocumentIds
-              ])
+                ...retrievedDocuments.map((doc) => doc.doc_id),
+                ...usedDocumentIds,
+              ]),
             ];
 
             yield {
               done: true,
-              linkedDocumentIds: allDocumentIds
+              linkedDocumentIds: allDocumentIds,
             };
             return;
           }
@@ -275,73 +308,86 @@ export class StreamingAgentService {
           const toolResults = [];
           for (const toolCall of toolCallsInResponse) {
             try {
-              const result = await this.toolManager.executeToolCall(toolCall.name, toolCall.input);
+              const result = await this.toolManager.executeToolCall(
+                toolCall.name,
+                toolCall.input,
+              );
               toolResults.push({
                 tool_use_id: toolCall.id,
-                type: 'tool_result',
-                content: JSON.stringify(result)
+                type: "tool_result",
+                content: JSON.stringify(result),
               });
 
               // Track document IDs if this was a document retrieval
-              if (toolCall.name === 'get_full_document' && result.success && result.data?.doc_id) {
+              if (
+                toolCall.name === "get_full_document" && result.success &&
+                result.data?.doc_id
+              ) {
                 usedDocumentIds.add(result.data.doc_id);
               }
 
               yield {
                 toolResult: {
                   id: toolCall.id,
-                  result: result
-                }
+                  result: result,
+                },
               };
-              
             } catch (error) {
-              logger.error({ 
-                error, 
+              logger.error({
+                error,
                 toolCall: toolCall.name,
-                toolId: toolCall.id 
-              }, '[StreamingAgentService] Tool execution failed');
-              
+                toolId: toolCall.id,
+              }, "[StreamingAgentService] Tool execution failed");
+
               toolResults.push({
                 tool_use_id: toolCall.id,
-                type: 'tool_result',
-                content: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`
+                type: "tool_result",
+                content: `Error: ${error instanceof Error ? error.message : "Unknown error"
+                  }`,
               });
             }
           }
 
           // Add assistant message with tool calls
           conversationMessages.push({
-            role: 'assistant',
+            role: "assistant",
             content: [
-              { type: 'text', text: fullResponse },
-              ...toolCallsInResponse.map(tc => ({
-                type: 'tool_use',
+              { type: "text", text: fullResponse },
+              ...toolCallsInResponse.map((tc) => ({
+                type: "tool_use",
                 id: tc.id,
                 name: tc.name,
-                input: tc.input
-              }))
-            ]
+                input: tc.input,
+              })),
+            ],
           } as ChatMessage);
 
           // Add tool results
           conversationMessages.push({
-            role: 'user',
-            content: toolResults as any // Tool results need specific type casting
+            role: "user",
+            content: toolResults as any, // Tool results need specific type casting
           } as ChatMessage);
 
           toolCallCount++;
-          
-          logger.info({ 
-            toolCallCount, 
-            toolsExecuted: toolCallsInResponse.length 
-          }, '[StreamingAgentService] Continuing conversation with tool results');
-          
-          // Continue the conversation loop
 
+          logger.info(
+            {
+              toolCallCount,
+              toolsExecuted: toolCallsInResponse.length,
+            },
+            "[StreamingAgentService] Continuing conversation with tool results",
+          );
+
+          // Continue the conversation loop
         } catch (error) {
-          logger.error({ error }, '[StreamingAgentService] Error in conversation loop');
+          logger.error(
+            { error },
+            "[StreamingAgentService] Error in conversation loop",
+          );
           yield {
-            error: error instanceof Error ? error.message : 'An unexpected error occurred'
+            error: error instanceof Error
+              ? error.message
+              : "An unexpected error occurred",
           };
           return;
         }
@@ -350,20 +396,24 @@ export class StreamingAgentService {
       // If we hit max tool calls, finish gracefully
       const allDocumentIds = [
         ...new Set([
-          ...retrievedDocuments.map(doc => doc.doc_id),
-          ...usedDocumentIds
-        ])
+          ...retrievedDocuments.map((doc) => doc.doc_id),
+          ...usedDocumentIds,
+        ]),
       ];
 
       yield {
         done: true,
-        linkedDocumentIds: allDocumentIds
+        linkedDocumentIds: allDocumentIds,
       };
-
     } catch (error) {
-      logger.error({ error }, '[StreamingAgentService] Error in RAG with tools execution');
+      logger.error(
+        { error },
+        "[StreamingAgentService] Error in RAG with tools execution",
+      );
       yield {
-        error: error instanceof Error ? error.message : 'An unexpected error occurred'
+        error: error instanceof Error
+          ? error.message
+          : "An unexpected error occurred",
       };
     }
   }
@@ -372,16 +422,17 @@ export class StreamingAgentService {
     originalQuestion: string,
     retrievedDocuments: RetrievedDocument[],
     courseId?: string,
-    timeZone?: string
+    timeZone?: string,
   ): { systemPrompt: string; userMessage: string } {
     const currentDate = this.getFormattedDate(timeZone);
-    
+
     // Get course context
     let courseDetailsText = "a college course";
     // This would need to be fetched from the database in a real implementation
     // For now, we'll use the courseId or default text
 
-    const systemPrompt = `You are a helpful assistant for a college student taking ${courseDetailsText}. Your goal is to provide accurate and concise answers based on the provided context and conversation history. ${currentDate}
+    const systemPrompt =
+      `You are a helpful assistant for a college student taking ${courseDetailsText}. Your goal is to provide accurate and concise answers based on the provided context and conversation history. ${currentDate}
 
 You have access to a tool called 'get_full_document' that allows you to retrieve the complete content of any document when you need more context beyond the provided chunks. Use this tool when:
 - The chunk content is insufficient to fully answer the user's question
@@ -399,12 +450,13 @@ IMPORTANT: ALL mathematical expressions MUST be formatted using LaTeX:
     let userMessage: string;
     if (retrievedDocuments.length > 0) {
       const contextHeader = "\n\n--- Relevant Context from Documents Start ---";
-      const documentsContext = retrievedDocuments.map(doc => 
+      const documentsContext = retrievedDocuments.map((doc) =>
         `Doc ID: ${doc.doc_id}\nContent: ${doc.content}`
       ).join("\n---\n");
       const contextFooter = "\n--- Relevant Context from Documents End ---";
-      
-      userMessage = `User message: "${originalQuestion}"\n\nIf helpful, use the following context to help respond to the user's message:${contextHeader}\n${documentsContext}\n${contextFooter}`;
+
+      userMessage =
+        `User message: "${originalQuestion}"\n\nIf helpful, use the following context to help respond to the user's message:${contextHeader}\n${documentsContext}\n${contextFooter}`;
     } else {
       userMessage = `User message: "${originalQuestion}"`;
     }
@@ -414,19 +466,20 @@ IMPORTANT: ALL mathematical expressions MUST be formatted using LaTeX:
 
   private getFormattedDate(timeZone?: string): string {
     const now = new Date();
-    const timeZoneToUse = timeZone || 'UTC';
-    const timeString = new Intl.DateTimeFormat('en-US', {
-      hour: 'numeric',
-      minute: 'numeric',
+    const timeZoneToUse = timeZone || "UTC";
+    const timeString = new Intl.DateTimeFormat("en-US", {
+      hour: "numeric",
+      minute: "numeric",
       hour12: true,
-      timeZone: timeZoneToUse
-    }).format(now).replace(' ', '').toLowerCase();
-    const dateString = new Intl.DateTimeFormat('en-US', {
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
-      timeZone: timeZoneToUse
+      timeZone: timeZoneToUse,
+    }).format(now).replace(" ", "").toLowerCase();
+    const dateString = new Intl.DateTimeFormat("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+      timeZone: timeZoneToUse,
     }).format(now);
     return `It is currently ${timeString} on ${dateString}.`;
   }
 }
+
