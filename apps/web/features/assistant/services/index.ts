@@ -1,0 +1,1 @@
+export { suggestedQueriesService } from './suggested-queries.service';

@@ -1,0 +1,9 @@
+{
+  "buildCommand": "npm run build",
+  "devCommand": "npm run start",
+  "functions": {
+    "api/**/*.ts": {
+      "runtime": "@vercel/node@20.x"
+    }
+  }
+}
