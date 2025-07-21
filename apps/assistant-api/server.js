@@ -141,6 +141,37 @@ const server = createServer(async (req, res) => {
     return;
   }
 
+  // Document ingestion endpoint
+  if (pathname === '/api/documents/ingest') {
+    if (req.method !== 'POST') {
+      res.writeHead(405, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Method not allowed' }));
+      return;
+    }
+
+    try {
+      // Parse request body
+      let body = '';
+      req.on('data', chunk => body += chunk);
+      await new Promise(resolve => req.on('end', resolve));
+
+      // Import and call the document ingestion handler
+      const { ingestDocumentHandler } = await import('./dist/api/documents/ingest.js');
+      await ingestDocumentHandler(req, res, body);
+
+    } catch (error) {
+      console.error('Error handling document ingestion request:', error);
+      
+      if (!res.headersSent) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ 
+          error: error instanceof Error ? error.message : 'Internal server error' 
+        }));
+      }
+    }
+    return;
+  }
+
   // 404 for other routes
   res.writeHead(404, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({ error: 'Not found' }));
@@ -157,4 +188,5 @@ server.listen(PORT, HOST, () => {
   console.log(`🚀 Assistant API server running on ${baseUrl}`);
   console.log(`   Health check: ${baseUrl}/api/health`);
   console.log(`   Stream endpoint: ${baseUrl}/api/chat/stream`);
+  console.log(`   Document ingestion: ${baseUrl}/api/documents/ingest`);
 });

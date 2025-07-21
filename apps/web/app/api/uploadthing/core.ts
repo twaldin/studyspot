@@ -2,10 +2,9 @@ import { createUploadthing, type FileRouter } from "uploadthing/next";
 import { UploadThingError } from "uploadthing/server";
 import { z } from "zod";
 import logger, { LogContext } from "@/lib/logger";
-import { ingestDocument } from "@/features/document/document-ingestion.service";
 import { auth } from "@clerk/nextjs/server";
 import { createServiceRoleClient } from "@/lib/services/database/supabase.service";
-import { safeCleanupUploadThingFile, validateFilesForUpload, UploadSecurityService, type UploadFile } from "@/lib/services/file";
+import { validateFilesForUpload, UploadSecurityService, type UploadFile } from "@/lib/services/file";
 
 const f = createUploadthing();
 
@@ -67,59 +66,12 @@ export const ourFileRouter = {
         courseId
       }), 'Upload complete, starting document ingestion');
 
-      // Skip document ingestion for temporary course IDs - the course creation route will handle it
-      if (courseId === 'temp') {
-        logger.info(LogContext.api('uploadthing/document', userId, {
-          fileKey: file.key,
-          fileName: file.name,
-          courseId
-        }), 'Skipping ingestion for temporary course');
-
-        return {
-          uploadedBy: userId,
-          fileUrl: file.ufsUrl,
-          originalName: file.name
-        };
-      }
-
-      try {
-        const ingestionSuccess = await ingestDocument({
-          fileKey: file.key,
-          fileName: file.name,
-          fileUrl: file.ufsUrl,
-          fileType: file.type,
-          courseId,
-        });
-
-        if (ingestionSuccess) {
-          logger.info(LogContext.api('uploadthing/document', userId, {
-            fileKey: file.key,
-            fileName: file.name
-          }), 'Document ingestion completed successfully');
-        } else {
-          logger.warn(LogContext.api('uploadthing/document', userId, {
-            fileKey: file.key,
-            fileName: file.name
-          }), 'Document ingestion skipped, cleaning up file');
-          
-          // Clean up the file since ingestion was skipped/failed
-          await safeCleanupUploadThingFile(file.key);
-        }
-      } catch (error) {
-        logger.error(LogContext.api('uploadthing/document', userId, {
-          error: error instanceof Error ? error.message : 'Unknown error',
-          fileKey: file.key,
-          fileName: file.name
-        }), 'Document ingestion failed, cleaning up file');
-        
-        // Clean up the file since ingestion failed
-        await safeCleanupUploadThingFile(file.key);
-      }
+      // Document processing will be handled asynchronously by the client
+      // This allows the upload dialog to close immediately and show processing status
 
       return {
         uploadedBy: userId,
-        fileUrl: file.ufsUrl,
-        originalName: file.name
+        fileType: file.type, // Preserve the original MIME type
       };
     }),
 } satisfies FileRouter;

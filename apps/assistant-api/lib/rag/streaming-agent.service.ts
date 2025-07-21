@@ -36,7 +36,7 @@ interface ToolCall {
 export class StreamingAgentService {
   private supabase: SupabaseClient<Database>;
   private claudeModel: Anthropic;
-  private directAnthropicClient: AnthropicSDK;
+  private static directAnthropicClient: AnthropicSDK;
   private toolManager: ToolManager;
 
   constructor(supabase: SupabaseClient<Database>) {
@@ -45,10 +45,22 @@ export class StreamingAgentService {
       apiKey: process.env.ANTHROPIC_API_KEY!,
       model: "claude-3-7-sonnet-latest",
     });
-    this.directAnthropicClient = new AnthropicSDK({
-      apiKey: process.env.ANTHROPIC_API_KEY!,
-    });
     this.toolManager = new ToolManager(supabase);
+  }
+
+  /**
+   * Get singleton Anthropic client instance
+   */
+  private static getAnthropicClient(): AnthropicSDK {
+    if (!this.directAnthropicClient) {
+      if (!process.env.ANTHROPIC_API_KEY) {
+        throw new Error("ANTHROPIC_API_KEY is not set. Cannot proceed with API calls.");
+      }
+      this.directAnthropicClient = new AnthropicSDK({
+        apiKey: process.env.ANTHROPIC_API_KEY!,
+      });
+    }
+    return this.directAnthropicClient;
   }
 
   async *executeRAGWithTools(
@@ -117,6 +129,8 @@ export class StreamingAgentService {
       let conversationMessages: ChatMessage[] = [...messages];
       let maxToolCalls = 5; // Prevent infinite loops
       let toolCallCount = 0;
+      let overloadRetryCount = 0;
+      const maxOverloadRetries = 3; // Maximum retries for overloaded errors
 
       // VERBOSE LOGGING: Log the exact messages being sent to Claude
       logger.info({
@@ -176,7 +190,7 @@ export class StreamingAgentService {
           }, "[StreamingAgentService] VERBOSE: Converted to Anthropic format");
 
           // Use direct Anthropic SDK for streaming with tools
-          const stream = await this.directAnthropicClient.messages.stream({
+          const stream = await StreamingAgentService.getAnthropicClient().messages.stream({
             model: "claude-3-5-sonnet-20241022",
             max_tokens: 4000,
             system: systemPromptMessage
@@ -380,6 +394,34 @@ export class StreamingAgentService {
 
           // Continue the conversation loop
         } catch (error) {
+          // Handle specific Anthropic overloaded errors with retry logic
+          if (this.isAnthropicOverloadedError(error) && overloadRetryCount < maxOverloadRetries) {
+            overloadRetryCount++;
+            logger.warn(
+              { error, attempt: overloadRetryCount, maxRetries: maxOverloadRetries },
+              "[StreamingAgentService] Anthropic API overloaded, will retry after delay"
+            );
+            
+            // Exponential backoff: 1s, 2s, 4s for subsequent retries
+            const delay = 1000 * Math.pow(2, overloadRetryCount - 1);
+            await this.sleep(delay);
+            
+            // Don't increment toolCallCount for retries due to overload
+            continue;
+          }
+          
+          // If we've exhausted overload retries, treat as regular error
+          if (this.isAnthropicOverloadedError(error)) {
+            logger.error(
+              { error, retriesExhausted: overloadRetryCount },
+              "[StreamingAgentService] Anthropic API overloaded - retries exhausted"
+            );
+            yield {
+              error: "The AI service is temporarily overloaded. Please try again in a few moments."
+            };
+            return;
+          }
+
           logger.error(
             { error },
             "[StreamingAgentService] Error in conversation loop",
@@ -480,6 +522,24 @@ IMPORTANT: ALL mathematical expressions MUST be formatted using LaTeX:
       timeZone: timeZoneToUse,
     }).format(now);
     return `It is currently ${timeString} on ${dateString}.`;
+  }
+
+  /**
+   * Check if an error is an Anthropic overloaded error
+   */
+  private isAnthropicOverloadedError(error: any): boolean {
+    return (
+      error?.error?.error?.type === "overloaded_error" ||
+      error?.message?.includes("overloaded") ||
+      error?.message?.includes("Overloaded")
+    );
+  }
+
+  /**
+   * Sleep for a given number of milliseconds
+   */
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 }
 

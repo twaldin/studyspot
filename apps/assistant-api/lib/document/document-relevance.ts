@@ -1,5 +1,5 @@
-import logger from '@/lib/logger';
-import { Gemini, GEMINI_MODEL } from '@/lib/llamaindex-imports';
+import logger from '@/lib/utils/logger';
+import { Gemini, GEMINI_MODEL } from '@/lib/utils/llamaindex-imports';
 
 // Simple check for obvious placeholder text
 async function checkForNonsensicalContent(content: string): Promise<{
@@ -30,7 +30,6 @@ async function checkForNonsensicalContent(content: string): Promise<{
     confidence: 'high',
   };
 }
-
 
 const gemini = new Gemini({
   model: GEMINI_MODEL.GEMINI_PRO_FLASH_LATEST,

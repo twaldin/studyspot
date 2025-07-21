@@ -3,22 +3,26 @@ import { AIResponse, AIMessage, GeminiConfig } from '@/lib/types/AITypes';
 import logger from '@/lib/logger';
 
 class GeminiService {
-  private client: Gemini;
+  private client: Gemini | null = null;
 
-  constructor() {
-    this.client = new Gemini({
-      apiKey: process.env.GOOGLE_API_KEY,
-      model: GEMINI_MODEL.GEMINI_PRO_FLASH_LATEST,
-    });
+  private getClient(): Gemini {
+    if (!this.client) {
+      if (!process.env.GOOGLE_API_KEY) {
+        throw new Error("Google API key not configured");
+      }
+      this.client = new Gemini({
+        apiKey: process.env.GOOGLE_API_KEY,
+        model: GEMINI_MODEL.GEMINI_PRO_FLASH_LATEST,
+      });
+    }
+    return this.client;
   }
 
   async chat(messages: AIMessage[], config: GeminiConfig = {}): Promise<AIResponse<string>> {
     try {
-      if (!process.env.GOOGLE_API_KEY) {
-        throw new Error('Google API key not configured');
-      }
+      const client = this.getClient();
 
-      const response = await this.client.chat({
+      const response = await client.chat({
         messages: messages.map((m) => ({
           role: m.role as 'user' | 'assistant' | 'system',
           content: m.content,

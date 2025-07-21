@@ -2,6 +2,7 @@
 
 import { useUploadThing } from '../uploadthing';
 import toast from "react-hot-toast";
+import { useDocumentProcessing } from '@/hooks/use-document-processing';
 import {
   Dialog,
   DialogClose,
@@ -83,6 +84,68 @@ export function FileUploadDialog({ open, onOpenChange, onUploadFinalized }: File
   const [files, setFiles] = useState<FileWithValidation[]>([]);
   const [isDragActive, setIsDragActive] = useState(false);
   const validFiles = useMemo(() => files.filter(f => f.isValid), [files]);
+  
+  const { startProcessing, markFileComplete, finishProcessing, clearProcessing } = useDocumentProcessing();
+
+  // Function to handle document processing after upload
+  const processUploadedDocuments = useCallback(async (uploadedFiles: any[], courseId: string) => {
+    const filesForProcessing = uploadedFiles.map(file => ({
+      id: file.key,
+      name: file.name,
+    }));
+
+    // Start processing tracking
+    startProcessing(filesForProcessing);
+
+    try {
+      const response = await fetch('/api/documents/process', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          files: uploadedFiles.map(file => ({
+            fileKey: file.key,
+            fileName: file.name,
+            fileUrl: file.url,
+            fileType: file.serverData?.fileType,
+          })),
+          courseId,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Mark each file as complete based on the results
+        result.results.forEach((fileResult: any) => {
+          markFileComplete(
+            fileResult.fileKey,
+            fileResult.success,
+            fileResult.error,
+            fileResult.reason
+          );
+        });
+      } else {
+        // Mark all files as failed
+        filesForProcessing.forEach(file => {
+          markFileComplete(file.id, false, result.error || 'Processing failed');
+        });
+      }
+    } catch (error) {
+      console.error('Error processing documents:', error);
+      // Mark all files as failed
+      filesForProcessing.forEach(file => {
+        markFileComplete(file.id, false, error instanceof Error ? error.message : 'Network error');
+      });
+    } finally {
+      finishProcessing();
+    }
+  }, [startProcessing, markFileComplete, finishProcessing]);
 
   const processFiles = useCallback((fileList: FileList | File[]) => {
     const newFiles = Array.from(fileList).map(file => {
@@ -107,18 +170,35 @@ export function FileUploadDialog({ open, onOpenChange, onUploadFinalized }: File
     "courseMaterialUploader",
     {
       onClientUploadComplete: (res) => {
+        const courseId = selectedCourseId || selectedCourse?.id || 'temp';
+        
+        console.log('UploadThing onClientUploadComplete:', res); // Debug log
+        
+        // Clear the dialog state
         setFiles([]);
         setUploadProgress({});
+        
         // Clear the file input
         const fileInput = document.getElementById('fileDropZoneInput') as HTMLInputElement;
         if (fileInput) {
           fileInput.value = '';
         }
+        
+        // Close the dialog immediately
+        onOpenChange(false);
+        
+        // Start document processing asynchronously (no upload success toast - processing toasts will handle feedback)
+        if (res && Array.isArray(res) && res.length > 0) {
+          if (courseId !== 'temp') {
+            processUploadedDocuments(res, courseId);
+          }
+        } else {
+          console.warn('UploadThing response is empty or invalid:', res);
+        }
+        
         if (onUploadFinalized && res) {
           onUploadFinalized(res);
         }
-        onOpenChange(false);
-        toast.success("Files uploaded successfully!");
       },
       onUploadError: (error: Error) => {
         setUploadProgress({});
@@ -182,6 +262,14 @@ export function FileUploadDialog({ open, onOpenChange, onUploadFinalized }: File
   const removeFile = useCallback((fileId: string) => {
     setFiles(prevFiles => prevFiles.filter(f => f.id !== fileId));
   }, []);
+
+  // Clean up processing state when dialog is closed
+  useEffect(() => {
+    if (!open) {
+      // Don't clear processing state as it needs to persist after dialog closes
+      // Only clear processing if explicitly cancelled
+    }
+  }, [open]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

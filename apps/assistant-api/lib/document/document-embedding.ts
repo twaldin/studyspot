@@ -1,9 +1,13 @@
-import logger from "@/lib/logger"; // --- 3. Generate Embeddings Function (from assistant/utils/embed.text.ts) ---
+import logger from "@/lib/utils/logger"; // --- 3. Generate Embeddings Function (from assistant/utils/embed.text.ts) ---
 import OpenAI from "openai";
-import { GenerateEmbeddingsParams } from "@/lib/types/DocumentTypes";
 
 // Initialize OpenAI client - ensure OPENAI_API_KEY is in .env
 const openai = new OpenAI(); // API key is read from process.env.OPENAI_API_KEY by default
+
+export interface GenerateEmbeddingsParams {
+  nodeTexts: string[];
+  fileKey: string;
+}
 
 export async function generateEmbeddings(
   { nodeTexts, fileKey }: GenerateEmbeddingsParams,

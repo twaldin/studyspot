@@ -1,4 +1,4 @@
-import logger from '@/lib/logger';
+import logger from '@/lib/utils/logger';
 import path from "path";
 import {
   Document,
@@ -10,8 +10,8 @@ import {
   MarkdownReader,
   PDFReader,
   TextFileReader
-} from '@/lib/llamaindex-imports';
-import type { Metadata } from '@/lib/llamaindex-imports';
+} from '@/lib/utils/llamaindex-imports';
+import type { Metadata } from '@/lib/utils/llamaindex-imports';
 
 // --- 1. Extract Document Function (from assistant/utils/extract.document.ts) ---
 const extToReader: Record<string, any> = {
@@ -40,4 +40,3 @@ export async function extractDocument(
   logger.info({ filePath, extension: ext }, "Document Ingestion: Loading data from file.");
   return await reader.loadData(filePath);
 }
-

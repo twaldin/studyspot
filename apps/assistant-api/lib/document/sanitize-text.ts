@@ -1,4 +1,4 @@
-import logger from "@/lib/logger";
+import logger from "@/lib/utils/logger";
 
 /**
  * Sanitizes text content to remove problematic Unicode characters that cause

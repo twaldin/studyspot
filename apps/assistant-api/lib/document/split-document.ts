@@ -1,9 +1,9 @@
-import logger from '@/lib/logger';
+import logger from '@/lib/utils/logger';
 import {
   Document,
   SentenceSplitter,
   TextNode,
-} from '@/lib/llamaindex-imports';
+} from '@/lib/utils/llamaindex-imports';
 
 // --- 2. Split Document Function (from assistant/utils/split.document.ts) ---
 export function splitDocumentsToNodes(documents: Document[]): TextNode[] {
@@ -19,4 +19,3 @@ export function splitDocumentsToNodes(documents: Document[]): TextNode[] {
   logger.info({ numDocuments: documents.length, numNodes: nodes.length }, "Document Ingestion: Documents split into nodes.");
   return nodes;
 }
-

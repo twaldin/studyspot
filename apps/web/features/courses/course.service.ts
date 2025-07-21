@@ -589,10 +589,10 @@ Respond with a JSON object containing:
         "Starting syllabus processing",
       );
 
-      const { ingestDocument } = await import(
-        "@/features/document/document-ingestion.service"
+      const { assistantApiIngestionService } = await import(
+        "@/lib/services/document/assistant-api-ingestion.service"
       );
-      const ingestionSuccess = await ingestDocument({
+      const ingestionSuccess = await assistantApiIngestionService.ingestDocument({
         fileKey: params.fileKey,
         fileName: params.fileName,
         fileUrl: params.fileUrl,
