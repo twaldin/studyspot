@@ -17,8 +17,11 @@
     "clean": "pnpm --recursive clean"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.1",
+    "@eslint/js": "^9.31.0",
     "concurrently": "^9.1.0",
     "dotenv-cli": "^8.0.0",
+    "eslint": "^9.31.0",
     "typescript": "^5"
   }
 }

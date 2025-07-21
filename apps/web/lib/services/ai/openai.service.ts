@@ -9,23 +9,29 @@ import { API_CONSTANTS } from "@/lib/constants";
 import logger from "@/lib/logger";
 
 class OpenAIService {
-  private client: OpenAI;
+  private client: OpenAI | null = null;
 
-  constructor() {
-    this.client = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
+  constructor() {}
+
+  private getClient(): OpenAI {
+    if (!this.client) {
+      if (!process.env.OPENAI_API_KEY) {
+        throw new Error(
+          "The OPENAI_API_KEY environment variable is missing or empty",
+        );
+      }
+      this.client = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY,
+      });
+    }
+    return this.client;
   }
 
   async generateEmbeddings(
     params: OpenAIEmbeddingParams,
   ): Promise<AIResponse<number[][]>> {
     try {
-      if (!process.env.OPENAI_API_KEY) {
-        throw new Error("OpenAI API key not configured");
-      }
-
-      const response = await this.client.embeddings.create({
+      const response = await this.getClient().embeddings.create({
         model: params.model || API_CONSTANTS.OPENAI_EMBEDDING_MODEL,
         input: params.input,
       });
@@ -50,11 +56,7 @@ class OpenAIService {
     config: OpenAIConfig = {},
   ): Promise<AIResponse<string>> {
     try {
-      if (!process.env.OPENAI_API_KEY) {
-        throw new Error("OpenAI API key not configured");
-      }
-
-      const response = await this.client.chat.completions.create({
+      const response = await this.getClient().chat.completions.create({
         model: config.model || "gpt-4o-mini",
         messages: messages.map((m) => ({
           role: m.role as "system" | "user" | "assistant",
