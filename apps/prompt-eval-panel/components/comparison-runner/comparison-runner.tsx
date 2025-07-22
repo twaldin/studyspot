@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { PromptComparison, ComparisonProgress } from '../../lib/types/comparison.types';
 import { ComparisonRunnerService } from '../../lib/services/comparison-runner.service';
 import { TestQuery } from '../../lib/types/testing.types';
-import { PromptConfig, TestQueriesConfig } from '../../lib/types/config.types';
+import { PromptConfig, TestQueriesConfig, convertToComplexPromptConfig } from '../../lib/types/config.types';
 
 interface ComparisonRunnerProps {
   onComparisonStart: () => void;
@@ -48,7 +48,14 @@ export default function ComparisonRunner({
       
       setPromptA(activePrompt);
       setPromptB(testPrompt);
-      setQueries(queriesConfig.queries);
+      
+      // Add enabled: false to all queries by default
+      const queriesWithEnabled = queriesConfig.queries.map((q: any) => ({
+        ...q,
+        enabled: false
+      }));
+      setQueries(queriesWithEnabled);
+      
       setCourseId(queriesConfig.defaultCourseId);
       setIterationsPerQuery(queriesConfig.defaultIterations);
       setLoadError('');
@@ -73,8 +80,8 @@ export default function ComparisonRunner({
       const comparison = await comparisonRunner.createComparison(
         activeQueries,
         courseId,
-        promptA,
-        promptB,
+        convertToComplexPromptConfig(promptA),
+        convertToComplexPromptConfig(promptB),
         iterationsPerQuery
       );
 

@@ -165,9 +165,6 @@ export class ConfigManagerService {
         if (!query.expectedDocumentId || typeof query.expectedDocumentId !== 'string') {
           errors.push(`Query ${index}: expectedDocumentId is required and must be a string`);
         }
-        if (typeof query.enabled !== 'boolean') {
-          errors.push(`Query ${index}: enabled must be a boolean`);
-        }
       });
     }
 
