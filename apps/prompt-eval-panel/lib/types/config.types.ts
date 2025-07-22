@@ -1,4 +1,5 @@
 // Configuration types for JSON config file management
+import { PromptConfig as ComplexPromptConfig } from './prompt-config.types';
 
 export interface PromptConfig {
   name: string;
@@ -10,16 +11,56 @@ export interface PromptConfig {
   model: string;
 }
 
-export interface TestQuery {
+// Conversion function from simple config to complex config
+export function convertToComplexPromptConfig(simpleConfig: PromptConfig): ComplexPromptConfig {
+  return {
+    id: `config-${Date.now()}`,
+    name: simpleConfig.name,
+    description: `Loaded from config: ${simpleConfig.name}`,
+    version: '1.0.0',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    systemPrompt: simpleConfig.systemPrompt,
+    ragDecisionPrompt: simpleConfig.ragDecisionPrompt,
+    queryReformulationPrompt: simpleConfig.queryReformulationPrompt,
+    toolDescription: simpleConfig.toolInstructions,
+    contextFormatting: {
+      useHeaders: true,
+      headerText: '\n\n--- Relevant Context from Documents Start ---',
+      footerText: '\n--- Relevant Context from Documents End ---',
+      includeDocumentIds: true,
+      documentSeparator: '\n---\n'
+    },
+    responseFormat: {
+      requireJSON: false,
+      includeLinkedDocumentIds: true,
+      encourageConciseness: true,
+      maxResponseLength: undefined
+    },
+    mathFormatting: 'latex' as const,
+    personality: {
+      tone: 'helpful' as const,
+      verbosity: 'concise' as const,
+      formality: 'neutral' as const
+    }
+  };
+}
+
+// Config file structure (no enabled field)
+export interface TestQueryConfig {
   id: string;
   query: string;
   expectedDocumentId: string;
+}
+
+// Runtime structure (with enabled field added by UI)
+export interface TestQuery extends TestQueryConfig {
   enabled: boolean;
 }
 
 export interface TestQueriesConfig {
   name: string;
-  queries: TestQuery[];
+  queries: TestQueryConfig[];
   defaultCourseId: string;
   defaultIterations: number;
 }

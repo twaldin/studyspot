@@ -1,7 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { PromptConfig, TestQueriesConfig } from '../../lib/types/config.types';
+import { PromptConfig, TestQueriesConfig, TestQuery } from '../../lib/types/config.types';
+
+// Runtime version of TestQueriesConfig with enabled fields
+interface RuntimeTestQueriesConfig {
+  name: string;
+  queries: TestQuery[];
+  defaultCourseId: string;
+  defaultIterations: number;
+}
 
 interface ConfigManagerProps {
   onConfigsChange?: () => void;
@@ -14,7 +22,7 @@ export default function ConfigManager({ onConfigsChange }: ConfigManagerProps) {
   const [selectedPromptConfig, setSelectedPromptConfig] = useState<string>('active.json');
   const [selectedQueriesConfig, setSelectedQueriesConfig] = useState<string>('queries.json');
   const [currentPromptConfig, setCurrentPromptConfig] = useState<PromptConfig | null>(null);
-  const [currentQueriesConfig, setCurrentQueriesConfig] = useState<TestQueriesConfig | null>(null);
+  const [currentQueriesConfig, setCurrentQueriesConfig] = useState<RuntimeTestQueriesConfig | null>(null);
   const [saveFilename, setSaveFilename] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string>('');
@@ -80,7 +88,15 @@ export default function ConfigManager({ onConfigsChange }: ConfigManagerProps) {
       const config = await response.json();
       
       if (response.ok) {
-        setCurrentQueriesConfig(config);
+        // Add enabled: false to all queries when loading from file
+        const configWithEnabled = {
+          ...config,
+          queries: config.queries.map((q: any) => ({
+            ...q,
+            enabled: false
+          }))
+        };
+        setCurrentQueriesConfig(configWithEnabled);
         setMessage('');
       } else {
         setMessage(`Error loading ${filename}: ${config.error}`);
@@ -103,7 +119,17 @@ export default function ConfigManager({ onConfigsChange }: ConfigManagerProps) {
     
     try {
       setLoading(true);
-      const config = activeTab === 'prompts' ? currentPromptConfig : currentQueriesConfig;
+      let config;
+      
+      if (activeTab === 'prompts') {
+        config = currentPromptConfig;
+      } else {
+        // For queries, strip the 'enabled' field from all queries before saving
+        config = {
+          ...currentQueriesConfig,
+          queries: currentQueriesConfig?.queries?.map(({ enabled, ...query }) => query) || []
+        };
+      }
       const endpoint = activeTab === 'prompts' ? '/api/configs/prompts' : '/api/configs/queries';
       
       const response = await fetch(endpoint, {
@@ -144,7 +170,7 @@ export default function ConfigManager({ onConfigsChange }: ConfigManagerProps) {
     }
   };
 
-  const updateQueriesField = (field: keyof TestQueriesConfig, value: any) => {
+  const updateQueriesField = (field: keyof RuntimeTestQueriesConfig, value: any) => {
     if (currentQueriesConfig) {
       setCurrentQueriesConfig({
         ...currentQueriesConfig,
@@ -158,8 +184,7 @@ export default function ConfigManager({ onConfigsChange }: ConfigManagerProps) {
       const newQuery = {
         id: `query-${Date.now()}`,
         query: '',
-        expectedDocumentId: 'c33ddcf0-e673-4e75-9250-14ea6b0eec45',
-        enabled: true
+        expectedDocumentId: 'c33ddcf0-e673-4e75-9250-14ea6b0eec45'
       };
       
       updateQueriesField('queries', [...currentQueriesConfig.queries, newQuery]);
@@ -473,17 +498,6 @@ function QueriesConfigEditor({
                     />
                   </div>
 
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={query.enabled}
-                      onChange={(e) => onUpdateQuery(index, 'enabled', e.target.checked)}
-                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                    />
-                    <label className="ml-2 block text-sm text-gray-700">
-                      Enabled
-                    </label>
-                  </div>
                 </div>
                 
                 <button

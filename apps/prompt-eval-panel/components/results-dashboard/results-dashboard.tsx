@@ -63,7 +63,7 @@ export default function ResultsDashboard({ results }: ResultsDashboardProps) {
   }, {} as Record<string, number>);
 
   const sortedDocuments = Object.entries(documentStats)
-    .sort(([,a], [,b]) => b - a)
+    .sort(([,a], [,b]) => (b as number) - (a as number))
     .slice(0, 10); // Top 10 most referenced documents
 
   return (
@@ -89,7 +89,7 @@ export default function ResultsDashboard({ results }: ResultsDashboardProps) {
           </h3>
           <div className="space-y-2">
             {sortedDocuments.map(([docId, count]) => {
-              const percentage = (count / responses.length) * 100;
+              const percentage = ((count as number) / responses.length) * 100;
               const isExpected = docId === results.testRun.expectedDocumentId;
               
               return (
@@ -117,7 +117,7 @@ export default function ResultsDashboard({ results }: ResultsDashboardProps) {
                     </div>
                   </div>
                   <span className="text-xs text-gray-500 w-8 text-right">
-                    {count}
+                    {count as number}
                   </span>
                 </div>
               );

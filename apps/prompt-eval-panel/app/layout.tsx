@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -22,24 +23,24 @@ export default function RootLayout({
                   <h1 className="text-xl font-bold text-gray-900">RAG Dev Panel</h1>
                 </div>
                 <div className="flex space-x-4 items-center">
-                  <a 
+                  <Link 
                     href="/" 
                     className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
                   >
                     Single Test
-                  </a>
-                  <a 
+                  </Link>
+                  <Link 
                     href="/comparison" 
                     className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
                   >
                     Prompt Comparison
-                  </a>
-                  <a 
+                  </Link>
+                  <Link 
                     href="/config" 
                     className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
                   >
                     Configuration
-                  </a>
+                  </Link>
                 </div>
               </div>
             </div>
