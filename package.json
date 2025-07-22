@@ -11,6 +11,8 @@
     "dev:web": "pnpm --filter @studyspot/web exec -- sh -c 'dotenv -e ../../.env next dev --turbopack | pino-pretty'",
     "dev:api": "pnpm --filter @studyspot/assistant-api dev",
     "dev:vercel": "pnpm --filter @studyspot/assistant-api dev:vercel",
+    "dev:panel": "pnpm --filter @studyspot/dev-panel dev",
+    "dev:all": "concurrently \"pnpm dev:web\" \"pnpm dev:vercel\" \"pnpm dev:panel\"",
     "build": "pnpm --filter @studyspot/web build && pnpm --filter @studyspot/assistant-api build",
     "lint": "pnpm --recursive lint",
     "test": "pnpm --recursive test",
