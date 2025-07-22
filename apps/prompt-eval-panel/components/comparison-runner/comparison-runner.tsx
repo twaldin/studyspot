@@ -1,11 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { PromptComparison, ComparisonProgress } from '../../lib/types/comparison.types';
-import { PromptConfig, DEFAULT_PROMPT_CONFIG } from '../../lib/types/prompt-config.types';
 import { ComparisonRunnerService } from '../../lib/services/comparison-runner.service';
 import { TestQuery } from '../../lib/types/testing.types';
-import { exampleQueries } from '../../lib/example-queries';
+import { PromptConfig, TestQueriesConfig } from '../../lib/types/config.types';
 
 interface ComparisonRunnerProps {
   onComparisonStart: () => void;
@@ -22,52 +21,44 @@ export default function ComparisonRunner({
   isRunning,
   progress
 }: ComparisonRunnerProps) {
-  const [queries, setQueries] = useState<TestQuery[]>(exampleQueries);
+  const [queries, setQueries] = useState<TestQuery[]>([]);
   const [courseId, setCourseId] = useState('1276af89-24ca-4a5a-8f9d-e25c7f28b59a');
   const [iterationsPerQuery, setIterationsPerQuery] = useState(5);
   const [assistantApiUrl, setAssistantApiUrl] = useState('http://localhost:3001');
   const [expandedPrompts, setExpandedPrompts] = useState({ A: false, B: false });
+  const [promptA, setPromptA] = useState<PromptConfig | null>(null);
+  const [promptB, setPromptB] = useState<PromptConfig | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string>('');
 
-  // Prompt A Configuration (Current Default)
-  const [promptA, setPromptA] = useState<PromptConfig>({
-    ...DEFAULT_PROMPT_CONFIG,
-    id: 'prompt-a',
-    name: 'Current Default',
-    createdAt: new Date(),
-    updatedAt: new Date()
-  });
+  // Load configs from API on mount
+  useEffect(() => {
+    loadActiveConfigs();
+  }, []);
 
-  // Prompt B Configuration (Modified)
-  const [promptB, setPromptB] = useState<PromptConfig>({
-    ...DEFAULT_PROMPT_CONFIG,
-    id: 'prompt-b',
-    name: 'Anthropic Docs Version',
-    description: 'Modified prompt based on Anthropic prompting documentation',
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    systemPrompt: `You are an expert academic assistant. Your role is to provide accurate, comprehensive, and well-structured answers to a college student's questions about their course materials.
-
-<instructions>
-- Base your answers on the provided context and conversation history.
-- Use the 'get_full_document' tool if the provided context is insufficient.
-- Respond in natural language using markdown for formatting.
-- Do not mention "Doc ID" as it is for internal use only.
-- Format all mathematical expressions using LaTeX.
-</instructions>
-
-<course_details>
-{courseDetails}
-</course_details>
-
-<date>
-{currentDate}
-</date>`,
-    personality: {
-      tone: 'academic',
-      verbosity: 'balanced',
-      formality: 'formal'
+  const loadActiveConfigs = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/configs/active');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const { activePrompt, testPrompt, queries: queriesConfig } = await response.json();
+      
+      setPromptA(activePrompt);
+      setPromptB(testPrompt);
+      setQueries(queriesConfig.queries);
+      setCourseId(queriesConfig.defaultCourseId);
+      setIterationsPerQuery(queriesConfig.defaultIterations);
+      setLoadError('');
+    } catch (error) {
+      console.error('Error loading active configs:', error);
+      setLoadError(`Failed to load configs: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setLoading(false);
     }
-  });
+  };
 
   const handleQueryChange = (id: string, field: keyof TestQuery, value: string | boolean) => {
     setQueries(queries.map(q => q.id === id ? { ...q, [field]: value } : q));
@@ -101,8 +92,62 @@ export default function ComparisonRunner({
   
   const enabledQueriesCount = queries.filter(q => q.enabled).length;
 
+  // Loading state
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center py-8">
+          <div className="text-gray-500">Loading configurations...</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (loadError) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-red-50 border border-red-200 rounded-md p-4">
+          <div className="text-red-800">
+            <strong>Configuration Error:</strong> {loadError}
+          </div>
+          <button 
+            onClick={loadActiveConfigs}
+            className="mt-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Ensure configs are loaded
+  if (!promptA || !promptB) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center py-8">
+          <div className="text-gray-500">Prompt configurations not available</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
+      {/* Config Status */}
+      <div className="bg-green-50 border border-green-200 rounded-md p-3">
+        <div className="text-green-800 text-sm">
+          ✓ Loaded: <strong>{promptA.name}</strong> vs <strong>{promptB.name}</strong> | {queries.length} queries available
+          <button 
+            onClick={loadActiveConfigs}
+            className="ml-4 text-green-600 hover:text-green-900 underline"
+          >
+            Refresh Configs
+          </button>
+        </div>
+      </div>
+
       {/* Test Configuration */}
       <div>
         <label className="block text-sm font-medium text-gray-700">
