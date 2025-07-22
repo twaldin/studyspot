@@ -45,3 +45,9 @@ next-env.d.ts
 
 # claude development files
 CLAUDE.local.md
+
+# Application-specific ignores
+apps/*/.next/
+apps/*/node_modules/
+apps/*/dist/
+apps/*/.turbo/

@@ -1,0 +1,31 @@
+{
+  "name": "Current Active Queries",
+  "queries": [
+    {
+      "id": "syllabus-info",
+      "query": "What is the most important information in the syllabus?",
+      "expectedDocumentId": "c33ddcf0-e673-4e75-9250-14ea6b0eec45",
+      "enabled": true
+    },
+    {
+      "id": "assignment-policy", 
+      "query": "What is the late assignment policy?",
+      "expectedDocumentId": "c33ddcf0-e673-4e75-9250-14ea6b0eec45",
+      "enabled": true
+    },
+    {
+      "id": "grading-scale",
+      "query": "What is the grading scale for this course?", 
+      "expectedDocumentId": "c33ddcf0-e673-4e75-9250-14ea6b0eec45",
+      "enabled": true
+    },
+    {
+      "id": "exam-schedule",
+      "query": "When are the exams scheduled?",
+      "expectedDocumentId": "c33ddcf0-e673-4e75-9250-14ea6b0eec45", 
+      "enabled": true
+    }
+  ],
+  "defaultCourseId": "1276af89-24ca-4a5a-8f9d-e25c7f28b59a",
+  "defaultIterations": 5
+}
