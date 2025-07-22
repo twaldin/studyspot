@@ -1,0 +1,12 @@
+{
+  "name": "Query Template",
+  "queries": [
+    {
+      "id": "template-query",
+      "query": "What are the office hours for Dr. Paul Hooker in Chemistry 103?",
+      "expectedDocumentId": "c33ddcf0-e673-4e75-9250-14ea6b0eec45"
+    }
+  ],
+  "defaultCourseId": "1276af89-24ca-4a5a-8f9d-e25c7f28b59a",
+  "defaultIterations": 5
+}

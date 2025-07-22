@@ -68,6 +68,7 @@ export class StreamingAgentService {
     conversationHistory: any[] = [],
     courseId?: string,
     timeZone?: string,
+    promptOverrides?: any // Will be typed properly from rag.service.ts
   ): AsyncGenerator<StreamingAgentResponse> {
     try {
       logger.info(
@@ -109,6 +110,7 @@ export class StreamingAgentService {
         retrievedDocuments,
         courseId,
         timeZone,
+        promptOverrides
       );
 
       // VERBOSE LOGGING: Log the exact prompts being sent
@@ -465,6 +467,7 @@ export class StreamingAgentService {
     retrievedDocuments: RetrievedDocument[],
     courseId?: string,
     timeZone?: string,
+    promptOverrides?: any
   ): { systemPrompt: string; userMessage: string } {
     const currentDate = this.getFormattedDate(timeZone);
 
@@ -473,8 +476,22 @@ export class StreamingAgentService {
     // This would need to be fetched from the database in a real implementation
     // For now, we'll use the courseId or default text
 
-    const systemPrompt =
-      `You are a helpful assistant for a college student taking ${courseDetailsText}. Your goal is to provide accurate and concise answers based on the provided context and conversation history. ${currentDate}
+    // Use custom system prompt if provided, otherwise use default
+    let systemPrompt: string;
+    if (promptOverrides?.systemPrompt) {
+      // Replace template variables in custom prompt
+      systemPrompt = promptOverrides.systemPrompt
+        .replace('{courseDetails}', courseDetailsText)
+        .replace('{currentDate}', currentDate);
+      
+      logger.info({ 
+        customPromptLength: systemPrompt.length,
+        preview: systemPrompt.substring(0, 200) + "..."
+      }, "[StreamingAgentService] Using custom system prompt");
+    } else {
+      // Default system prompt
+      systemPrompt =
+        `You are a helpful assistant for a college student taking ${courseDetailsText}. Your goal is to provide accurate and concise answers based on the provided context and conversation history. ${currentDate}
 
 You have access to a tool called 'get_full_document' that allows you to retrieve the complete content of any document when you need more context beyond the provided chunks. Use this tool when:
 - The chunk content is insufficient to fully answer the user's question
@@ -488,17 +505,42 @@ IMPORTANT: ALL mathematical expressions MUST be formatted using LaTeX:
 - Use $$...$$ for display math (e.g., $$\\int_0^\\infty e^{-x^2} dx = \\frac{\\sqrt{\\pi}}{2}$$)
 - Always use proper LaTeX commands (e.g., \\frac, \\int, \\sum, etc.)
 - Never use plain text for mathematical notation`;
+    }
 
     let userMessage: string;
     if (retrievedDocuments.length > 0) {
-      const contextHeader = "\n\n--- Relevant Context from Documents Start ---";
-      const documentsContext = retrievedDocuments.map((doc) =>
-        `Doc ID: ${doc.doc_id}\nContent: ${doc.content}`
-      ).join("\n---\n");
-      const contextFooter = "\n--- Relevant Context from Documents End ---";
+      // Use custom context formatting if provided
+      const contextConfig = promptOverrides?.contextFormatting || {};
+      
+      const useHeaders = contextConfig.useHeaders !== false; // Default true
+      const headerText = contextConfig.headerText || "\n\n--- Relevant Context from Documents Start ---";
+      const footerText = contextConfig.footerText || "\n--- Relevant Context from Documents End ---";
+      const includeDocumentIds = contextConfig.includeDocumentIds !== false; // Default true
+      const documentSeparator = contextConfig.documentSeparator || "\n---\n";
 
-      userMessage =
-        `User message: "${originalQuestion}"\n\nIf helpful, use the following context to help respond to the user's message:${contextHeader}\n${documentsContext}\n${contextFooter}`;
+      const documentsContext = retrievedDocuments.map((doc) => {
+        if (includeDocumentIds) {
+          return `Doc ID: ${doc.doc_id}\nContent: ${doc.content}`;
+        } else {
+          return doc.content;
+        }
+      }).join(documentSeparator);
+
+      if (useHeaders) {
+        userMessage =
+          `User message: "${originalQuestion}"\n\nIf helpful, use the following context to help respond to the user's message:${headerText}\n${documentsContext}\n${footerText}`;
+      } else {
+        userMessage =
+          `User message: "${originalQuestion}"\n\nIf helpful, use the following context to help respond to the user's message:\n${documentsContext}`;
+      }
+
+      if (promptOverrides?.contextFormatting) {
+        logger.info({ 
+          useHeaders, 
+          includeDocumentIds, 
+          documentCount: retrievedDocuments.length 
+        }, "[StreamingAgentService] Using custom context formatting");
+      }
     } else {
       userMessage = `User message: "${originalQuestion}"`;
     }
