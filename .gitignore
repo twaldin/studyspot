@@ -42,3 +42,12 @@ next-env.d.ts
 
 # clerk configuration (can include secrets)
 /.clerk/
+
+# claude development files
+CLAUDE.local.md
+
+# Application-specific ignores
+apps/*/.next/
+apps/*/node_modules/
+apps/*/dist/
+apps/*/.turbo/
