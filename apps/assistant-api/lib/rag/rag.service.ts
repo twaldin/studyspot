@@ -228,13 +228,41 @@ Use the provided pieces of context (if any) and conversation history to respond 
   return structuredOutput;
 }
 
+// Prompt override types (matching the schema from stream.ts)
+interface PromptOverrides {
+  systemPrompt?: string;
+  ragDecisionPrompt?: string;
+  queryReformulationPrompt?: string;
+  toolDescription?: string;
+  contextFormatting?: {
+    useHeaders?: boolean;
+    headerText?: string;
+    footerText?: string;
+    includeDocumentIds?: boolean;
+    documentSeparator?: string;
+  };
+  responseFormat?: {
+    requireJSON?: boolean;
+    includeLinkedDocumentIds?: boolean;
+    encourageConciseness?: boolean;
+    maxResponseLength?: number;
+  };
+  mathFormatting?: 'latex' | 'plain' | 'markdown';
+  personality?: {
+    tone?: 'helpful' | 'professional' | 'casual' | 'academic';
+    verbosity?: 'concise' | 'balanced' | 'detailed';
+    formality?: 'formal' | 'informal' | 'neutral';
+  };
+}
+
 // Streaming version with tool calling support using StreamingAgentService
 export async function* getFullRagResponseStream(
   supabase: SupabaseClient<Database>,
   originalQuestion: string,
   conversationHistory: ChatMessage[], // These are LlamaIndex ChatMessage
   courseId?: string,
-  timeZone?: string
+  timeZone?: string,
+  promptOverrides?: PromptOverrides
 ): AsyncGenerator<{ chunk?: string; linkedDocumentIds?: string[]; done?: boolean; error?: string }> {
   try {
     logger.info({ question: originalQuestion }, "[RAGService - getFullRagResponseStream] Using StreamingAgentService for RAG with tools.");
@@ -242,11 +270,20 @@ export async function* getFullRagResponseStream(
     // Use the new streaming agent service that supports tool calling
     const streamingAgent = new StreamingAgentService(supabase);
     
+    // Log prompt override usage
+    if (promptOverrides) {
+      logger.info({ 
+        overrideKeys: Object.keys(promptOverrides),
+        question: originalQuestion.substring(0, 100)
+      }, "[RAGService - getFullRagResponseStream] Using prompt overrides");
+    }
+    
     for await (const response of streamingAgent.executeRAGWithTools(
       originalQuestion,
       conversationHistory,
       courseId,
-      timeZone
+      timeZone,
+      promptOverrides
     )) {
       if (response.error) {
         yield { error: response.error };
