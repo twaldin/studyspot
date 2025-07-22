@@ -4,7 +4,8 @@ import { PromptConfig, TestQueriesConfig, ConfigType, ConfigValidationResult, AC
 
 export class ConfigManagerService {
   private getConfigPath(type: ConfigType): string {
-    const basePath = process.cwd(); // Project root
+    // From apps/prompt-eval-panel, go up 2 levels to project root
+    const basePath = path.join(process.cwd(), '..', '..');
     return type === 'prompts' 
       ? path.join(basePath, CONFIG_PATHS.PROMPTS)
       : path.join(basePath, CONFIG_PATHS.QUERIES);
