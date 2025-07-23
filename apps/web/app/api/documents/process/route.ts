@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { z } from 'zod';
-import { assistantApiIngestionService } from '@/lib/services/document/assistant-api-ingestion.service';
+// Removed assistant-api dependency - now using serverless ingestion
 import { safeCleanupUploadThingFile } from '@/lib/services/file';
 import logger, { LogContext } from '@/lib/logger';
 
@@ -38,20 +38,39 @@ export async function POST(request: NextRequest) {
             fileKey: file.fileKey,
             fileName: file.fileName,
             courseId
-          }), 'Processing document via assistant-api');
+          }), 'Processing document via serverless function');
 
-          const success = await assistantApiIngestionService.ingestDocument({
-            fileKey: file.fileKey,
-            fileName: file.fileName,
-            fileUrl: file.fileUrl,
-            fileType: file.fileType,
-            courseId,
+          // Call our new serverless ingestion function
+          const baseUrl = process.env.VERCEL_URL 
+            ? `https://${process.env.VERCEL_URL}`
+            : process.env.NEXTAUTH_URL || 'http://localhost:3000';
+          
+          const response = await fetch(`${baseUrl}/api/documents/ingest-single`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              fileKey: file.fileKey,
+              fileName: file.fileName,
+              fileUrl: file.fileUrl,
+              fileType: file.fileType || 'application/pdf',
+              courseId,
+            }),
           });
 
-          if (!success) {
+          if (!response.ok) {
+            throw new Error(`Serverless function returned ${response.status}: ${response.statusText}`);
+          }
+
+          const result = await response.json();
+
+          if (!result.success) {
             logger.warn(LogContext.api('documents/process', userId, {
               fileKey: file.fileKey,
-              fileName: file.fileName
+              fileName: file.fileName,
+              reason: result.reason,
+              skipped: result.skipped
             }), 'Document processing was skipped, cleaning up file');
             
             await safeCleanupUploadThingFile(file.fileKey);
@@ -60,19 +79,21 @@ export async function POST(request: NextRequest) {
               fileKey: file.fileKey,
               fileName: file.fileName,
               success: false,
-              reason: 'Document was skipped (duplicate content or not relevant)',
+              reason: result.reason || result.error || 'Document processing failed',
             };
           }
 
           logger.info(LogContext.api('documents/process', userId, {
             fileKey: file.fileKey,
-            fileName: file.fileName
-          }), 'Document processing completed successfully');
+            fileName: file.fileName,
+            documentId: result.documentId
+          }), 'Document processing completed successfully via serverless function');
 
           return {
             fileKey: file.fileKey,
             fileName: file.fileName,
             success: true,
+            documentId: result.documentId,
           };
 
         } catch (error) {
