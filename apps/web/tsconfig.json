@@ -13,10 +13,11 @@
     "incremental": true,
     "module": "esnext",
     "esModuleInterop": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
+    "jsxImportSource": "react",
     "plugins": [
       {
         "name": "next"
@@ -33,6 +34,9 @@
     "**/*.ts",
     "**/*.tsx"
   ],
+  "ts-node": {
+    "esm": true
+  },
   "exclude": [
     "node_modules"
   ]
