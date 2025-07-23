@@ -12,7 +12,7 @@
     "dev:api": "pnpm --filter @studyspot/assistant-api dev",
     "dev:panel": "pnpm --filter @studyspot/dev-panel dev",
     "dev:all": "concurrently \"pnpm dev:web\" \"pnpm dev:api\" \"pnpm dev:panel\"",
-    "build": "pnpm --filter @studyspot/web build && pnpm --filter @studyspot/assistant-api build",
+    "build": "pnpm --filter @studyspot/web build && pnpm --filter @studyspot/assistant-api build && pnpm --filter @studyspot/dev-panel build",
     "lint": "pnpm --recursive lint",
     "test": "pnpm --recursive test",
     "clean": "pnpm --recursive clean"
