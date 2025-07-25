@@ -22,8 +22,8 @@ export function DocumentCard({ url, file, fileType }: DocumentCardProps) {
       rel="noopener noreferrer"
       className="h-full text-blue-600"
     >
-      <Card className="h-full">
-        <CardHeader className="pb-3">
+      <Card className="h-full relative overflow-hidden">
+        <CardHeader className="pb-3 relative z-10">
           <CardTitle className="text-sm leading-tight">
             {(file.file_name || "Untitled Document").substring(
               0,
@@ -32,6 +32,9 @@ export function DocumentCard({ url, file, fileType }: DocumentCardProps) {
           </CardTitle>
           <CardDescription className="text-xs">{fileType}</CardDescription>
         </CardHeader>
+        
+        {/* Document Preview */}
+        <div className="absolute bottom-[-80px] right-[0px] w-26 h-32 bg-white border border-gray-200 rounded-md shadow-sm rotate-6 opacity-80 z-0" />
       </Card>
     </a>
   );
