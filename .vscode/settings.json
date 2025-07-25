@@ -15,5 +15,6 @@
     "**/.pnpm/**": true,
     "**/dist/**": true,
     "**/.next/**": true
-  }
+  },
+  "window.autoDetectColorScheme": true
 }
