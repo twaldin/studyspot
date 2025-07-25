@@ -7,6 +7,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Document } from "@/lib/types/DocumentTypes"; // Adjust path as needed
+import { Document as PdfDocument, Page, pdfjs } from 'react-pdf';
+
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url,
+).toString();
+
 
 interface DocumentCardProps {
   url: string;
@@ -34,7 +41,13 @@ export function DocumentCard({ url, file, fileType }: DocumentCardProps) {
         </CardHeader>
         
         {/* Document Preview */}
-        <div className="absolute bottom-[-80px] right-[0px] w-26 h-32 bg-white border border-gray-200 rounded-md shadow-sm rotate-6 opacity-80 z-0" />
+        {fileType === "pdf" && (
+          <div className="absolute bottom-[-80px] right-[0px] w-26 h-32 bg-white border border-gray-200 rounded-md shadow-sm rotate-6 opacity-80 z-0">
+            <PdfDocument file={url} loading="Loading PDF..." error="Failed to load PDF.">
+              <Page pageNumber={1} />
+            </PdfDocument>
+          </div>
+        )}
       </Card>
     </a>
   );
