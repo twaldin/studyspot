@@ -7,6 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Document } from "@/lib/types/DocumentTypes"; // Adjust path as needed
+import { useEffect, useRef, useState } from "react";
 import { Document as PdfDocument, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
@@ -24,6 +25,15 @@ interface DocumentCardProps {
 }
 
 export function DocumentCard({ url, file, fileType }: DocumentCardProps) {
+  const pdfWrapperRef = useRef<HTMLDivElement>(null);
+  const [pdfWidth, setPdfWidth] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (pdfWrapperRef.current) {
+      setPdfWidth(pdfWrapperRef.current.clientWidth);
+    }
+  }, []);
+
   return (
     <a
       href={url}
@@ -44,10 +54,14 @@ export function DocumentCard({ url, file, fileType }: DocumentCardProps) {
         
         {/* Document Preview */}
         {fileType === "pdf" && (
-          <div className="absolute bottom-[-80px] right-[0px] w-26 h-32 bg-white border border-gray-200 rounded-md shadow-sm rotate-6 opacity-80 z-0">
-            <PdfDocument file={url} loading="Loading PDF..." error="Failed to load PDF.">
-              <Page pageNumber={1} />
-            </PdfDocument>
+          <div 
+            ref={pdfWrapperRef}
+            className="absolute bottom-[-80px] right-[0px] w-26 h-32 bg-white border border-gray-200 rounded-md shadow-sm rotate-6 opacity-80 z-0">
+            {pdfWidth && (
+              <PdfDocument file={url} loading="Loading PDF..." error="Failed to load PDF.">
+                <Page pageNumber={1} width={pdfWidth} />
+              </PdfDocument>
+            )}
           </div>
         )}
       </Card>
