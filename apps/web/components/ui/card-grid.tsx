@@ -1,8 +1,13 @@
 "use client";
 
-import { DocumentCard } from "../document-card";
+import dynamic from 'next/dynamic';
 import { useDocuments } from "@/hooks/api/documents";
 import type { Document } from "@/lib/types/DocumentTypes";
+
+const DocumentCard = dynamic(() => import('../document-card').then(mod => mod.DocumentCard), {
+  ssr: false,
+  loading: () => <div className="h-full bg-gray-100 rounded-md"></div>,
+});
 
 interface CardGridProps {
   courseId?: string;
