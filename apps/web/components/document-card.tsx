@@ -56,9 +56,9 @@ export function DocumentCard({ url, file, fileType }: DocumentCardProps) {
         {fileType === "pdf" && (
           <div 
             ref={pdfWrapperRef}
-            className="absolute bottom-[-80px] right-[0px] w-26 h-32 bg-white border border-gray-200 rounded-md shadow-sm rotate-6 opacity-80 z-0">
+            className="absolute bottom-[-80px] right-[0px] w-26 h-32 bg-white border border-gray-200 rounded-md shadow-sm rotate-6 opacity-80 z-0 overflow-hidden">
             {pdfWidth && (
-              <PdfDocument file={url} loading="Loading PDF..." error="Failed to load PDF.">
+              <PdfDocument file={url} loading={null} error="Failed to load PDF.">
                 <Page pageNumber={1} width={pdfWidth} />
               </PdfDocument>
             )}
