@@ -26,11 +26,8 @@ function PDFPreview({ url, width }: { url: string; width: number }) {
     // Only import react-pdf on client side
     if (typeof window !== 'undefined') {
       import('react-pdf').then((reactPdf) => {
-        // Set up worker only on client side
-        reactPdf.pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-          'pdfjs-dist/build/pdf.worker.min.mjs',
-          import.meta.url,
-        ).toString();
+        // Set up worker only on client side to match react-pdf version
+        reactPdf.pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${reactPdf.pdfjs.version}/build/pdf.worker.min.mjs`;
         
         setPdfComponents(reactPdf);
       }).catch((error) => {

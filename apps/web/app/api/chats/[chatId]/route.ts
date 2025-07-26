@@ -28,36 +28,7 @@ export async function GET(
   }
 }
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ chatId: string }> }
-) {
-  try {
-    const auth = await authService.validateAuthWithSchool();
-    const { chatId } = await params;
-    const { messages } = await request.json();
 
-    if (!chatId) {
-      return NextResponse.json(
-        { message: 'Chat ID is required' },
-        { status: 400 }
-      );
-    }
-
-    if (!messages || !Array.isArray(messages)) {
-      return NextResponse.json(
-        { message: 'Messages array is required' },
-        { status: 400 }
-      );
-    }
-
-    const result = await chatService.updateChat(chatId, { messages }, auth.userId);
-    return NextResponse.json({ data: result });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'An unknown error occurred';
-    return NextResponse.json({ message }, { status: 500 });
-  }
-}
 
 export async function DELETE(
   request: Request,

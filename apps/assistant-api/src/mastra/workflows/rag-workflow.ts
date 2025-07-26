@@ -15,7 +15,9 @@ const RAGWorkflowInputSchema = z.object({
     content: z.string()
   })).default([]),
   courseId: z.string().uuid().optional(),
+  userId: z.string().optional(),
   timeZone: z.string().optional(),
+  sessionId: z.string().uuid().optional(), // Added sessionId for chat updates
   promptOverrides: z.any().optional() // PromptOverrides type
 });
 
@@ -57,7 +59,7 @@ export class RAGWorkflowStreaming {
    */
   static async* executeStream(input: RAGWorkflowInput): AsyncGenerator<{
     chunk?: string;
-    linkedDocumentIds?: string[];
+    linkedDocumentIds?: Array<{ type: 'document' | 'flashcard_set'; id: string }>;
     done?: boolean;
     error?: string;
     toolCall?: any;
@@ -83,25 +85,21 @@ export class RAGWorkflowStreaming {
         input.timeZone
       );
 
-      // Step 3: Conditional vector search
+      // Step 3: Conditional vector search. This is for context, not for linking.
       let retrievedDocuments: any[] = [];
-      let linkedDocumentIds: string[] = [];
-
       if (analysisResult.ragNeeded && input.courseId && analysisResult.search_query) {
         const searchResult = await SupabaseService.performVectorSearch(
           analysisResult.search_query,
           input.courseId,
           5
         );
-
         if (searchResult.success && searchResult.documents) {
           retrievedDocuments = searchResult.documents;
-          linkedDocumentIds = [...new Set(searchResult.documents.map(doc => doc.doc_id))];
         }
       }
 
-      // Step 4: Stream response generation with scratchpad reasoning
-      // Clear any previous sources for this course (start fresh)
+      // Step 4: Stream response generation.
+      // Clear any previous sources for this request.
       if (input.courseId) {
         clearSourcesStore(input.courseId);
       }
@@ -125,28 +123,62 @@ export class RAGWorkflowStreaming {
         finalUserMessage,
         input.conversationHistory,
         input.courseId,
+        input.userId,
         input.timeZone
       );
 
-      for await (const chunk of responseStream) {
-        yield { chunk };
-      }
+      let fullResponseContent = '';
+      const createdFlashcardSets: string[] = [];
 
-      // After streaming, check if the assistant set any sources
-      let assistantLinkedDocumentIds: string[] = [];
-      if (input.courseId) {
-        assistantLinkedDocumentIds = getSourcesFromStore(input.courseId);
-        if (assistantLinkedDocumentIds.length > 0) {
-          console.log(`[RAGWorkflow] Assistant set ${assistantLinkedDocumentIds.length} source documents via set_sources tool`);
+      for await (const chunk of responseStream) {
+        const anyChunk = chunk as any;
+        // The chunk can be a string or an object with tool call info
+        if (typeof anyChunk === 'string') {
+          fullResponseContent += anyChunk;
+          yield { chunk: anyChunk };
+        } else if (typeof anyChunk === 'object' && anyChunk !== null) {
+          if ('toolCall' in anyChunk && anyChunk.toolCall && anyChunk.toolCall.toolName === 'create_flashcards') {
+            if ('toolResult' in anyChunk && anyChunk.toolResult?.setId) {
+              createdFlashcardSets.push(anyChunk.toolResult.setId);
+              console.log(`[RAGWorkflow] Captured created flashcard set ID: ${anyChunk.toolResult.setId}`);
+            }
+          }
+          // Yield the whole object so consumers can see tool calls if they want
+          yield anyChunk;
         }
       }
 
-      // Use assistant-chosen sources if available, otherwise fall back to automatic linking
-      const finalLinkedDocumentIds = assistantLinkedDocumentIds.length > 0 
-        ? assistantLinkedDocumentIds 
-        : linkedDocumentIds;
+      // After streaming, get linked resources EXCLUSIVELY from the tools that were used.
+      const linkedResources: Array<{ type: 'document' | 'flashcard_set'; id: string }> = [];
+      if (input.courseId) {
+        const docIds = getSourcesFromStore(input.courseId);
+        docIds.forEach(id => linkedResources.push({ type: 'document', id }));
+        console.log(`[RAGWorkflow] Found ${docIds.length} documents from set_sources tool.`);
+      }
+      if (createdFlashcardSets.length > 0) {
+        createdFlashcardSets.forEach(id => linkedResources.push({ type: 'flashcard_set', id }));
+        console.log(`[RAGWorkflow] Found ${createdFlashcardSets.length} newly created flashcard sets.`);
+      }
 
-      console.log(`[RAGWorkflow] Final linked documents: ${finalLinkedDocumentIds.length} (${assistantLinkedDocumentIds.length > 0 ? 'assistant-chosen' : 'automatic'})`);
+      console.log(`[RAGWorkflow] Final linked resources to save: ${linkedResources.length}`);
+
+      // Update the chat in the database with the final message and linked resources.
+      if (input.sessionId && linkedResources.length > 0) {
+        console.log(`[RAGWorkflow] Attempting to update chat: ${input.sessionId}`);
+        try {
+          await SupabaseService.updateAssistantMessageInChat(
+            input.sessionId,
+            fullResponseContent,
+            linkedResources
+          );
+          console.log(`[RAGWorkflow] Successfully updated chat: ${input.sessionId}`);
+        } catch (dbError) {
+          console.error(`[RAGWorkflow] FAILED to update chat ${input.sessionId}:`, dbError);
+        }
+      } else {
+        const reason = !input.sessionId ? 'No sessionId provided' : 'No linked resources to save';
+        console.warn(`[RAGWorkflow] Skipping chat update. Reason: ${reason}`);
+      }
 
       // Clean up the store
       if (input.courseId) {
@@ -156,7 +188,7 @@ export class RAGWorkflowStreaming {
       // Send final result with metadata
       yield {
         done: true,
-        linkedDocumentIds: finalLinkedDocumentIds
+        linkedDocumentIds: linkedResources
       };
 
     } catch (error) {

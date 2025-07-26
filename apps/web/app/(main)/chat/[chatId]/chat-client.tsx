@@ -1,31 +1,34 @@
-"use client"
+"use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react"
-import { useParams, useRouter } from "next/navigation"
-import { ChatInputBar } from "@/components/chat-input-bar"
-import { UserMessage } from "@/components/user-message"
-import AssistantMessage from "@/components/assistant-message"
-import { useChat, useUpdateChat } from "@/hooks/api/chats"
-import { useSelectedCourse } from "@/hooks/api/courses"
-import { Message } from "@/features/chat/chat.types"
-import { Skeleton } from "@/components/ui/skeleton"
-import { ScrollToBottomButton } from "@/components/scroll-to-bottom"
-import { chatStateService } from "@/features/chat/services/chat-state.service"
-import { chatStreamingService } from "@/features/chat/services/chat-streaming.service"
-import { streamingManager } from "@/features/chat/services/streaming-manager.service"
-import { useStreamingChats } from "@/features/chat/PendingChatContext"
-import logger from "@/lib/logger"
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { ChatInputBar } from "@/components/chat-input-bar";
+import { UserMessage } from "@/components/user-message";
+import AssistantMessage from "@/components/assistant-message";
+import { useChat } from "@/hooks/api/chats";
+import { useSelectedCourse } from "@/hooks/api/courses";
+import { useAuthenticatedUser, queryKeys } from "@/hooks/api/base";
+import { Message } from "@/features/chat/chat.types";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ScrollToBottomButton } from "@/components/scroll-to-bottom";
+import { chatStateService } from "@/features/chat/services/chat-state.service";
+import { chatStreamingService } from "@/features/chat/services/chat-streaming.service";
+import { streamingManager } from "@/features/chat/services/streaming-manager.service";
+import { useStreamingChats } from "@/features/chat/PendingChatContext";
+import logger from "@/lib/logger";
 
 export function ChatPageContent() {
-  const params = useParams()
-  const router = useRouter()
-  const chatId = Array.isArray(params?.chatId) ? params.chatId[0] : params?.chatId
+  const params = useParams();
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const chatId = Array.isArray(params?.chatId) ? params.chatId[0] : params?.chatId;
   const [initialMessage, setInitialMessage] = useState<string | null>(null)
   
   // Fetch real chat data
   const { data: chat, isLoading: isLoadingChat, error: chatError } = useChat(chatId)
   const { data: selectedCourse } = useSelectedCourse()
-  const updateChatMutation = useUpdateChat()
+  const { userId } = useAuthenticatedUser()
   const { setStreamingStatus, updateStreamingMessage, getStreamingMessage } = useStreamingChats()
   
   const [messages, setMessages] = useState<Message[]>([])
@@ -93,8 +96,7 @@ export function ChatPageContent() {
           const assistantMessage: Message = {
             id: Date.now().toString() + '-streaming-assistant',
             content: streamingData.message,
-            type: 'assistant',
-            linkedDocumentIds: streamingData.linkedDocumentIds || []
+            role: 'assistant'
           };
           setMessages([...convertedMessages, assistantMessage]);
         } else {
@@ -115,11 +117,14 @@ export function ChatPageContent() {
   // Handle initial message streaming
   useEffect(() => {
     if (initialMessage && selectedCourse && chat && chatId && !streamingManager.isStreaming(chatId)) {
-      // Check if we should start streaming (messages loaded from database)
-      const shouldStartStreaming = messages.length > 0 && 
-        messages[messages.length - 1].type === 'user' && 
-        messages[messages.length - 1].content === initialMessage
-      
+      // This logic is specifically for the first message in a new chat.
+      // It looks for a user message followed by an empty assistant message.
+      const shouldStartStreaming = messages.length === 2 &&
+        messages[0].role === 'user' &&
+        messages[0].content === initialMessage &&
+        messages[1].role === 'assistant' &&
+        messages[1].content === ''
+
       if (shouldStartStreaming) {
         setIsReplying(true)
         
@@ -128,17 +133,7 @@ export function ChatPageContent() {
         
         const startStreaming = async () => {
           try {
-            // Create assistant message for streaming
-            const assistantMessage: Message = {
-              id: Date.now().toString() + '-assistant',
-              content: '',
-              type: 'assistant',
-              linkedDocumentIds: []
-            }
-            
-            setMessages(prev => [...prev, assistantMessage])
-            
-            // Use streaming manager to start persistent streaming
+            // The empty assistant message already exists, so we just stream into it.
             await streamingManager.startStreaming(
               chatId,
               initialMessage,
@@ -150,8 +145,7 @@ export function ChatPageContent() {
                 conversationHistory: [],
                 isNewChat: false,
                 chatId: chatId,
-                createChatMutation: updateChatMutation,
-                updateChatMutation,
+                userId,
                 router,
                 selectedCourse,
                 setIsReplying,
@@ -159,15 +153,20 @@ export function ChatPageContent() {
               }
             );
             
-            // Streaming completed successfully
+            // Streaming completed successfully, invalidate cache to refetch augmented data
             setStreamingStatus(chatId, chat.title || 'Chat', false);
+            await queryClient.invalidateQueries({
+              queryKey: queryKeys.chats.detail(chatId),
+            });
             
           } catch (error) {
             console.error('Failed to start streaming:', error)
             setStreamingStatus(chatId, chat.title || 'Chat', false);
+            // Remove the empty assistant message on error
             chatStateService.handleMessageError(
               { messages, setMessages, setIsReplying, setError },
-              error instanceof Error ? error : new Error('Failed to start streaming')
+              error instanceof Error ? error : new Error('Failed to start streaming'),
+              1 
             )
           }
         }
@@ -175,7 +174,7 @@ export function ChatPageContent() {
         startStreaming()
       }
     }
-  }, [initialMessage, selectedCourse, chat, chatId, messages, updateChatMutation, router, setStreamingStatus, updateStreamingMessage])
+  }, [initialMessage, selectedCourse, chat, chatId, messages, router, setStreamingStatus, updateStreamingMessage, userId])
 
   // Handle chat loading errors
   useEffect(() => {
@@ -234,8 +233,6 @@ export function ChatPageContent() {
           conversationHistory,
           isNewChat: false,
           chatId: chatId,
-          createChatMutation: updateChatMutation,
-          updateChatMutation,
           router,
           selectedCourse,
           setIsReplying,
@@ -243,8 +240,11 @@ export function ChatPageContent() {
         }
       );
 
-      // Streaming completed successfully
+      // Streaming completed successfully, invalidate cache to refetch augmented data
       setStreamingStatus(chatId, chat?.title || 'Chat', false);
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.chats.detail(chatId),
+      });
 
     } catch (error) {
       console.error('Failed to send message:', error)
@@ -254,7 +254,7 @@ export function ChatPageContent() {
         error instanceof Error ? error : new Error('Failed to send message')
       )
     }
-  }, [chatId, selectedCourse, messages, updateChatMutation, router, setStreamingStatus, chat?.title, updateStreamingMessage])
+  }, [chatId, selectedCourse, messages, router, setStreamingStatus, chat?.title, updateStreamingMessage, queryClient])
 
   if (!chatId) {
     return (
@@ -314,7 +314,7 @@ export function ChatPageContent() {
           ) : (
             // Show actual messages
             messages.map((message, i) =>
-              message.type === "user" ? (
+              message.role === "user" ? (
                 <UserMessage key={message.id || i} className="w-fit max-w-2xl self-end">
                   {message.content}
                 </UserMessage>
@@ -322,7 +322,7 @@ export function ChatPageContent() {
                 <AssistantMessage 
                   key={message.id || i} 
                   content={message.content}
-                  linkedDocumentIds={message.linkedDocumentIds}
+                  linkedResources={message.linkedResources}
                   isStreaming={isReplying && i === messages.length - 1 && message.content.trim().length > 0}
                 />
               )

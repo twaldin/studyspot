@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient, queryKeys, mutationKeys, useAuthenticatedUser } from './base';
 import { useUserSchool } from "./user"; // Import useUserSchool
-import { Chat, Message } from '@/features/chat/chat.types';
+import { Chat, Message, LinkedResource } from '@/features/chat/chat.types';
 import logger from '@/lib/logger';
 import { rateLimiter, RATE_LIMITS } from '@/lib/utils/rate-limiter';
 
@@ -18,7 +18,7 @@ export interface CreateChatRequest {
   initialMessages: Array<{
     role: string;
     content: string;
-    linkedDocumentIds?: string[];
+    linkedResources?: LinkedResource[];
   }>;
 }
 
@@ -26,7 +26,7 @@ export interface UpdateChatRequest {
   messages: Array<{
     role: string;
     content: string;
-    linkedDocumentIds?: string[];
+    linkedResources?: LinkedResource[];
   }>;
 }
 
@@ -132,54 +132,6 @@ export function useCreateChat() {
     },
     onError: (error) => {
       logger.error({ error }, 'Failed to create chat');
-    },
-  });
-}
-
-// Update chat mutation
-export function useUpdateChat() {
-  const queryClient = useQueryClient();
-  const { data: school } = useUserSchool();
-  const schoolId = school?.id;
-  
-  return useMutation({
-    mutationKey: mutationKeys.chats.update,
-    mutationFn: async ({ chatId, data }: { chatId: string; data: UpdateChatRequest }) => {
-      if (rateLimiter.checkRateLimit(`/chats/${chatId}`, RATE_LIMITS.CHAT_MESSAGES)) {
-        throw new Error('Rate limit exceeded for chat updates');
-      }
-      
-      const response = await apiClient<{ data: UpdateChatResponse }>(`/chats/${chatId}`, {
-        method: 'PATCH',
-        body: JSON.stringify(data),
-      });
-      return { chatId, messages: data.messages, ...response.data };
-    },
-    onSuccess: ({ chatId, title, messages }) => {
-      if (messages) {
-        queryClient.setQueryData(queryKeys.chats.detail(chatId), (oldData: any) => {
-          if (!oldData) return oldData;
-          
-          const updatedData = {
-            ...oldData,
-            chats: messages
-          };
-          
-          logger.info('Updated chat cache with complete message history', { chatId, messagesCount: messages.length });
-          return updatedData;
-        });
-      }
-      
-      if (title) {
-        queryClient.setQueryData(queryKeys.chats.list(schoolId), (old: ChatSummary[] | undefined) =>
-          old?.map(chat => chat.id === chatId ? { ...chat, title } : chat) || []
-        );
-      }
-      
-      logger.info({ chatId, newTitle: title }, 'Updated chat');
-    },
-    onError: (error) => {
-      logger.error({ error }, 'Failed to update chat');
     },
   });
 }

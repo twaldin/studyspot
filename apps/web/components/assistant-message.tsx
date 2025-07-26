@@ -2,27 +2,23 @@
 import { marked } from "marked";
 import React, { useEffect, useState } from "react";
 import DOMPurify from "dompurify";
-import { useDocumentsByIds } from "@/hooks/api/documents";
 import { renderMarkdownWithLatex } from "@/lib/renderMarkdown";
-import { DocumentCard } from "@/components/document-card";
+import { ResourceCard } from "@/components/resource-card";
+import { LinkedResource } from "@/features/chat/chat.types";
 
 interface AssistantMessageProps {
   content: string;
-  linkedDocumentIds?: string[];
+  linkedResources?: LinkedResource[];
   isStreaming?: boolean;
 }
 
 const AssistantMessage: React.FC<AssistantMessageProps> = ({
   content,
-  linkedDocumentIds,
+  linkedResources,
   isStreaming,
 }) => {
   // Initialize with content as fallback for SSR
   const [html, setHtml] = useState(content);
-
-  // Fetch linked documents
-  const { data: linkedDocuments = [], isLoading: isLoadingDocuments } =
-    useDocumentsByIds(linkedDocumentIds || []);
 
   // Parse the displayed content as Markdown
   useEffect(() => {
@@ -173,31 +169,16 @@ const AssistantMessage: React.FC<AssistantMessageProps> = ({
           dangerouslySetInnerHTML={createMarkup()}
         />
 
-        {/* Render linked documents - only show after streaming is complete */}
-        {!isStreaming && linkedDocuments.length > 0 && (
+        {/* Render linked resources - only show after streaming is complete */}
+        {!isStreaming && linkedResources && linkedResources.length > 0 && (
           <div className="mt-3">
             <div className="grid gap-4 grid-cols-1 @md:grid-cols-2 @lg:grid-cols-3">
-              {linkedDocuments.map((document) => (
-                <DocumentCard
-                  key={document.id}
-                  url={document.file_url}
-                  file={document}
-                  fileType={document.file_type === "application/pdf"
-                    ? "pdf"
-                    : "Unknown"}
-                />
+              {linkedResources.map((resource) => (
+                <ResourceCard key={`${resource.type}-${resource.id}`} resource={resource} />
               ))}
             </div>
           </div>
         )}
-
-        {/* Show loading state for documents */}
-        {!isStreaming && isLoadingDocuments && linkedDocumentIds &&
-          linkedDocumentIds.length > 0 && (
-            <div className="mt-3 text-sm text-gray-500">
-              Loading sources...
-            </div>
-          )}
       </div>
     </div>
   );

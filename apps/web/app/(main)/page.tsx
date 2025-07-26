@@ -55,7 +55,8 @@ export default function Home() {
       // Create real chat with just the user message
       const createRequest = {
         initialMessages: [
-          { role: 'user', content: messageContent }
+          { role: 'user', content: messageContent },
+          { role: 'assistant', content: '' } // Add an empty assistant message
         ]
       };
       

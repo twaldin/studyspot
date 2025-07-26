@@ -52,6 +52,7 @@ const StreamRequestSchema = z.object({
     content: z.string()
   })).default([]),
   courseId: z.string().optional(),
+  userId: z.string().optional(),
   timeZone: z.string().optional(),
   sessionId: z.string().optional(),
   // Developer-only prompt overrides
@@ -81,7 +82,7 @@ export default async function handler(req: SimpleRequest, res: SimpleResponse) {
   try {
     // Parse and validate request body
     const body = StreamRequestSchema.parse(req.body);
-    const { question, conversationHistory, courseId, timeZone, sessionId, promptOverrides } = body;
+    const { question, conversationHistory, courseId, userId, timeZone, sessionId, promptOverrides } = body;
 
     // Log prompt override usage (matching original API)
     if (promptOverrides) {
@@ -108,7 +109,9 @@ export default async function handler(req: SimpleRequest, res: SimpleResponse) {
       question,
       conversationHistory,
       courseId,
+      userId,
       timeZone,
+      sessionId, // Pass sessionId to the workflow
       promptOverrides
     };
 

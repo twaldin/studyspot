@@ -5,6 +5,7 @@ import { getFullDocumentTool } from '../tools/get-full-document.tool.js';
 import { listAllDocumentsTool } from '../tools/list-all-documents.tool.js';
 import { semanticSearchTool } from '../tools/semantic-search.tool.js';
 import { setSourcesTool } from '../tools/set-sources.tool.js';
+import { generateFlashcardSetTool } from '../tools/generate-flashcard-set.tool.js';
 import { ConfigLoaderService } from '../../services/config-loader.service.js';
 import { SupabaseService } from '../../services/supabase.service.js';
 
@@ -45,7 +46,8 @@ export class StudySpotAgent {
           get_full_document: getFullDocumentTool,
           list_all_documents: listAllDocumentsTool,
           semantic_search: semanticSearchTool,
-          set_sources: setSourcesTool
+          set_sources: setSourcesTool,
+          create_flashcards: generateFlashcardSetTool
         }
       });
 
@@ -130,6 +132,7 @@ export class StudySpotAgent {
     question: string,
     conversationHistory: any[] = [],
     courseId?: string,
+    userId?: string,
     timeZone?: string
   ): Promise<AsyncGenerator<string, void, unknown>> {
     try {
@@ -170,6 +173,9 @@ export class StudySpotAgent {
       const runtimeContext = new RuntimeContext();
       if (courseId) {
         runtimeContext.set('courseId', courseId);
+      }
+      if (userId) {
+        runtimeContext.set('userId', userId);
       }
       if (timeZone) {
         runtimeContext.set('timeZone', timeZone);

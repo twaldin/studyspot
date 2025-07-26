@@ -1,31 +1,30 @@
 import logger from "@/lib/logger";
-import { Message } from "@/features/chat/chat.types";
+import { Message, LinkedResource } from "@/features/chat/chat.types";
 import type { CreateChatRequest } from "@/hooks/api/chats";
 
 export interface StreamingContext {
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
   messageContent: string;
   conversationHistory: Array<
-    { role: string; content: string; linkedDocumentIds?: string[] }
+    { role: string; content: string; linkedResources?: LinkedResource[] }
   >;
   isNewChat: boolean;
   chatId?: string; // Chat ID for database operations
-  createChatMutation: any;
-  updateChatMutation: any;
+  userId?: string; // User ID for flashcard generation
   router: any;
   selectedCourse: any;
   setIsReplying: React.Dispatch<React.SetStateAction<boolean>>;
   updateStreamingMessage?: (
     chatId: string,
     partialMessage: string,
-    linkedDocumentIds?: string[],
+    linkedResources?: LinkedResource[],
   ) => void;
 }
 
 export interface StreamingResponse {
   chunk?: string;
   done?: boolean;
-  linkedDocumentIds?: string[];
+  linkedResources?: LinkedResource[];
   error?: string;
 }
 
@@ -60,7 +59,7 @@ export class ChatStreamingService {
 
     try {
       let chunkCount = 0;
-      let linkedDocumentIds: string[] = [];
+      let linkedResources: LinkedResource[] = [];
 
       while (true) {
         const { done, value } = await reader.read();
@@ -93,18 +92,18 @@ export class ChatStreamingService {
                 console.info({
                   finalResponseLength: fullResponse.length,
                 }, "Received done signal from server");
-                linkedDocumentIds = data.linkedDocumentIds || [];
-                this.updateAssistantMessageWithDocuments(
+                linkedResources = data.linkedResources || [];
+                this.updateAssistantMessageWithResources(
                   context.setMessages,
-                  linkedDocumentIds,
+                  linkedResources,
                 );
 
-                // Update streaming context with final linked documents
+                // Update streaming context with final linked resources
                 if (context.chatId && context.updateStreamingMessage) {
                   context.updateStreamingMessage(
                     context.chatId,
                     fullResponse,
-                    linkedDocumentIds,
+                    linkedResources,
                   );
                 }
                 break;
@@ -119,16 +118,6 @@ export class ChatStreamingService {
             }
           }
         }
-      }
-
-      // Update chat with complete conversation after streaming is complete
-      if (context.chatId) {
-        await this.finalizeChat(
-          context,
-          fullResponse,
-          linkedDocumentIds,
-          context.chatId,
-        );
       }
     } finally {
       reader.releaseLock();
@@ -147,7 +136,7 @@ export class ChatStreamingService {
     setMessages((prevMessages) => {
       const newMessages = [...prevMessages];
       const lastMessage = newMessages[newMessages.length - 1];
-      if (lastMessage && lastMessage.type === "assistant") {
+      if (lastMessage && lastMessage.role === "assistant") {
         lastMessage.content = content;
       }
       return newMessages;
@@ -155,52 +144,20 @@ export class ChatStreamingService {
   }
 
   /**
-   * Updates the assistant message with linked documents
+   * Updates the assistant message with linked resources
    */
-  private updateAssistantMessageWithDocuments(
+  private updateAssistantMessageWithResources(
     setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
-    linkedDocumentIds: string[],
+    linkedResources: LinkedResource[],
   ): void {
     setMessages((prevMessages) => {
       const newMessages = [...prevMessages];
       const lastMessage = newMessages[newMessages.length - 1];
-      if (lastMessage && lastMessage.type === "assistant") {
-        lastMessage.linkedDocumentIds = linkedDocumentIds;
+      if (lastMessage && lastMessage.role === "assistant") {
+        lastMessage.linkedResources = linkedResources;
       }
       return newMessages;
     });
-  }
-
-  /**
-   * Finalizes the chat by updating the database with complete conversation
-   */
-  private async finalizeChat(
-    context: StreamingContext,
-    fullResponse: string,
-    linkedDocumentIds: string[],
-    realChatId: string,
-  ): Promise<void> {
-    const finalMessages = [
-      ...context.conversationHistory,
-      // Always include the user message for both new and existing chats
-      { role: "user", content: context.messageContent },
-      { role: "assistant", content: fullResponse, linkedDocumentIds },
-    ];
-
-    console.info({
-      finalMessagesCount: finalMessages.length,
-      isNewChat: context.isNewChat,
-      realChatId,
-    }, "[ChatStreaming] Updating chat with final messages");
-
-    await context.updateChatMutation.mutateAsync({
-      chatId: realChatId,
-      data: { messages: finalMessages },
-    });
-
-    console.info({
-      chatId: realChatId,
-    }, "[ChatStreaming] Streaming complete");
   }
 
   /**
@@ -212,13 +169,20 @@ export class ChatStreamingService {
       { role: string; content: string; linkedDocumentIds?: string[] }
     >,
     courseId: string,
+    chatId?: string, // Make chatId optional
+    userId?: string,
   ): Promise<Response> {
-    const requestBody = {
+    const requestBody: any = {
       question: messageContent,
       conversationHistory,
       courseId,
+      userId,
       timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     };
+
+    if (chatId) {
+      requestBody.sessionId = chatId;
+    }
 
     const apiUrl = process.env.NEXT_PUBLIC_ASSISTANT_API_URL;
     logger.info("Using assistant API at", apiUrl);
