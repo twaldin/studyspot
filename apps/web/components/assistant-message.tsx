@@ -17,7 +17,8 @@ const AssistantMessage: React.FC<AssistantMessageProps> = ({
   linkedDocumentIds,
   isStreaming,
 }) => {
-  const [html, setHtml] = useState("");
+  // Initialize with content as fallback for SSR
+  const [html, setHtml] = useState(content);
 
   // Fetch linked documents
   const { data: linkedDocuments = [], isLoading: isLoadingDocuments } =
@@ -25,6 +26,11 @@ const AssistantMessage: React.FC<AssistantMessageProps> = ({
 
   // Parse the displayed content as Markdown
   useEffect(() => {
+    // Only run on client side
+    if (typeof window === 'undefined') {
+      return;
+    }
+
     // Normalize LaTeX delimiters
     const normalizedContent = content
       .replace(/\\\(/g, "$")
