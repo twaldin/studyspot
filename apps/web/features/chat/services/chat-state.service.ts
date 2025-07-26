@@ -35,7 +35,8 @@ export class ChatStateService {
       id: index.toString(),
       content: msg.content,
       role: msg.role,
-      linkedResources: msg.linked_resources || [],
+      linkedResources: [], // Will be populated by client-side conversion  
+      linkedResourceRefs: msg.linked_resources || [], // Store raw refs for conversion
     }));
 
     // We are not calling the augmentation here because the data from useChat is already augmented.

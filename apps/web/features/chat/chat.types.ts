@@ -3,21 +3,32 @@
 // Resource types that can be linked in chat messages
 export type LinkedResourceType = 'document' | 'flashcard_set';
 
-// Unified resource interface for chat display
-export interface LinkedResource {
-  id: string;
+// Simple linked resource from API (only type and id)
+export interface LinkedResourceRef {
   type: LinkedResourceType;
+  id: string;
+}
+
+// Full document resource (after fetching details)
+export interface DocumentResource {
+  id: string;
+  type: 'document';
+  title: string;
+  file_type: string;
+  file_url: string;
+}
+
+// Full flashcard set resource (after fetching details)
+export interface FlashcardSetResource {
+  id: string;
+  type: 'flashcard_set';
   title: string;
   description?: string;
-  metadata?: {
-    // For documents
-    file_type?: string;
-    file_url?: string;
-    // For flashcard sets
-    cardCount?: number;
-    // Future resource types can add their own metadata
-  };
+  cardCount: number;
 }
+
+// Unified resource interface for chat display
+export type LinkedResource = DocumentResource | FlashcardSetResource;
 
 // Represents a message in a chat session
 export interface Message {
@@ -25,6 +36,7 @@ export interface Message {
   content: string;
   role: 'user' | 'assistant';
   linkedResources?: LinkedResource[];
+  linkedResourceRefs?: LinkedResourceRef[]; // Raw refs from API
 }
 
 // Represents a full chat object with all messages

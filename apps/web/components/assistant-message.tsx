@@ -3,7 +3,7 @@ import { marked } from "marked";
 import React, { useEffect, useState } from "react";
 import DOMPurify from "dompurify";
 import { renderMarkdownWithLatex } from "@/lib/renderMarkdown";
-import { ResourceCard } from "@/components/resource-card";
+import { LinkedResourceCard } from "@/components/linked-resource-card";
 import { LinkedResource } from "@/features/chat/chat.types";
 
 interface AssistantMessageProps {
@@ -174,7 +174,7 @@ const AssistantMessage: React.FC<AssistantMessageProps> = ({
           <div className="mt-3">
             <div className="grid gap-4 grid-cols-1 @md:grid-cols-2 @lg:grid-cols-3">
               {linkedResources.map((resource) => (
-                <ResourceCard key={`${resource.type}-${resource.id}`} resource={resource} />
+                <LinkedResourceCard key={`${resource.type}-${resource.id}`} resource={resource} />
               ))}
             </div>
           </div>

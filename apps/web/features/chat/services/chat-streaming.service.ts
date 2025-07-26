@@ -1,5 +1,5 @@
 import logger from "@/lib/logger";
-import { Message, LinkedResource } from "@/features/chat/chat.types";
+import { Message, LinkedResource, LinkedResourceRef } from "@/features/chat/chat.types";
 import type { CreateChatRequest } from "@/hooks/api/chats";
 
 export interface StreamingContext {
@@ -24,7 +24,7 @@ export interface StreamingContext {
 export interface StreamingResponse {
   chunk?: string;
   done?: boolean;
-  linkedResources?: LinkedResource[];
+  linkedResources?: LinkedResourceRef[]; // Simple type/id pairs
   error?: string;
 }
 
@@ -91,8 +91,13 @@ export class ChatStreamingService {
               } else if (data.done) {
                 console.info({
                   finalResponseLength: fullResponse.length,
+                  linkedResourceRefs: data.linkedResources?.length || 0
                 }, "Received done signal from server");
-                linkedResources = data.linkedResources || [];
+                
+                // Convert simple refs to full resources
+                const linkedResourceRefs = data.linkedResources || [];
+                linkedResources = await this.convertRefsToResources(linkedResourceRefs);
+                
                 this.updateAssistantMessageWithResources(
                   context.setMessages,
                   linkedResources,
@@ -158,6 +163,60 @@ export class ChatStreamingService {
       }
       return newMessages;
     });
+  }
+
+  /**
+   * Convert simple type/id refs to full LinkedResource objects
+   */
+  public async convertRefsToResources(refs: LinkedResourceRef[]): Promise<LinkedResource[]> {
+    const resources: LinkedResource[] = [];
+    
+    try {
+      // Batch fetch documents
+      const documentIds = refs.filter(ref => ref.type === 'document').map(ref => ref.id);
+      if (documentIds.length > 0) {
+        const response = await fetch(`/api/docs?ids=${documentIds.join(',')}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.docs) {
+            for (const doc of data.docs) {
+              resources.push({
+                id: doc.id,
+                type: 'document',
+                title: doc.file_name || 'Unknown Document',
+                file_type: doc.file_type || 'unknown',
+                file_url: doc.file_url || ''
+              });
+            }
+          }
+        }
+      }
+
+      // Fetch flashcard sets individually 
+      const flashcardRefs = refs.filter(ref => ref.type === 'flashcard_set');
+      for (const ref of flashcardRefs) {
+        const response = await fetch(`/api/flashcard-sets/${ref.id}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data) {
+            const set = data.data;
+            resources.push({
+              id: ref.id,
+              type: 'flashcard_set',
+              title: set.title || 'Untitled Flashcard Set',
+              description: set.description,
+              cardCount: set.card_count || 0
+            });
+          }
+        }
+      }
+      
+      logger.info(`Converted ${refs.length} refs to ${resources.length} full resources`);
+      return resources;
+    } catch (error) {
+      logger.error('Failed to convert refs to resources:', error);
+      return [];
+    }
   }
 
   /**

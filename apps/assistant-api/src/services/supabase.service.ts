@@ -648,4 +648,134 @@ export class SupabaseService {
       };
     }
   }
+
+  /**
+   * Get documents by their IDs
+   */
+  static async getDocumentsByIds(documentIds: string[]): Promise<{
+    success: boolean;
+    documents?: Array<{
+      id: string;
+      file_name: string;
+      file_type: string;
+      file_url: string;
+    }>;
+    error?: string;
+  }> {
+    try {
+      const client = this.getClient();
+      
+      const { data: documents, error } = await client
+        .from('docs')
+        .select('id, file_name, file_type, file_url')
+        .in('id', documentIds);
+
+      if (error) {
+        console.error(`[SupabaseService] Error fetching documents:`, error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, documents: documents || [] };
+    } catch (error) {
+      console.error(`[SupabaseService] Unexpected error fetching documents:`, error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      };
+    }
+  }
+
+  /**
+   * Get flashcard set by ID with basic info
+   */
+  static async getFlashcardSetById(setId: string): Promise<{
+    success: boolean;
+    flashcardSet?: {
+      id: string;
+      title: string;
+      description: string;
+      card_count: number;
+    };
+    error?: string;
+  }> {
+    try {
+      const client = this.getClient();
+      
+      // Get flashcard set details
+      const { data: setData, error: setError } = await client
+        .from('flashcard_sets')
+        .select('id, title, description')
+        .eq('id', setId)
+        .single();
+
+      if (setError || !setData) {
+        console.error(`[SupabaseService] Error fetching flashcard set:`, setError);
+        return { success: false, error: 'Flashcard set not found' };
+      }
+
+      // Get card count
+      const { count: cardCount, error: countError } = await client
+        .from('flashcards')
+        .select('*', { count: 'exact', head: true })
+        .eq('set_id', setId);
+
+      if (countError) {
+        console.warn(`[SupabaseService] Error counting flashcards for set ${setId}:`, countError);
+      }
+
+      return { 
+        success: true, 
+        flashcardSet: {
+          id: setData.id,
+          title: setData.title,
+          description: setData.description,
+          card_count: cardCount || 0
+        }
+      };
+    } catch (error) {
+      console.error(`[SupabaseService] Unexpected error fetching flashcard set:`, error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      };
+    }
+  }
+
+  /**
+   * Get recent flashcard sets for a user/course (most recent first)
+   */
+  static async getRecentFlashcardSets(userId: string, courseId: string, limit: number = 1): Promise<{
+    success: boolean;
+    flashcardSets?: Array<{
+      id: string;
+      title: string;
+      created_at: string;
+    }>;
+    error?: string;
+  }> {
+    try {
+      const client = this.getClient();
+      
+      const { data: flashcardSets, error } = await client
+        .from('flashcard_sets')
+        .select('id, title, created_at')
+        .eq('user_id', userId)
+        .eq('course_id', courseId)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      if (error) {
+        console.error(`[SupabaseService] Error fetching recent flashcard sets:`, error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, flashcardSets: flashcardSets || [] };
+    } catch (error) {
+      console.error(`[SupabaseService] Unexpected error fetching recent flashcard sets:`, error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      };
+    }
+  }
 }

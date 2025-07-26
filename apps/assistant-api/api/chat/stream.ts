@@ -59,6 +59,8 @@ const StreamRequestSchema = z.object({
   promptOverrides: PromptOverrideSchema.optional()
 });
 
+// No longer needed - client will build resources from type/id
+
 /**
  * Mastra-based streaming chat endpoint
  * Maintains exact compatibility with the original assistant API
@@ -135,24 +137,19 @@ export default async function handler(req: SimpleRequest, res: SimpleResponse) {
         // Text chunk response (matching original API format)
         res.write(`data: ${JSON.stringify({ chunk: response.chunk })}\n\n`);
       } else if (response.done) {
-        // Final response with document IDs (matching original API format)
+        console.log(`[Stream API] Processing done response with linkedDocumentIds:`, response.linkedDocumentIds);
+        
+        // Send simple type/id pairs to client - client will fetch details
+        const linkedResources = response.linkedDocumentIds || [];
+        
+        console.log(`[Stream API] Sending ${linkedResources.length} linked resources to client:`, linkedResources);
+        
+        // Send final response
         res.write(`data: ${JSON.stringify({ 
           done: true, 
-          linkedDocumentIds: response.linkedDocumentIds 
+          linkedResources
         })}\n\n`);
         break;
-      } else if (response.toolCall) {
-        // Log tool calls for debugging (not sent to client to maintain compatibility)
-        console.log(`[Mastra Stream API] Tool call executed:`, {
-          toolName: response.toolCall.name,
-          toolId: response.toolCall.id
-        });
-      } else if (response.toolResult) {
-        // Log tool results for debugging (not sent to client to maintain compatibility)
-        console.log(`[Mastra Stream API] Tool result received:`, {
-          toolId: response.toolResult.id,
-          success: response.toolResult.success
-        });
       }
     }
 

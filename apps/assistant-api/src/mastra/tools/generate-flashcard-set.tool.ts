@@ -3,6 +3,23 @@ import { z } from 'zod';
 import { SupabaseService } from '../../services/supabase.service.js';
 import { randomUUID } from 'crypto';
 
+// Global store for created flashcard sets (per session)
+const flashcardStore = new Map<string, string[]>();
+
+export function getFlashcardSetsFromStore(sessionKey: string): string[] {
+  return flashcardStore.get(sessionKey) || [];
+}
+
+export function addFlashcardSetToStore(sessionKey: string, setId: string): void {
+  const existing = flashcardStore.get(sessionKey) || [];
+  existing.push(setId);
+  flashcardStore.set(sessionKey, existing);
+}
+
+export function clearFlashcardStore(sessionKey: string): void {
+  flashcardStore.delete(sessionKey);
+}
+
 /**
  * Tool for generating flashcard sets from course content
  * Allows the AI to create flashcards based on course materials and user requests
@@ -158,6 +175,9 @@ export const generateFlashcardSetTool = createTool({
       }
 
       console.log(`[GenerateFlashcardSetTool] Successfully created flashcard set ${setId} with ${flashcards.length} cards`);
+
+      // Store the created flashcard set ID in the global store (using courseId as the key)
+      addFlashcardSetToStore(courseId, setId);
 
       return {
         setId,

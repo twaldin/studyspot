@@ -6,6 +6,7 @@ import { vectorSearchTool } from '../tools/vector-search.tool.js';
 import { ConfigLoaderService, PromptOverrides } from '../../services/config-loader.service.js';
 import { SupabaseService } from '../../services/supabase.service.js';
 import { getSourcesFromStore, clearSourcesStore } from '../tools/set-sources.tool.js';
+import { getFlashcardSetsFromStore, clearFlashcardStore } from '../tools/generate-flashcard-set.tool.js';
 
 // Input schema for the RAG workflow
 const RAGWorkflowInputSchema = z.object({
@@ -99,9 +100,10 @@ export class RAGWorkflowStreaming {
       }
 
       // Step 4: Stream response generation.
-      // Clear any previous sources for this request.
+      // Clear any previous sources and flashcards for this request.
       if (input.courseId) {
         clearSourcesStore(input.courseId);
+        clearFlashcardStore(input.courseId);
       }
 
       let finalUserMessage = input.question;
@@ -128,7 +130,6 @@ export class RAGWorkflowStreaming {
       );
 
       let fullResponseContent = '';
-      const createdFlashcardSets: string[] = [];
 
       for await (const chunk of responseStream) {
         const anyChunk = chunk as any;
@@ -137,34 +138,33 @@ export class RAGWorkflowStreaming {
           fullResponseContent += anyChunk;
           yield { chunk: anyChunk };
         } else if (typeof anyChunk === 'object' && anyChunk !== null) {
-          if ('toolCall' in anyChunk && anyChunk.toolCall && anyChunk.toolCall.toolName === 'create_flashcards') {
-            if ('toolResult' in anyChunk && anyChunk.toolResult?.setId) {
-              createdFlashcardSets.push(anyChunk.toolResult.setId);
-              console.log(`[RAGWorkflow] Captured created flashcard set ID: ${anyChunk.toolResult.setId}`);
-            }
-          }
-          // Yield the whole object so consumers can see tool calls if they want
+          // Yield the whole object so consumers can see tool calls/results
           yield anyChunk;
         }
       }
 
-      // After streaming, get linked resources EXCLUSIVELY from the tools that were used.
+      // After streaming, get linked resources from tools used.
       const linkedResources: Array<{ type: 'document' | 'flashcard_set'; id: string }> = [];
+      
+      // Add documents from set_sources tool
       if (input.courseId) {
         const docIds = getSourcesFromStore(input.courseId);
         docIds.forEach(id => linkedResources.push({ type: 'document', id }));
         console.log(`[RAGWorkflow] Found ${docIds.length} documents from set_sources tool.`);
       }
-      if (createdFlashcardSets.length > 0) {
-        createdFlashcardSets.forEach(id => linkedResources.push({ type: 'flashcard_set', id }));
-        console.log(`[RAGWorkflow] Found ${createdFlashcardSets.length} newly created flashcard sets.`);
+      
+      // Add flashcard sets created during this session
+      if (input.courseId) {
+        const flashcardSetIds = getFlashcardSetsFromStore(input.courseId);
+        flashcardSetIds.forEach(id => linkedResources.push({ type: 'flashcard_set', id }));
+        console.log(`[RAGWorkflow] Found ${flashcardSetIds.length} flashcard sets from generate_flashcard tool.`);
       }
 
       console.log(`[RAGWorkflow] Final linked resources to save: ${linkedResources.length}`);
 
       // Update the chat in the database with the final message and linked resources.
-      if (input.sessionId && linkedResources.length > 0) {
-        console.log(`[RAGWorkflow] Attempting to update chat: ${input.sessionId}`);
+      if (input.sessionId) {
+        console.log(`[RAGWorkflow] Attempting to update chat: ${input.sessionId} with ${linkedResources.length} linked resources`);
         try {
           await SupabaseService.updateAssistantMessageInChat(
             input.sessionId,
@@ -176,13 +176,13 @@ export class RAGWorkflowStreaming {
           console.error(`[RAGWorkflow] FAILED to update chat ${input.sessionId}:`, dbError);
         }
       } else {
-        const reason = !input.sessionId ? 'No sessionId provided' : 'No linked resources to save';
-        console.warn(`[RAGWorkflow] Skipping chat update. Reason: ${reason}`);
+        console.warn(`[RAGWorkflow] Skipping chat update. Reason: No sessionId provided`);
       }
 
-      // Clean up the store
+      // Clean up the stores
       if (input.courseId) {
         clearSourcesStore(input.courseId);
+        clearFlashcardStore(input.courseId);
       }
 
       // Send final result with metadata

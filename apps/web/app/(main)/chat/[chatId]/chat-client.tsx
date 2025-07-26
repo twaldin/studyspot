@@ -79,36 +79,52 @@ export function ChatPageContent() {
     if (chat && chat.chats && messages.length === 0) {
       const convertedMessages = chatStateService.loadChatFromDatabase(chat)
       
-      // Check if there's active streaming for this chat
-      const isActivelyStreaming = streamingManager.isStreaming(chatId);
-      
-      if (isActivelyStreaming) {
-        // Update the streaming context with current UI state
-        streamingManager.updateStreamContext(chatId, {
-          setMessages,
-          setIsReplying,
-          updateStreamingMessage
-        });
+      // Convert linkedResourceRefs to linkedResources for each message
+      const processMessagesWithResources = async () => {
+        const processedMessages = await Promise.all(
+          convertedMessages.map(async (msg) => {
+            if (msg.linkedResourceRefs && msg.linkedResourceRefs.length > 0) {
+              // Use the same conversion logic as streaming service
+              const linkedResources = await chatStreamingService.convertRefsToResources(msg.linkedResourceRefs);
+              return { ...msg, linkedResources };
+            }
+            return msg;
+          })
+        );
         
-        // Check for partial streaming message
-        const streamingData = getStreamingMessage(chatId);
-        if (streamingData && streamingData.message) {
-          const assistantMessage: Message = {
-            id: Date.now().toString() + '-streaming-assistant',
-            content: streamingData.message,
-            role: 'assistant'
-          };
-          setMessages([...convertedMessages, assistantMessage]);
+        // Check if there's active streaming for this chat
+        const isActivelyStreaming = streamingManager.isStreaming(chatId);
+        
+        if (isActivelyStreaming) {
+          // Update the streaming context with current UI state
+          streamingManager.updateStreamContext(chatId, {
+            setMessages,
+            setIsReplying,
+            updateStreamingMessage
+          });
+          
+          // Check for partial streaming message
+          const streamingData = getStreamingMessage(chatId);
+          if (streamingData && streamingData.message) {
+            const assistantMessage: Message = {
+              id: Date.now().toString() + '-streaming-assistant',
+              content: streamingData.message,
+              role: 'assistant'
+            };
+            setMessages([...processedMessages, assistantMessage]);
+          } else {
+            setMessages(processedMessages);
+          }
+          
+          setIsReplying(true);
         } else {
-          setMessages(convertedMessages);
+          setMessages(processedMessages);
         }
         
-        setIsReplying(true);
-      } else {
-        setMessages(convertedMessages);
-      }
+        setError(null);
+      };
       
-      setError(null)
+      processMessagesWithResources();
     }
   }, [chat, messages.length, chatId, getStreamingMessage, setMessages, setIsReplying, updateStreamingMessage])
 
