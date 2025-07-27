@@ -37,7 +37,7 @@ export function Flashcard({
           className="absolute inset-0 backface-hidden"
           style={{ backfaceVisibility: 'hidden' }}
         >
-          <Card className="h-80 w-full bg-white dark:bg-gray-800 border-2 border-blue-200 dark:border-blue-700 shadow-lg hover:shadow-xl transition-shadow">
+          <Card className="h-80 w-full bg-white dark:bg-gray-800 border-0 shadow-lg hover:shadow-xl transition-shadow rounded-xl">
             <CardContent className="h-full flex flex-col items-center justify-center p-8 text-center">
               <div className="space-y-4">
                 <div className="text-2xl md:text-3xl font-medium text-gray-900 dark:text-gray-100 leading-relaxed">
@@ -59,7 +59,7 @@ export function Flashcard({
             transform: 'rotateY(180deg)'
           }}
         >
-          <Card className="h-80 w-full bg-white dark:bg-gray-800 border-2 border-green-200 dark:border-green-700 shadow-lg hover:shadow-xl transition-shadow">
+          <Card className="h-80 w-full bg-white dark:bg-gray-800 border-0 shadow-lg hover:shadow-xl transition-shadow rounded-xl">
             <CardContent className="h-full flex flex-col items-center justify-center p-8 text-center">
               <div className="space-y-4">
                 <div className="text-2xl md:text-3xl font-medium text-gray-900 dark:text-gray-100 leading-relaxed">

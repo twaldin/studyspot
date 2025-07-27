@@ -115,6 +115,33 @@ export class FlashcardService {
   }
 
   /**
+   * Navigate to the previous card in study mode
+   */
+  navigateToPreviousCard(currentState: StudyState): StudyState {
+    const { progress, shuffledCards } = currentState;
+    
+    if (!shuffledCards || shuffledCards.length === 0) {
+      return currentState;
+    }
+
+    // Calculate previous index (loop infinitely in reverse)
+    const prevIndex = progress.currentCardIndex === 0 
+      ? shuffledCards.length - 1 
+      : progress.currentCardIndex - 1;
+
+    const newProgress: StudyProgress = {
+      ...progress,
+      currentCardIndex: prevIndex,
+    };
+
+    return {
+      ...currentState,
+      progress: newProgress,
+      isFlipped: false, // Reset flip state for new card
+    };
+  }
+
+  /**
    * Skip current card (flip it automatically and then navigate)
    */
   skipCurrentCard(currentState: StudyState): StudyState {
