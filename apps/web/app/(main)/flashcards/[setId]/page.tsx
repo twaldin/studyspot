@@ -47,6 +47,7 @@ export default function FlashcardSetPage() {
       const initialStudyState = flashcardService.initializeStudyState(flashcardSet.cards);
       setStudyState(initialStudyState);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flashcardSet]);
 
   const handleEditMode = () => {
@@ -89,7 +90,7 @@ export default function FlashcardSetPage() {
 
   const handleSwapSides = () => {
     if (!studyState) return;
-    const newSettings = { 
+    const newSettings: StudySettings = { 
       ...studyState.settings, 
       practiceSide: studyState.settings.practiceSide === 'side1-first' ? 'side2-first' : 'side1-first'
     };
@@ -166,7 +167,7 @@ export default function FlashcardSetPage() {
     );
   }
 
-  const progressText = `${studyState.progress.currentIndex + 1} / ${studyState.progress.totalCards}`;
+  const progressText = `${studyState.progress.currentCardIndex + 1} / ${studyState.progress.totalCards}`;
 
   const timeAgo = flashcardService.formatTimeAgo(flashcardSet.created_at);
 
@@ -287,7 +288,7 @@ export default function FlashcardSetPage() {
                 <label className="text-xs text-muted-foreground">Track progress</label>
                 <Checkbox
                   checked={trackProgress}
-                  onCheckedChange={setTrackProgress}
+                  onCheckedChange={(checked) => setTrackProgress(checked === true)}
                 />
               </div>
               <Button

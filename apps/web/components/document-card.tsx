@@ -66,8 +66,8 @@ export function DocumentCard({ url, file, fileType }: DocumentCardProps) {
       rel="noopener noreferrer"
       className="h-full text-blue-600"
     >
-      <Card className="h-full relative overflow-hidden transition-colors hover:bg-accent">
-        <CardHeader className="pb-3 relative z-10">
+      <Card className="h-full relative overflow-hidden transition-colors hover:bg-accent py-3">
+        <CardHeader className="pb-0 relative z-10">
           <CardTitle className="text-sm leading-tight">
             {(file.file_name || "Untitled Document").substring(
               0,
