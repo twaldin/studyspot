@@ -1,7 +1,7 @@
 // src/features/chat/chat.types.ts
 
 // Resource types that can be linked in chat messages
-export type LinkedResourceType = 'document' | 'flashcard_set';
+export type LinkedResourceType = 'document' | 'flashcard_set' | 'quiz';
 
 // Simple linked resource from API (only type and id)
 export interface LinkedResourceRef {
@@ -27,8 +27,18 @@ export interface FlashcardSetResource {
   cardCount: number;
 }
 
+// Full quiz resource (after fetching details)
+export interface QuizResource {
+  id: string;
+  type: 'quiz';
+  title: string;
+  description?: string;
+  questionCount: number;
+  difficultyLevel?: string;
+}
+
 // Unified resource interface for chat display
-export type LinkedResource = DocumentResource | FlashcardSetResource;
+export type LinkedResource = DocumentResource | FlashcardSetResource | QuizResource;
 
 // Represents a message in a chat session
 export interface Message {

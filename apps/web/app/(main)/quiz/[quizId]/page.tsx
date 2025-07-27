@@ -2,64 +2,56 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { useFlashcardSet } from "@/hooks/api/flashcards";
-import { flashcardService } from "@/features/flashcards/services/flashcard.service";
-import { Flashcard } from "@/features/flashcards/components/flashcard";
-import { FlashcardEditMode } from "@/features/flashcards/components/flashcard-edit-mode";
+import { useQuiz } from "@/hooks/api/quizzes";
+import { quizService } from "@/features/quiz/services/quiz.service";
+import { QuizQuestion } from "@/features/quiz/components/quiz-question";
+import { QuizControls } from "@/features/quiz/components/quiz-controls";
+import { QuizEditMode } from "@/features/quiz/components/quiz-edit-mode";
 import {
-  Flashcard as FlashcardType,
+  QuizQuestion as QuizQuestionType,
   StudyMode,
   StudySettings,
   StudyState,
-} from "@/lib/types/FlashcardTypes";
+  OptionLabel,
+} from "@/lib/types/QuizTypes";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  ArrowLeft,
-  ArrowRight,
-  BarChart3,
   BookOpen,
   Calendar,
   Edit3,
   Loader2,
   Maximize,
-  RotateCcw,
   Shuffle,
-  User,
+  Target,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { cn } from "@/lib/utils";
 
-export default function FlashcardSetPage() {
+export default function QuizPage() {
   const params = useParams();
-  const setId = params.setId as string;
+  const quizId = params.quizId as string;
 
-  const { data: flashcardSet, isLoading, error } = useFlashcardSet(setId);
+  const { data: quiz, isLoading, error } = useQuiz(quizId);
 
-  // Disable body scrolling when component mounts
-  useEffect(() => {
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = "unset";
-    };
-  }, []);
+  // No need to disable body scrolling - main container handles overflow
 
   const [isEditMode, setIsEditMode] = useState(false);
   const [studyState, setStudyState] = useState<StudyState | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [trackProgress, setTrackProgress] = useState(true);
 
-  // Initialize study state when flashcard set loads
+  // Initialize study state when quiz loads
   useEffect(() => {
-    if (flashcardSet?.cards && flashcardSet.cards.length > 0 && !studyState) {
-      const initialStudyState = flashcardService.initializeStudyState(
-        flashcardSet.cards,
+    if (quiz?.questions && quiz.questions.length > 0 && !studyState) {
+      const initialStudyState = quizService.initializeStudyState(
+        quiz.questions,
       );
       setStudyState(initialStudyState);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [flashcardSet]);
+  }, [quiz]);
 
   const handleEditMode = () => {
     setIsEditMode(true);
@@ -70,50 +62,41 @@ export default function FlashcardSetPage() {
   };
 
   // Study handlers
-  const handleFlipCard = () => {
+  const handleAnswerSelect = (answer: OptionLabel) => {
     if (!studyState) return;
-    const newState = flashcardService.flipCard(studyState);
+    const newState = quizService.selectAnswer(studyState, answer);
+    setStudyState(newState);
+
+    // Auto-advance after correct answer with delay
+    if (newState.currentAnswerState.isCorrect) {
+      setTimeout(() => {
+        handleNextQuestion();
+      }, 1500);
+    }
+  };
+
+  const handleNextQuestion = () => {
+    if (!studyState) return;
+    const newState = quizService.navigateToNextQuestion(studyState);
     setStudyState(newState);
   };
 
-  const handleNextCard = () => {
+  const handlePreviousQuestion = () => {
     if (!studyState) return;
-    const newState = flashcardService.navigateToNextCard(studyState);
-    setStudyState(newState);
-  };
-
-  const handlePrevCard = () => {
-    if (!studyState) return;
-    const newState = flashcardService.navigateToPreviousCard(studyState);
+    const newState = quizService.navigateToPreviousQuestion(studyState);
     setStudyState(newState);
   };
 
   const handleRandomize = () => {
-    if (!studyState || !flashcardSet?.cards) return;
+    if (!studyState || !quiz?.questions) return;
     const newMode: StudyMode = studyState.settings.mode === "ordered"
       ? "random"
       : "ordered";
     const newSettings = { ...studyState.settings, mode: newMode };
-    const newState = flashcardService.updateStudySettings(
+    const newState = quizService.updateStudySettings(
       studyState,
       newSettings,
-      flashcardSet.cards,
-    );
-    setStudyState(newState);
-  };
-
-  const handleSwapSides = () => {
-    if (!studyState) return;
-    const newSettings: StudySettings = {
-      ...studyState.settings,
-      practiceSide: studyState.settings.practiceSide === "side1-first"
-        ? "side2-first"
-        : "side1-first",
-    };
-    const newState = flashcardService.updateStudySettings(
-      studyState,
-      newSettings,
-      flashcardSet?.cards || [],
+      quiz.questions,
     );
     setStudyState(newState);
   };
@@ -129,7 +112,7 @@ export default function FlashcardSetPage() {
         <div className="text-center space-y-4">
           <Loader2 className="h-8 w-8 animate-spin mx-auto text-blue-500" />
           <p className="text-gray-600 dark:text-gray-400">
-            Loading flashcard set...
+            Loading quiz...
           </p>
         </div>
       </div>
@@ -137,16 +120,16 @@ export default function FlashcardSetPage() {
   }
 
   // Error state
-  if (error || !flashcardSet && !isLoading) {
+  if (error || !quiz && !isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center space-y-4">
           <div className="text-red-500 text-6xl">⚠️</div>
           <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-            Flashcard Set Not Found
+            Quiz Not Found
           </h2>
           <p className="text-gray-600 dark:text-gray-400">
-            The flashcard set you're looking for doesn't exist or has been
+            The quiz you're looking for doesn't exist or has been
             removed.
           </p>
           <Button onClick={() => window.history.back()}>
@@ -160,26 +143,25 @@ export default function FlashcardSetPage() {
   // Edit mode
   if (isEditMode) {
     return (
-      <FlashcardEditMode
-        flashcardSet={flashcardSet}
+      <QuizEditMode
+        quiz={quiz}
         onBack={handleBackFromEdit}
       />
     );
   }
 
-  // Main flashcard view
+  // Main quiz view
   if (!studyState) {
     return null;
   }
 
-  const currentCard = flashcardService.getCurrentCard(studyState);
-  const displaySide = flashcardService.getCardDisplaySide(studyState);
+  const currentQuestion = quizService.getCurrentQuestion(studyState);
 
-  if (!currentCard) {
+  if (!currentQuestion) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center space-y-4">
-          <p className="text-gray-600 dark:text-gray-400">No cards available</p>
+          <p className="text-gray-600 dark:text-gray-400">No questions available</p>
           <Button onClick={() => window.history.back()}>Go Back</Button>
         </div>
       </div>
@@ -187,10 +169,10 @@ export default function FlashcardSetPage() {
   }
 
   const progressText = `${
-    studyState.progress.currentCardIndex + 1
-  } / ${studyState.progress.totalCards}`;
+    studyState.progress.currentQuestionIndex + 1
+  } / ${studyState.progress.totalQuestions}`;
 
-  const timeAgo = flashcardService.formatTimeAgo(flashcardSet.created_at);
+  const timeAgo = quizService.formatTimeAgo(quiz.created_at);
 
   const renderContent = () => (
     <>
@@ -201,26 +183,32 @@ export default function FlashcardSetPage() {
           isFullscreen ? "mb-6" : "mb-4",
         )}
       >
-        <h1
-          className={cn(
-            "font-bold font-crimson-text text-foreground",
-            isFullscreen ? "text-3xl" : "text-2xl",
+        <div className="flex items-center gap-3">
+          <h1
+            className={cn(
+              "font-bold font-crimson-text text-foreground",
+              isFullscreen ? "text-3xl" : "text-2xl",
+            )}
+          >
+            {quiz.title}
+          </h1>
+          {quiz.difficulty_level && (
+            <Badge variant="secondary" className={quizService.getDifficultyColorClass(quiz.difficulty_level)}>
+              {quizService.formatDifficultyLevel(quiz.difficulty_level)}
+            </Badge>
           )}
-        >
-          {flashcardSet.title}
-        </h1>
+        </div>
 
         {/* Course and Meta Info */}
         <div className="space-y-2">
           <p className="text-lg text-muted-foreground">
-            {flashcardSet.description}
+            {quiz.description}
           </p>
 
           {/* Show "edited from" info if this is an edit */}
-          {flashcardSet.edited_from && flashcardSet.original_title && (
+          {quiz.edited_from && quiz.original_title && (
             <p className="text-sm text-muted-foreground italic">
-              (edited from '{flashcardSet.original_title}')
-              {/* TODO: Add link to original when we have navigation */}
+              (edited from '{quiz.original_title}')
             </p>
           )}
 
@@ -228,85 +216,58 @@ export default function FlashcardSetPage() {
             <div className="flex items-center gap-2">
               <BookOpen className="h-4 w-4" />
               <span>
-                {flashcardSet.course_code} - {flashcardSet.course_name}
+                {quiz.course_code} - {quiz.course_name}
               </span>
             </div>
 
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4" />
-              <span>Created {timeAgo} by {flashcardSet.creator_name}</span>
+              <span>Created {timeAgo} by {quiz.creator_name}</span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Target className="h-4 w-4" />
+              <span>{quiz.question_count} questions</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Main Flashcard Area */}
+      {/* Main Quiz Area */}
       <div className="flex-1 flex flex-col justify-center">
-        {/* Flashcard Container */}
+        {/* Question Container */}
         <div className="flex-1 flex items-center justify-center">
           <div className="relative w-full flex justify-center items-center">
-            <Flashcard
-              card={currentCard}
-              isFlipped={studyState.isFlipped}
-              showSide={displaySide}
-              onFlip={handleFlipCard}
+            <QuizQuestion
+              question={currentQuestion}
+              answerState={studyState.currentAnswerState}
+              onAnswerSelect={handleAnswerSelect}
+              onNext={handleNextQuestion}
               isFullscreen={isFullscreen}
             />
-
-            {/* Navigation Arrows - positioned at card edges */}
-            <Button
-              onClick={handlePrevCard}
-              variant="ghost"
-              size="icon"
-              className="absolute left-0 top-1/2 cursor-pointer -translate-y-1/2 -translate-x-full ml-4 rounded-full bg-white hover:bg-gray-100/80 dark:bg-black dark:hover:bg-card shadow-lg"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <Button
-              onClick={handleNextCard}
-              variant="ghost"
-              size="icon"
-              className="absolute right-0 top-1/2 cursor-pointer -translate-y-1/2 translate-x-full mr-4 rounded-full bg-white hover:bg-gray-100/80 dark:bg-black dark:hover:bg-card shadow-lg"
-            >
-              <ArrowRight className="h-5 w-5" />
-            </Button>
           </div>
         </div>
 
         {/* Progress Bar - Fixed height container to prevent layout shift */}
         <div className="h-16 mb-4">
           {trackProgress && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-foreground">
-                  Study Progress
-                </span>
-                <Badge
-                  variant={studyState.progress.isComplete
-                    ? "default"
-                    : "secondary"}
-                >
-                  {flashcardService.getProgressText(studyState.progress)}
-                </Badge>
-              </div>
-              <div className="w-full bg-muted rounded-full h-2">
-                <div
-                  className={cn(
-                    "h-2 rounded-full transition-all duration-300",
-                    studyState.progress.isComplete
-                      ? "bg-green-500"
-                      : "bg-primary",
-                  )}
-                  style={{
-                    width: `${
-                      flashcardService.getProgressPercentage(
-                        studyState.progress,
-                      )
-                    }%`,
-                  }}
-                />
-              </div>
-            </div>
+            <QuizControls
+              settings={studyState.settings}
+              onSettingsChange={(newSettings) => {
+                if (!quiz?.questions) return;
+                const newState = quizService.updateStudySettings(
+                  studyState,
+                  newSettings,
+                  quiz.questions,
+                );
+                setStudyState(newState);
+              }}
+              progress={studyState.progress}
+              onNext={handleNextQuestion}
+              onPrevious={handlePreviousQuestion}
+              canNavigateNext={studyState.currentAnswerState.hasAnswered}
+              canNavigatePrevious={true}
+            />
           )}
         </div>
 
@@ -339,19 +300,16 @@ export default function FlashcardSetPage() {
             >
               <Edit3 className="h-4 w-4" />
             </Button>
-            <Button
-              onClick={handleSwapSides}
-              variant="ghost"
-              size="icon"
-              className="cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-            >
-              <RotateCcw className="h-4 w-4" />
-            </Button>
           </div>
 
           {/* Center Progress Text */}
           <div className="flex items-center gap-4">
             <span className="text-sm font-medium">{progressText}</span>
+            {studyState.progress.answeredQuestions.size > 0 && (
+              <Badge variant="outline">
+                Score: {studyState.progress.correctAnswers.size}/{studyState.progress.answeredQuestions.size}
+              </Badge>
+            )}
           </div>
 
           {/* Right Controls */}

@@ -210,6 +210,26 @@ export class ChatStreamingService {
           }
         }
       }
+
+      // Fetch quiz sets individually 
+      const quizRefs = refs.filter(ref => ref.type === 'quiz');
+      for (const ref of quizRefs) {
+        const response = await fetch(`/api/quizzes/${ref.id}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data) {
+            const quiz = data.data;
+            resources.push({
+              id: ref.id,
+              type: 'quiz',
+              title: quiz.title || 'Untitled Quiz',
+              description: quiz.description,
+              questionCount: quiz.question_count || 0,
+              difficultyLevel: quiz.difficulty_level
+            });
+          }
+        }
+      }
       
       logger.info(`Converted ${refs.length} refs to ${resources.length} full resources`);
       return resources;
