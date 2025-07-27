@@ -61,15 +61,26 @@ export function FlashcardEditMode({
         flashcardSet.course_id
       );
 
-      const newSetId = await saveFlashcardSetMutation.mutateAsync({
+      // Add edited_from field if creating a new copy
+      const saveData = {
         originalSetId: flashcardSet.id,
-        flashcardSetData: saveRequest,
-      });
+        flashcardSetData: {
+          ...saveRequest,
+          edited_from: flashcardSet.is_owned_by_current_user ? undefined : flashcardSet.id
+        },
+      };
 
-      toast.success("Flashcard set saved as your own!");
-      
-      // Navigate to the new set
-      router.push(`/flashcards/${newSetId}`);
+      const result = await saveFlashcardSetMutation.mutateAsync(saveData);
+
+      if (flashcardSet.is_owned_by_current_user) {
+        toast.success("Flashcard set updated!");
+        // Stay on the same page since we updated the original
+        onBack();
+      } else {
+        toast.success("Flashcard set saved as your own!");
+        // Navigate to the new set
+        router.push(`/flashcards/${result}`);
+      }
     } catch (error) {
       console.error("Error saving flashcard set:", error);
       toast.error("Failed to save flashcard set");
@@ -101,7 +112,10 @@ export function FlashcardEditMode({
               Edit Flashcard Set
             </h1>
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              Make changes and save as your own version
+              {flashcardSet.is_owned_by_current_user 
+                ? "Make changes to your flashcard set"
+                : "Make changes and save as your own version"
+              }
             </p>
           </div>
         </div>
@@ -220,21 +234,30 @@ export function FlashcardEditMode({
               className="flex items-center gap-2"
             >
               <Save className="h-4 w-4" />
-              {saveFlashcardSetMutation.isPending ? "Saving..." : "Save as Mine"}
+              {saveFlashcardSetMutation.isPending 
+                ? "Saving..." 
+                : flashcardSet.is_owned_by_current_user 
+                  ? "Save Changes" 
+                  : "Save as Mine"
+              }
             </Button>
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Save Flashcard Set</AlertDialogTitle>
+              <AlertDialogTitle>
+                {flashcardSet.is_owned_by_current_user ? "Save Changes" : "Save Flashcard Set"}
+              </AlertDialogTitle>
               <AlertDialogDescription>
-                This will create a new flashcard set under your account with your changes. 
-                The original set will remain unchanged. You'll be redirected to your new set.
+                {flashcardSet.is_owned_by_current_user 
+                  ? "This will update your flashcard set with the changes you've made."
+                  : "This will create a new flashcard set under your account with your changes. The original set will remain unchanged. You'll be redirected to your new set."
+                }
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction onClick={handleSave}>
-                Save as Mine
+                {flashcardSet.is_owned_by_current_user ? "Save Changes" : "Save as Mine"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
