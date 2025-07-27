@@ -1,31 +1,30 @@
 import logger from "@/lib/logger";
-import { Message } from "@/features/chat/chat.types";
+import { Message, LinkedResource, LinkedResourceRef } from "@/features/chat/chat.types";
 import type { CreateChatRequest } from "@/hooks/api/chats";
 
 export interface StreamingContext {
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
   messageContent: string;
   conversationHistory: Array<
-    { role: string; content: string; linkedDocumentIds?: string[] }
+    { role: string; content: string; linkedResources?: LinkedResource[] }
   >;
   isNewChat: boolean;
   chatId?: string; // Chat ID for database operations
-  createChatMutation: any;
-  updateChatMutation: any;
+  userId?: string; // User ID for flashcard generation
   router: any;
   selectedCourse: any;
   setIsReplying: React.Dispatch<React.SetStateAction<boolean>>;
   updateStreamingMessage?: (
     chatId: string,
     partialMessage: string,
-    linkedDocumentIds?: string[],
+    linkedResources?: LinkedResource[],
   ) => void;
 }
 
 export interface StreamingResponse {
   chunk?: string;
   done?: boolean;
-  linkedDocumentIds?: string[];
+  linkedResources?: LinkedResourceRef[]; // Simple type/id pairs
   error?: string;
 }
 
@@ -60,7 +59,7 @@ export class ChatStreamingService {
 
     try {
       let chunkCount = 0;
-      let linkedDocumentIds: string[] = [];
+      let linkedResources: LinkedResource[] = [];
 
       while (true) {
         const { done, value } = await reader.read();
@@ -92,19 +91,24 @@ export class ChatStreamingService {
               } else if (data.done) {
                 console.info({
                   finalResponseLength: fullResponse.length,
+                  linkedResourceRefs: data.linkedResources?.length || 0
                 }, "Received done signal from server");
-                linkedDocumentIds = data.linkedDocumentIds || [];
-                this.updateAssistantMessageWithDocuments(
+                
+                // Convert simple refs to full resources
+                const linkedResourceRefs = data.linkedResources || [];
+                linkedResources = await this.convertRefsToResources(linkedResourceRefs);
+                
+                this.updateAssistantMessageWithResources(
                   context.setMessages,
-                  linkedDocumentIds,
+                  linkedResources,
                 );
 
-                // Update streaming context with final linked documents
+                // Update streaming context with final linked resources
                 if (context.chatId && context.updateStreamingMessage) {
                   context.updateStreamingMessage(
                     context.chatId,
                     fullResponse,
-                    linkedDocumentIds,
+                    linkedResources,
                   );
                 }
                 break;
@@ -119,16 +123,6 @@ export class ChatStreamingService {
             }
           }
         }
-      }
-
-      // Update chat with complete conversation after streaming is complete
-      if (context.chatId) {
-        await this.finalizeChat(
-          context,
-          fullResponse,
-          linkedDocumentIds,
-          context.chatId,
-        );
       }
     } finally {
       reader.releaseLock();
@@ -147,7 +141,7 @@ export class ChatStreamingService {
     setMessages((prevMessages) => {
       const newMessages = [...prevMessages];
       const lastMessage = newMessages[newMessages.length - 1];
-      if (lastMessage && lastMessage.type === "assistant") {
+      if (lastMessage && lastMessage.role === "assistant") {
         lastMessage.content = content;
       }
       return newMessages;
@@ -155,52 +149,74 @@ export class ChatStreamingService {
   }
 
   /**
-   * Updates the assistant message with linked documents
+   * Updates the assistant message with linked resources
    */
-  private updateAssistantMessageWithDocuments(
+  private updateAssistantMessageWithResources(
     setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
-    linkedDocumentIds: string[],
+    linkedResources: LinkedResource[],
   ): void {
     setMessages((prevMessages) => {
       const newMessages = [...prevMessages];
       const lastMessage = newMessages[newMessages.length - 1];
-      if (lastMessage && lastMessage.type === "assistant") {
-        lastMessage.linkedDocumentIds = linkedDocumentIds;
+      if (lastMessage && lastMessage.role === "assistant") {
+        lastMessage.linkedResources = linkedResources;
       }
       return newMessages;
     });
   }
 
   /**
-   * Finalizes the chat by updating the database with complete conversation
+   * Convert simple type/id refs to full LinkedResource objects
    */
-  private async finalizeChat(
-    context: StreamingContext,
-    fullResponse: string,
-    linkedDocumentIds: string[],
-    realChatId: string,
-  ): Promise<void> {
-    const finalMessages = [
-      ...context.conversationHistory,
-      // Always include the user message for both new and existing chats
-      { role: "user", content: context.messageContent },
-      { role: "assistant", content: fullResponse, linkedDocumentIds },
-    ];
+  public async convertRefsToResources(refs: LinkedResourceRef[]): Promise<LinkedResource[]> {
+    const resources: LinkedResource[] = [];
+    
+    try {
+      // Batch fetch documents
+      const documentIds = refs.filter(ref => ref.type === 'document').map(ref => ref.id);
+      if (documentIds.length > 0) {
+        const response = await fetch(`/api/docs?ids=${documentIds.join(',')}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.docs) {
+            for (const doc of data.docs) {
+              resources.push({
+                id: doc.id,
+                type: 'document',
+                title: doc.file_name || 'Unknown Document',
+                file_type: doc.file_type || 'unknown',
+                file_url: doc.file_url || ''
+              });
+            }
+          }
+        }
+      }
 
-    console.info({
-      finalMessagesCount: finalMessages.length,
-      isNewChat: context.isNewChat,
-      realChatId,
-    }, "[ChatStreaming] Updating chat with final messages");
-
-    await context.updateChatMutation.mutateAsync({
-      chatId: realChatId,
-      data: { messages: finalMessages },
-    });
-
-    console.info({
-      chatId: realChatId,
-    }, "[ChatStreaming] Streaming complete");
+      // Fetch flashcard sets individually 
+      const flashcardRefs = refs.filter(ref => ref.type === 'flashcard_set');
+      for (const ref of flashcardRefs) {
+        const response = await fetch(`/api/flashcard-sets/${ref.id}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data) {
+            const set = data.data;
+            resources.push({
+              id: ref.id,
+              type: 'flashcard_set',
+              title: set.title || 'Untitled Flashcard Set',
+              description: set.description,
+              cardCount: set.card_count || 0
+            });
+          }
+        }
+      }
+      
+      logger.info(`Converted ${refs.length} refs to ${resources.length} full resources`);
+      return resources;
+    } catch (error) {
+      logger.error('Failed to convert refs to resources:', error);
+      return [];
+    }
   }
 
   /**
@@ -212,13 +228,20 @@ export class ChatStreamingService {
       { role: string; content: string; linkedDocumentIds?: string[] }
     >,
     courseId: string,
+    chatId?: string, // Make chatId optional
+    userId?: string,
   ): Promise<Response> {
-    const requestBody = {
+    const requestBody: any = {
       question: messageContent,
       conversationHistory,
       courseId,
+      userId,
       timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     };
+
+    if (chatId) {
+      requestBody.sessionId = chatId;
+    }
 
     const apiUrl = process.env.NEXT_PUBLIC_ASSISTANT_API_URL;
     logger.info("Using assistant API at", apiUrl);

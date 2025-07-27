@@ -134,6 +134,14 @@ export const queryKeys = {
     all: ['schools'] as const,
     lists: () => [...queryKeys.schools.all, 'list'] as const,
   },
+  
+  // Flashcard-related queries
+  flashcards: {
+    all: ['flashcards'] as const,
+    lists: () => [...queryKeys.flashcards.all, 'list'] as const,
+    details: () => [...queryKeys.flashcards.all, 'detail'] as const,
+    detail: (id: string) => [...queryKeys.flashcards.details(), id] as const,
+  },
 } as const;
 
 // Mutation key factories
@@ -168,5 +176,9 @@ export const mutationKeys = {
     toggleStar: ['documents', 'toggleStar'] as const,
     report: ['documents', 'report'] as const,
     delete: ['documents', 'delete'] as const,
+  },
+  
+  flashcards: {
+    save: () => ['flashcards', 'save'] as const,
   },
 } as const;

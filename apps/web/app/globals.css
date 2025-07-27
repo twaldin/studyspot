@@ -4,6 +4,15 @@
 @import 'react-pdf/dist/Page/AnnotationLayer.css';
 @import 'react-pdf/dist/Page/TextLayer.css';
 
+/* 3D Transform utilities for flashcard flipping */
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
