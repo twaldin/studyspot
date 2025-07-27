@@ -13,8 +13,6 @@ const compat = new FlatCompat({
 });
 
 export default defineConfig([{
-  extends: compat.extends("next/core-web-vitals"),
-
   rules: {
     "react/no-unescaped-entities": "off",
     "@typescript-eslint/no-explicit-any": "off",

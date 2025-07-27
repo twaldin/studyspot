@@ -586,7 +586,7 @@ export class SupabaseService {
   static async updateAssistantMessageInChat(
     chatId: string,
     finalContent: string,
-    linkedResources: Array<{ type: 'document' | 'flashcard_set'; id: string }>
+    linkedResources: Array<{ type: 'document' | 'flashcard_set' | 'quiz'; id: string }>
   ): Promise<{ success: boolean; error?: string }> {
     try {
       const client = this.getClient();
@@ -772,6 +772,229 @@ export class SupabaseService {
       return { success: true, flashcardSets: flashcardSets || [] };
     } catch (error) {
       console.error(`[SupabaseService] Unexpected error fetching recent flashcard sets:`, error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      };
+    }
+  }
+
+  /**
+   * Create a new quiz record in the database
+   */
+  static async createQuiz(quizData: {
+    id: string;
+    title: string;
+    description: string;
+    course_id: string;
+    created_by: string;
+    difficulty_level?: string;
+    is_public?: boolean;
+    total_questions: number;
+    created_at: string;
+    updated_at: string;
+  }): Promise<{ success: boolean; error?: string }> {
+    try {
+      const client = this.getClient();
+      
+      console.log(`[SupabaseService] Creating quiz: ${quizData.title}`);
+
+      const { error } = await client
+        .from('quizzes')
+        .insert(quizData);
+
+      if (error) {
+        console.error(`[SupabaseService] Error creating quiz:`, error);
+        return { success: false, error: error.message };
+      }
+
+      console.log(`[SupabaseService] Successfully created quiz: ${quizData.id}`);
+      return { success: true };
+
+    } catch (error) {
+      console.error(`[SupabaseService] Unexpected error creating quiz:`, error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      };
+    }
+  }
+
+  /**
+   * Create quiz questions in the database
+   */
+  static async createQuizQuestions(questions: Array<{
+    id: string;
+    quiz_id: string;
+    question_text: string;
+    option_a: string;
+    option_b: string;
+    option_c: string;
+    option_d: string;
+    correct_answer: string;
+    explanation?: string;
+    order_index: number;
+    created_at: string;
+    updated_at: string;
+  }>): Promise<{ success: boolean; error?: string }> {
+    try {
+      const client = this.getClient();
+      
+      console.log(`[SupabaseService] Creating ${questions.length} quiz questions`);
+
+      const { error } = await client
+        .from('quiz_questions')
+        .insert(questions);
+
+      if (error) {
+        console.error(`[SupabaseService] Error creating quiz questions:`, error);
+        return { success: false, error: error.message };
+      }
+
+      console.log(`[SupabaseService] Successfully created ${questions.length} quiz questions`);
+      return { success: true };
+
+    } catch (error) {
+      console.error(`[SupabaseService] Unexpected error creating quiz questions:`, error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      };
+    }
+  }
+
+  /**
+   * Delete a quiz and all its associated questions
+   */
+  static async deleteQuiz(quizId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const client = this.getClient();
+      
+      console.log(`[SupabaseService] Deleting quiz: ${quizId}`);
+
+      // Delete questions first (foreign key constraint)
+      const { error: questionsError } = await client
+        .from('quiz_questions')
+        .delete()
+        .eq('quiz_id', quizId);
+
+      if (questionsError) {
+        console.error(`[SupabaseService] Error deleting quiz questions:`, questionsError);
+        return { success: false, error: questionsError.message };
+      }
+
+      // Delete the quiz
+      const { error: quizError } = await client
+        .from('quizzes')
+        .delete()
+        .eq('id', quizId);
+
+      if (quizError) {
+        console.error(`[SupabaseService] Error deleting quiz:`, quizError);
+        return { success: false, error: quizError.message };
+      }
+
+      console.log(`[SupabaseService] Successfully deleted quiz: ${quizId}`);
+      return { success: true };
+
+    } catch (error) {
+      console.error(`[SupabaseService] Unexpected error deleting quiz:`, error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      };
+    }
+  }
+
+  /**
+   * Get quiz by ID with basic info
+   */
+  static async getQuizById(quizId: string): Promise<{
+    success: boolean;
+    quiz?: {
+      id: string;
+      title: string;
+      description: string;
+      question_count: number;
+      difficulty_level?: string;
+    };
+    error?: string;
+  }> {
+    try {
+      const client = this.getClient();
+      
+      // Get quiz details
+      const { data: quizData, error: quizError } = await client
+        .from('quizzes')
+        .select('id, title, description, difficulty_level')
+        .eq('id', quizId)
+        .single();
+
+      if (quizError || !quizData) {
+        console.error(`[SupabaseService] Error fetching quiz:`, quizError);
+        return { success: false, error: 'Quiz not found' };
+      }
+
+      // Get question count
+      const { count: questionCount, error: countError } = await client
+        .from('quiz_questions')
+        .select('*', { count: 'exact', head: true })
+        .eq('quiz_id', quizId);
+
+      if (countError) {
+        console.warn(`[SupabaseService] Error counting questions for quiz ${quizId}:`, countError);
+      }
+
+      return { 
+        success: true, 
+        quiz: {
+          id: quizData.id,
+          title: quizData.title,
+          description: quizData.description,
+          difficulty_level: quizData.difficulty_level,
+          question_count: questionCount || 0
+        }
+      };
+    } catch (error) {
+      console.error(`[SupabaseService] Unexpected error fetching quiz:`, error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      };
+    }
+  }
+
+  /**
+   * Get recent quizzes for a user/course (most recent first)
+   */
+  static async getRecentQuizzes(userId: string, courseId: string, limit: number = 1): Promise<{
+    success: boolean;
+    quizzes?: Array<{
+      id: string;
+      title: string;
+      created_at: string;
+    }>;
+    error?: string;
+  }> {
+    try {
+      const client = this.getClient();
+      
+      const { data: quizzes, error } = await client
+        .from('quizzes')
+        .select('id, title, created_at')
+        .eq('user_id', userId)
+        .eq('course_id', courseId)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      if (error) {
+        console.error(`[SupabaseService] Error fetching recent quizzes:`, error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, quizzes: quizzes || [] };
+    } catch (error) {
+      console.error(`[SupabaseService] Unexpected error fetching recent quizzes:`, error);
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown error' 

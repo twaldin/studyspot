@@ -69,7 +69,7 @@ export function JoinedCourseList({
         <Button
           asChild
           variant="ghost"
-          className="gap-2"
+          className="cursor-pointer gap-2"
           onClick={handleAddMoreClick}
         >
           <Link href="/courses">
@@ -92,7 +92,7 @@ export function JoinedCourseList({
             key={course.id}
             onClick={() => handleCourseClick(course)}
             className={cn(
-              "flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors hover:bg-accent hover:text-accent-foreground disabled:opacity-50",
+              "cursor-pointer flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors hover:bg-accent hover:text-accent-foreground disabled:opacity-50",
               isSelected && "bg-secondary",
             )}
           >
@@ -104,7 +104,7 @@ export function JoinedCourseList({
       <Button
         asChild
         variant="ghost"
-        className="gap-2"
+        className="cursor-pointer gap-2"
         onClick={handleAddMoreClick}
       >
         <Link href="/courses">

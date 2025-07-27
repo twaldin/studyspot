@@ -3,6 +3,7 @@ import Link from "next/link";
 import {
   DocumentResource,
   FlashcardSetResource,
+  QuizResource,
   LinkedResource,
 } from "@/features/chat/chat.types";
 import { Card, CardContent } from "@/components/ui/card";
@@ -97,6 +98,65 @@ export const LinkedResourceCard: React.FC<LinkedResourceCardProps> = (
                   </span>
                   <span className="text-xs text-gray-500 dark:text-gray-400">
                     Study now →
+                  </span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Link>
+      </Card>
+    );
+  }
+
+  // Handle quiz resources
+  if (resource.type === "quiz") {
+    const quizResource = resource as QuizResource;
+
+    return (
+      <Card className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer py-3">
+        <Link href={`/quiz/${quizResource.id}`} className="block">
+          <CardContent className="px-4 py-0">
+            <div className="flex items-start gap-3">
+              {/* Quiz icon */}
+              <div className="flex-shrink-0 mt-1">
+                <svg
+                  className="w-5 h-5 text-green-600 dark:text-green-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                  {quizResource.title}
+                </h3>
+
+                {quizResource.description && (
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
+                    {quizResource.description}
+                  </p>
+                )}
+
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
+                    {quizResource.questionCount} questions
+                  </span>
+                  {quizResource.difficultyLevel && (
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
+                      {quizResource.difficultyLevel}
+                    </span>
+                  )}
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    Take quiz →
                   </span>
                 </div>
               </div>

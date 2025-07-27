@@ -142,6 +142,15 @@ export const queryKeys = {
     details: () => [...queryKeys.flashcards.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.flashcards.details(), id] as const,
   },
+  
+  // Quiz-related queries
+  quizzes: {
+    all: ['quizzes'] as const,
+    lists: () => [...queryKeys.quizzes.all, 'list'] as const,
+    details: () => [...queryKeys.quizzes.all, 'detail'] as const,
+    detail: (id: string) => [...queryKeys.quizzes.details(), id] as const,
+    attempts: (quizId: string) => [...queryKeys.quizzes.all, 'attempts', quizId] as const,
+  },
 } as const;
 
 // Mutation key factories
@@ -180,5 +189,9 @@ export const mutationKeys = {
   
   flashcards: {
     save: () => ['flashcards', 'save'] as const,
+  },
+  
+  quizzes: {
+    save: () => ['quizzes', 'save'] as const,
   },
 } as const;

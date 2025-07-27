@@ -22,7 +22,7 @@ import { JoinedCourseList } from "@/features/courses/components/joined-course-li
 import { usePathname } from "next/navigation";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { UserButton } from "@/components/user-button";
-import { SettingsButton } from "@/components/settings-button";
+import { DarkModeButton } from "@/components/dark-mode-button";
 
 function CustomToaster() {
   const { toasts, handlers } = useToaster();
@@ -167,7 +167,7 @@ export function AppRightSidebar() {
       <div className="hidden lg:flex flex-col w-72 border-l border-sidebar-border">
         <div className="border-b border-sidebar-border flex flex-col gap-4 p-4">
           <div className="flex items-center justify-end gap-2">
-            <SettingsButton variant="right-sidebar" />
+            <DarkModeButton variant="right-sidebar" />
             <UserButton variant="right-sidebar" />
           </div>
         </div>

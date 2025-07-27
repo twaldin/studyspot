@@ -25,7 +25,7 @@ export default function RootLayout({
           <AppSidebar />
         <SidebarInset>
           <header className="flex h-16 items-center gap-4 px-6">
-            <SidebarTrigger className="-ml-1" />
+            <SidebarTrigger className="cursor-pointer -ml-1" />
             <Separator
               orientation="vertical"
               className="mr-2 data-[orientation=vertical]:h-4"
