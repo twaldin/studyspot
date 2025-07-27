@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { ChatInputBar } from "@/components/chat-input-bar"
 import { UserMessage } from "@/components/user-message"
 import AssistantMessage from "@/components/assistant-message"
-import { useCreateChat, useUpdateChat, useChat, useDeleteChat } from "@/hooks/api/chats"
+import { useCreateChat, useChat, useDeleteChat } from "@/hooks/api/chats"
 import { useSelectedCourse } from "@/hooks/api/courses"
 import { Message } from "@/features/chat/chat.types"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -28,7 +28,6 @@ export function ChatPageContent({ chatId }: { chatId?: string }) {
 
   // React Query mutations
   const createChatMutation = useCreateChat()
-  const updateChatMutation = useUpdateChat()
   const deleteChatMutation = useDeleteChat()
 
 
@@ -38,9 +37,8 @@ export function ChatPageContent({ chatId }: { chatId?: string }) {
       // Dashboard mode - show welcome message
       setMessages([{
         id: 'welcome',
-        type: 'assistant',
-        content: 'Hello! How can I help you today?',
-        linkedDocumentIds: []
+        role: 'assistant',
+        content: 'Hello! How can I help you today?'
       }])
       setError(null)
       setIsReplying(false)
@@ -111,8 +109,6 @@ export function ChatPageContent({ chatId }: { chatId?: string }) {
         conversationHistory,
         isNewChat: false,
         chatId: targetChatId,
-        createChatMutation,
-        updateChatMutation,
         router,
         selectedCourse,
         setIsReplying
@@ -120,7 +116,7 @@ export function ChatPageContent({ chatId }: { chatId?: string }) {
     } catch (error) {
       chatStateService.handleMessageError({ messages, setMessages, setIsReplying, setError }, error as Error)
     }
-  }, [messages, selectedCourse, createChatMutation, updateChatMutation, router, isReplying])
+  }, [messages, selectedCourse, router, isReplying])
 
   const handleDeleteChat = useCallback(async (chatIdToDelete: string) => {
     try {
@@ -151,7 +147,7 @@ export function ChatPageContent({ chatId }: { chatId?: string }) {
       <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
         <div className="flex flex-col gap-4 py-4">
           {messages.map((message, i) =>
-            message.type === "user" ? (
+            message.role === "user" ? (
               <UserMessage key={message.id || i} className="w-fit max-w-[80%] self-end">
                 {message.content}
               </UserMessage>
@@ -159,7 +155,7 @@ export function ChatPageContent({ chatId }: { chatId?: string }) {
               <div key={message.id || i} className="w-fit max-w-[80%] self-start">
                 <AssistantMessage 
                   content={message.content}
-                  linkedDocumentIds={message.linkedDocumentIds}
+                  linkedResources={message.linkedResources}
                   isStreaming={isReplying && i === messages.length - 1}
                 />
               </div>

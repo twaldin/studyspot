@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useCallback, useState } from 'react';
+import { LinkedResource } from '@/features/chat/chat.types';
 
 interface StreamingChat {
   chatId: string;
@@ -8,14 +9,14 @@ interface StreamingChat {
   isStreaming: boolean;
   createdAt: Date;
   partialAssistantMessage?: string;
-  linkedDocumentIds?: string[];
+  linkedResources?: LinkedResource[];
 }
 
 interface StreamingChatContextType {
   streamingChats: StreamingChat[];
   setStreamingStatus: (chatId: string, title: string, isStreaming: boolean) => void;
-  updateStreamingMessage: (chatId: string, partialMessage: string, linkedDocumentIds?: string[]) => void;
-  getStreamingMessage: (chatId: string) => { message: string; linkedDocumentIds?: string[] } | undefined;
+  updateStreamingMessage: (chatId: string, partialMessage: string, linkedResources?: LinkedResource[]) => void;
+  getStreamingMessage: (chatId: string) => { message: string; linkedResources?: LinkedResource[] } | undefined;
   isStreaming: (chatId: string) => boolean;
   getChatTitle: (chatId: string) => string | undefined;
 }
@@ -63,7 +64,7 @@ export const StreamingChatProvider: React.FC<{ children: React.ReactNode }> = ({
     });
   }, []);
 
-  const updateStreamingMessage = useCallback((chatId: string, partialMessage: string, linkedDocumentIds?: string[]) => {
+  const updateStreamingMessage = useCallback((chatId: string, partialMessage: string, linkedResources?: LinkedResource[]) => {
     console.log('Updating streaming message:', { chatId, messageLength: partialMessage.length });
     setStreamingChats(prev => {
       const existingIndex = prev.findIndex(chat => chat.chatId === chatId);
@@ -73,7 +74,7 @@ export const StreamingChatProvider: React.FC<{ children: React.ReactNode }> = ({
         newChats[existingIndex] = {
           ...newChats[existingIndex],
           partialAssistantMessage: partialMessage,
-          linkedDocumentIds,
+          linkedResources,
         };
         return newChats;
       }
@@ -87,7 +88,7 @@ export const StreamingChatProvider: React.FC<{ children: React.ReactNode }> = ({
     if (chat?.partialAssistantMessage) {
       return {
         message: chat.partialAssistantMessage,
-        linkedDocumentIds: chat.linkedDocumentIds
+        linkedResources: chat.linkedResources
       };
     }
     return undefined;

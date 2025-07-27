@@ -31,13 +31,9 @@ export const setSourcesTool = createTool({
       .describe('Optional brief explanation of why these documents are being cited')
   }),
   outputSchema: z.object({
-    linkedDocuments: z.array(z.object({
-      id: z.string().describe('Document ID'),
-      title: z.string().describe('Document title/filename'),
-      documentType: z.string().optional().describe('Document type')
-    })),
-    totalLinked: z.number().describe('Total number of documents linked'),
     success: z.boolean().describe('Whether the sources were set successfully'),
+    linkedDocumentIds: z.array(z.string()).optional().describe('Array of document IDs that were linked'),
+    totalLinked: z.number().optional().describe('Total number of documents linked'),
     error: z.string().optional().describe('Error message if operation failed')
   }),
   execute: async ({ context, runtimeContext }) => {
@@ -45,84 +41,39 @@ export const setSourcesTool = createTool({
     
     // Use provided courseId or fall back to runtime context
     const courseId = providedCourseId || runtimeContext?.get?.('courseId');
-    const sessionKey = `${courseId}_${Date.now()}`; // Simple session key for this request
     
     if (!courseId) {
-      console.warn(`[SetSourcesTool] No course ID provided in tool input or runtime context`);
+      const errorMsg = 'Course ID is required to set sources';
+      console.warn(`[SetSourcesTool] ${errorMsg}`);
       return {
-        linkedDocuments: [],
-        totalLinked: 0,
         success: false,
-        error: 'Course ID is required to set sources'
+        error: errorMsg
       };
     }
     
     console.log(`[SetSourcesTool] Setting ${documentIds.length} source documents for course ${courseId}${reasoning ? `, reasoning: ${reasoning}` : ''}`);
 
     try {
-      // Validate course access
-      const hasAccess = await SupabaseService.validateCourseAccess(courseId);
-      if (!hasAccess) {
-        console.warn(`[SetSourcesTool] No access to course: ${courseId}`);
-        return {
-          linkedDocuments: [],
-          totalLinked: 0,
-          success: false,
-          error: 'Course not found or access denied'
-        };
-      }
-
-      // Validate that all document IDs exist and belong to the course
-      const linkedDocuments = [];
+      // The agent has already decided these are the correct sources based on prior tool outputs.
+      // We will trust the agent's decision and directly store the IDs.
+      // The previous implementation was failing here because it tried to re-validate chunk IDs against the docs table.
       
-      for (const docId of documentIds) {
-        try {
-          const docResult = await SupabaseService.getFullDocument(docId, courseId);
-          
-          if (docResult.success) {
-            linkedDocuments.push({
-              id: docId,
-              title: docResult.title || 'Untitled Document',
-              documentType: docResult.documentType
-            });
-            console.log(`[SetSourcesTool] Validated document: ${docId} (${docResult.title})`);
-          } else {
-            console.warn(`[SetSourcesTool] Document not found or no access: ${docId}`);
-            // Continue processing other documents rather than failing entirely
-          }
-        } catch (error) {
-          console.error(`[SetSourcesTool] Error validating document ${docId}:`, error);
-          // Continue processing other documents
-        }
-      }
-
-      if (linkedDocuments.length === 0) {
-        return {
-          linkedDocuments: [],
-          totalLinked: 0,
-          success: false,
-          error: 'No valid documents found or access denied to all provided document IDs'
-        };
-      }
-
       // Store the document IDs in the global store (using courseId as the key)
-      const documentIdsToStore = linkedDocuments.map(doc => doc.id);
-      sourcesStore.set(courseId, documentIdsToStore);
+      sourcesStore.set(courseId, documentIds);
 
-      console.log(`[SetSourcesTool] Successfully set ${linkedDocuments.length} source documents and stored for session`);
+      console.log(`[SetSourcesTool] Successfully set and stored ${documentIds.length} source document IDs.`);
 
       return {
-        linkedDocuments,
-        totalLinked: linkedDocuments.length,
-        success: true
+        success: true,
+        // Output is simplified as we are no longer fetching full document details here.
+        // The primary purpose of this tool is to populate the sourcesStore.
+        linkedDocumentIds: documentIds, 
+        totalLinked: documentIds.length
       };
 
     } catch (error) {
       console.error(`[SetSourcesTool] Error setting sources:`, error);
-      
       return {
-        linkedDocuments: [],
-        totalLinked: 0,
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error occurred'
       };

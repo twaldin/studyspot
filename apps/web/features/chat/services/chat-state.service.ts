@@ -1,5 +1,6 @@
-import { Message } from '@/features/chat/chat.types';
+import { Message, LinkedResource } from '@/features/chat/chat.types';
 import logger from '@/lib/logger';
+import { chatService } from './chat.service';
 
 
 export interface ChatStateContext {
@@ -33,9 +34,13 @@ export class ChatStateService {
     const convertedMessages = messages.map((msg: any, index: number) => ({
       id: index.toString(),
       content: msg.content,
-      type: msg.role,
-      linkedDocumentIds: msg.linkedDocumentIds || [],
+      role: msg.role,
+      linkedResources: [], // Will be populated by client-side conversion  
+      linkedResourceRefs: msg.linked_resources || [], // Store raw refs for conversion
     }));
+
+    // We are not calling the augmentation here because the data from useChat is already augmented.
+    // This service is only for client-side state management.
 
     logger.info({ 
       chatId: chat.id, 
@@ -52,15 +57,13 @@ export class ChatStateService {
     const userMsg: Message = {
       id: Date.now().toString(),
       content: userMessage,
-      type: 'user',
-      linkedDocumentIds: [],
+      role: 'user',
     };
 
     const assistantMsg: Message = {
       id: Date.now().toString() + '-assistant',
       content: '',
-      type: 'assistant',
-      linkedDocumentIds: []
+      role: 'assistant'
     };
 
     return { userMessage: userMsg, assistantMessage: assistantMsg };
@@ -70,11 +73,11 @@ export class ChatStateService {
   /**
    * Generates conversation history for API calls from current messages
    */
-  getConversationHistory(messages: Message[]): Array<{ role: string; content: string; linkedDocumentIds?: string[] }> {
+  getConversationHistory(messages: Message[]): Array<{ role: string; content: string; linkedResources?: LinkedResource[] }> {
     return messages.map(msg => ({
-      role: msg.type,
+      role: msg.role,
       content: msg.content,
-      linkedDocumentIds: msg.linkedDocumentIds || [],
+      linkedResources: msg.linkedResources || [],
     }));
   }
 
@@ -139,7 +142,7 @@ export class ChatStateService {
   shouldShowThinkingIndicator(messages: Message[], isReplying: boolean): boolean {
     return isReplying && 
       messages.length > 0 && 
-      messages[messages.length - 1]?.type === 'assistant' && 
+      messages[messages.length - 1]?.role === 'assistant' && 
       messages[messages.length - 1]?.content === '';
   }
 
@@ -155,7 +158,7 @@ export class ChatStateService {
         messageCount: messages.length, 
         isReplying,
         messages: messages.map(m => ({ 
-          type: m.type, 
+          role: m.role, 
           content: m.content.substring(0, 50) + '...' 
         }))
       }, '[ChatState] Message state changed');

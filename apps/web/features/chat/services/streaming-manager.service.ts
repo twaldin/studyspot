@@ -1,6 +1,7 @@
 'use client';
 
 import { chatStreamingService, StreamingContext } from './chat-streaming.service';
+import { LinkedResource } from '@/features/chat/chat.types';
 import logger from '@/lib/logger';
 
 interface ActiveStream {
@@ -32,7 +33,7 @@ class StreamingManagerService {
   async startStreaming(
     chatId: string,
     messageContent: string,
-    conversationHistory: Array<{ role: string; content: string; linkedDocumentIds?: string[] }>,
+    conversationHistory: Array<{ role: string; content: string; linkedResources?: LinkedResource[] }>,
     courseId: string,
     context: StreamingContext
   ): Promise<void> {
@@ -48,6 +49,7 @@ class StreamingManagerService {
     
     try {
       const streamPromise = this.executeStreaming(
+        chatId, // Pass chatId here
         messageContent,
         conversationHistory,
         courseId,
@@ -79,8 +81,9 @@ class StreamingManagerService {
    * Execute the actual streaming
    */
   private async executeStreaming(
+    chatId: string, // Add chatId here
     messageContent: string,
-    conversationHistory: Array<{ role: string; content: string; linkedDocumentIds?: string[] }>,
+    conversationHistory: Array<{ role: string; content: string; linkedResources?: LinkedResource[] }>,
     courseId: string,
     context: StreamingContext,
     signal: AbortSignal
@@ -88,7 +91,9 @@ class StreamingManagerService {
     const response = await chatStreamingService.sendMessage(
       messageContent,
       conversationHistory,
-      courseId
+      courseId,
+      chatId, // Pass chatId to sendMessage
+      context.userId
     );
 
     // Check if cancelled

@@ -462,4 +462,320 @@ export class SupabaseService {
     
     return `It is currently ${timeString} on ${dateString}.`;
   }
+
+  /**
+   * Create a new flashcard set record in the database
+   */
+  static async createFlashcardSet(setData: {
+    id: string;
+    title: string;
+    description: string;
+    course_id: string;
+    user_id: string;
+    created_at: string;
+    updated_at: string;
+  }): Promise<{ success: boolean; error?: string }> {
+    try {
+      const client = this.getClient();
+      
+      console.log(`[SupabaseService] Creating flashcard set: ${setData.title}`);
+
+      const { error } = await client
+        .from('flashcard_sets')
+        .insert(setData);
+
+      if (error) {
+        console.error(`[SupabaseService] Error creating flashcard set:`, error);
+        return { success: false, error: error.message };
+      }
+
+      console.log(`[SupabaseService] Successfully created flashcard set: ${setData.id}`);
+      return { success: true };
+
+    } catch (error) {
+      console.error(`[SupabaseService] Unexpected error creating flashcard set:`, error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      };
+    }
+  }
+
+  /**
+   * Create flashcards in the database
+   */
+  static async createFlashcards(flashcards: Array<{
+    card_id: string;
+    set_id: string;
+    side1: string;
+    side2: string;
+    card_number: number;
+  }>): Promise<{ success: boolean; error?: string }> {
+    try {
+      const client = this.getClient();
+      
+      console.log(`[SupabaseService] Creating ${flashcards.length} flashcards`);
+
+      const { error } = await client
+        .from('flashcards')
+        .insert(flashcards);
+
+      if (error) {
+        console.error(`[SupabaseService] Error creating flashcards:`, error);
+        return { success: false, error: error.message };
+      }
+
+      console.log(`[SupabaseService] Successfully created ${flashcards.length} flashcards`);
+      return { success: true };
+
+    } catch (error) {
+      console.error(`[SupabaseService] Unexpected error creating flashcards:`, error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      };
+    }
+  }
+
+  /**
+   * Delete a flashcard set and all its associated cards
+   */
+  static async deleteFlashcardSet(setId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const client = this.getClient();
+      
+      console.log(`[SupabaseService] Deleting flashcard set: ${setId}`);
+
+      // Delete flashcards first (foreign key constraint)
+      const { error: cardsError } = await client
+        .from('flashcards')
+        .delete()
+        .eq('set_id', setId);
+
+      if (cardsError) {
+        console.error(`[SupabaseService] Error deleting flashcards:`, cardsError);
+        return { success: false, error: cardsError.message };
+      }
+
+      // Delete the set
+      const { error: setError } = await client
+        .from('flashcard_sets')
+        .delete()
+        .eq('set_id', setId);
+
+      if (setError) {
+        console.error(`[SupabaseService] Error deleting flashcard set:`, setError);
+        return { success: false, error: setError.message };
+      }
+
+      console.log(`[SupabaseService] Successfully deleted flashcard set: ${setId}`);
+      return { success: true };
+
+    } catch (error) {
+      console.error(`[SupabaseService] Unexpected error deleting flashcard set:`, error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      };
+    }
+  }
+
+  /**
+   * Update the last assistant message in a chat with the final content and linked resources
+   */
+  static async updateAssistantMessageInChat(
+    chatId: string,
+    finalContent: string,
+    linkedResources: Array<{ type: 'document' | 'flashcard_set'; id: string }>
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const client = this.getClient();
+      
+      console.log(`[SupabaseService] Updating final assistant message in chat: ${chatId}`);
+
+      // 1. Fetch the current chat to get the messages array
+      const { data: chatData, error: fetchError } = await client
+        .from('chats')
+        .select('chats') // The JSONB column
+        .eq('id', chatId)
+        .single();
+
+      if (fetchError || !chatData) {
+        console.error(`[SupabaseService] Could not fetch chat ${chatId} for update:`, fetchError);
+        return { success: false, error: 'Chat not found or could not be fetched' };
+      }
+
+      // 2. Find the last assistant message and update it
+      const messages = (chatData.chats as any[] || []);
+      let messageUpdated = false;
+      for (let i = messages.length - 1; i >= 0; i--) {
+        if (messages[i].role === 'assistant') {
+          messages[i].content = finalContent;
+          messages[i].linked_resources = linkedResources; // Use the new format
+          messageUpdated = true;
+          break;
+        }
+      }
+
+      if (!messageUpdated) {
+        console.warn(`[SupabaseService] No assistant message found in chat ${chatId} to update.`);
+        // This might happen in race conditions, but we can proceed to save the whole array
+        // as the user message should be present.
+      }
+
+      // 3. Save the updated messages array back to the database
+      const { error: updateError } = await client
+        .from('chats')
+        .update({ 
+          chats: messages,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', chatId);
+
+      if (updateError) {
+        console.error(`[SupabaseService] Failed to update chat ${chatId} with final message:`, updateError);
+        return { success: false, error: updateError.message };
+      }
+
+      console.log(`[SupabaseService] Successfully updated chat ${chatId} with final assistant message and resources`);
+      return { success: true };
+
+    } catch (error) {
+      console.error(`[SupabaseService] Unexpected error updating assistant message:`, error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      };
+    }
+  }
+
+  /**
+   * Get documents by their IDs
+   */
+  static async getDocumentsByIds(documentIds: string[]): Promise<{
+    success: boolean;
+    documents?: Array<{
+      id: string;
+      file_name: string;
+      file_type: string;
+      file_url: string;
+    }>;
+    error?: string;
+  }> {
+    try {
+      const client = this.getClient();
+      
+      const { data: documents, error } = await client
+        .from('docs')
+        .select('id, file_name, file_type, file_url')
+        .in('id', documentIds);
+
+      if (error) {
+        console.error(`[SupabaseService] Error fetching documents:`, error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, documents: documents || [] };
+    } catch (error) {
+      console.error(`[SupabaseService] Unexpected error fetching documents:`, error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      };
+    }
+  }
+
+  /**
+   * Get flashcard set by ID with basic info
+   */
+  static async getFlashcardSetById(setId: string): Promise<{
+    success: boolean;
+    flashcardSet?: {
+      id: string;
+      title: string;
+      description: string;
+      card_count: number;
+    };
+    error?: string;
+  }> {
+    try {
+      const client = this.getClient();
+      
+      // Get flashcard set details
+      const { data: setData, error: setError } = await client
+        .from('flashcard_sets')
+        .select('id, title, description')
+        .eq('id', setId)
+        .single();
+
+      if (setError || !setData) {
+        console.error(`[SupabaseService] Error fetching flashcard set:`, setError);
+        return { success: false, error: 'Flashcard set not found' };
+      }
+
+      // Get card count
+      const { count: cardCount, error: countError } = await client
+        .from('flashcards')
+        .select('*', { count: 'exact', head: true })
+        .eq('set_id', setId);
+
+      if (countError) {
+        console.warn(`[SupabaseService] Error counting flashcards for set ${setId}:`, countError);
+      }
+
+      return { 
+        success: true, 
+        flashcardSet: {
+          id: setData.id,
+          title: setData.title,
+          description: setData.description,
+          card_count: cardCount || 0
+        }
+      };
+    } catch (error) {
+      console.error(`[SupabaseService] Unexpected error fetching flashcard set:`, error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      };
+    }
+  }
+
+  /**
+   * Get recent flashcard sets for a user/course (most recent first)
+   */
+  static async getRecentFlashcardSets(userId: string, courseId: string, limit: number = 1): Promise<{
+    success: boolean;
+    flashcardSets?: Array<{
+      id: string;
+      title: string;
+      created_at: string;
+    }>;
+    error?: string;
+  }> {
+    try {
+      const client = this.getClient();
+      
+      const { data: flashcardSets, error } = await client
+        .from('flashcard_sets')
+        .select('id, title, created_at')
+        .eq('user_id', userId)
+        .eq('course_id', courseId)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      if (error) {
+        console.error(`[SupabaseService] Error fetching recent flashcard sets:`, error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, flashcardSets: flashcardSets || [] };
+    } catch (error) {
+      console.error(`[SupabaseService] Unexpected error fetching recent flashcard sets:`, error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      };
+    }
+  }
 }

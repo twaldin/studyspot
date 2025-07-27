@@ -37,6 +37,7 @@
     "cmdk": "^1.1.1",
     "dompurify": "^3.2.6",
     "file-type": "^21.0.0",
+    "framer-motion": "^12.23.9",
     "katex": "^0.16.22",
     "llamaindex": "^0.11.17",
     "lucide-react": "^0.525.0",
