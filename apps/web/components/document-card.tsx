@@ -22,16 +22,17 @@ function PDFPreview({ url, width }: { url: string; width: number }) {
 
   useEffect(() => {
     setIsClient(true);
-    
+
     // Only import react-pdf on client side
-    if (typeof window !== 'undefined') {
-      import('react-pdf').then((reactPdf) => {
+    if (typeof window !== "undefined") {
+      import("react-pdf").then((reactPdf) => {
         // Set up worker only on client side to match react-pdf version
-        reactPdf.pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${reactPdf.pdfjs.version}/build/pdf.worker.min.mjs`;
-        
+        reactPdf.pdfjs.GlobalWorkerOptions.workerSrc =
+          `//unpkg.com/pdfjs-dist@${reactPdf.pdfjs.version}/build/pdf.worker.min.mjs`;
+
         setPdfComponents(reactPdf);
       }).catch((error) => {
-        console.error('Failed to load react-pdf:', error);
+        console.error("Failed to load react-pdf:", error);
       });
     }
   }, []);
@@ -67,7 +68,7 @@ export function DocumentCard({ url, file, fileType }: DocumentCardProps) {
       className="h-full text-blue-600"
     >
       <Card className="h-full relative overflow-hidden transition-colors hover:bg-accent py-3">
-        <CardHeader className="pb-0 relative z-10">
+        <CardHeader className="pb-6 relative z-10">
           <CardTitle className="text-sm leading-tight">
             {(file.file_name || "Untitled Document").substring(
               0,
@@ -76,7 +77,7 @@ export function DocumentCard({ url, file, fileType }: DocumentCardProps) {
           </CardTitle>
           <CardDescription className="text-xs">{fileType}</CardDescription>
         </CardHeader>
-        
+
         {/* Document Preview */}
         {fileType === "pdf" && (
           <PDFPreview url={url} width={PDF_PREVIEW_WIDTH} />
@@ -85,4 +86,3 @@ export function DocumentCard({ url, file, fileType }: DocumentCardProps) {
     </a>
   );
 }
-

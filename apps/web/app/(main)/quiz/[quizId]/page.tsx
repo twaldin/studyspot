@@ -8,39 +8,47 @@ import { QuizQuestion } from "@/features/quiz/components/quiz-question";
 import { QuizControls } from "@/features/quiz/components/quiz-controls";
 import { QuizEditMode } from "@/features/quiz/components/quiz-edit-mode";
 import {
+  OptionLabel,
+  QuizMode,
   QuizQuestion as QuizQuestionType,
   StudyMode,
   StudySettings,
   StudyState,
-  OptionLabel,
 } from "@/lib/types/QuizTypes";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   BookOpen,
   Calendar,
   Edit3,
+  Infinity,
   Loader2,
   Maximize,
+  RotateCcw,
   Shuffle,
   Target,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { cn } from "@/lib/utils";
+import { useConfetti } from "@/hooks/use-confetti";
+import {
+  QuizCompletionDialog,
+  QuizCompletionMode,
+} from "@/components/quiz-completion-dialog";
 
 export default function QuizPage() {
   const params = useParams();
   const quizId = params.quizId as string;
 
   const { data: quiz, isLoading, error } = useQuiz(quizId);
+  const { fireCorrectAnswer, fireQuizComplete } = useConfetti();
 
   // No need to disable body scrolling - main container handles overflow
 
   const [isEditMode, setIsEditMode] = useState(false);
   const [studyState, setStudyState] = useState<StudyState | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [trackProgress, setTrackProgress] = useState(true);
+  const [showCompletionDialog, setShowCompletionDialog] = useState(false);
 
   // Initialize study state when quiz loads
   useEffect(() => {
@@ -64,45 +72,149 @@ export default function QuizPage() {
   // Study handlers
   const handleAnswerSelect = (answer: OptionLabel) => {
     if (!studyState) return;
+
+    const willComplete = quizService.willCompleteAfterCurrentAnswer(studyState);
     const newState = quizService.selectAnswer(studyState, answer);
+    const isCorrect = newState.currentAnswerState.isCorrect;
+
     setStudyState(newState);
 
-    // Auto-advance after correct answer with delay
-    if (newState.currentAnswerState.isCorrect) {
+    // Handle completion logic - skip for practice/infinite mode
+    console.log("Quiz completion check:", {
+      wasComplete: studyState.progress.isComplete,
+      nowComplete: newState.progress.isComplete,
+      isCorrect,
+      willComplete,
+      answeredCount: newState.progress.answeredQuestions.size,
+      totalQuestions: newState.progress.totalQuestions,
+      quizMode: newState.quizMode,
+    });
+
+    if (
+      newState.quizMode !== "practice" && newState.progress.isComplete &&
+      !studyState.progress.isComplete
+    ) {
+      // Quiz just completed (not in infinite/practice mode)
+      console.log("Quiz completion detected!", { isCorrect });
+      if (isCorrect) {
+        // Correct final answer - show completion confetti immediately
+        fireQuizComplete();
+        setTimeout(() => {
+          setShowCompletionDialog(true);
+        }, 1000);
+      } else {
+        // Wrong final answer - wait for user to click "Finish Quiz"
+        // Confetti will be triggered in handleNextQuestion
+      }
+    } else if (isCorrect && !willComplete) {
+      // Regular correct answer (not final question)
+      fireCorrectAnswer();
       setTimeout(() => {
-        handleNextQuestion();
+        setStudyState((currentState) => {
+          if (!currentState) return currentState;
+          return quizService.navigateToNextQuestion(currentState);
+        });
       }, 1500);
     }
+    // For incorrect answers, user must click "Next Question" or "Finish Quiz"
   };
 
   const handleNextQuestion = () => {
     if (!studyState) return;
-    const newState = quizService.navigateToNextQuestion(studyState);
-    setStudyState(newState);
+
+    // Skip completion logic if in review mode or practice mode
+    if (
+      studyState.quizMode !== "review" && studyState.quizMode !== "practice"
+    ) {
+      // Check if this is the completion trigger (wrong final answer)
+      const isFinalQuestion = quizService.isOnFinalQuestion(studyState);
+      const willComplete = isFinalQuestion &&
+        studyState.currentAnswerState.hasAnswered;
+
+      console.log("Next question clicked:", {
+        isFinalQuestion,
+        hasAnswered: studyState.currentAnswerState.hasAnswered,
+        willComplete,
+        isComplete: studyState.progress.isComplete,
+        quizMode: studyState.quizMode,
+      });
+
+      if (willComplete || studyState.progress.isComplete) {
+        // Fire completion confetti and show dialog
+        console.log("Triggering completion from next button");
+        fireQuizComplete();
+        setTimeout(() => {
+          setShowCompletionDialog(true);
+        }, 1000);
+      }
+    }
+
+    setStudyState((currentState) => {
+      if (!currentState) return currentState;
+      return quizService.navigateToNextQuestion(currentState);
+    });
   };
 
   const handlePreviousQuestion = () => {
-    if (!studyState) return;
-    const newState = quizService.navigateToPreviousQuestion(studyState);
-    setStudyState(newState);
+    setStudyState((currentState) => {
+      if (!currentState) return currentState;
+      return quizService.navigateToPreviousQuestion(currentState);
+    });
   };
 
   const handleRandomize = () => {
-    if (!studyState || !quiz?.questions) return;
-    const newMode: StudyMode = studyState.settings.mode === "ordered"
-      ? "random"
-      : "ordered";
-    const newSettings = { ...studyState.settings, mode: newMode };
-    const newState = quizService.updateStudySettings(
+    if (!quiz?.questions) return;
+    setStudyState((currentState) => {
+      if (!currentState) return currentState;
+      const newMode: StudyMode = currentState.settings.mode === "ordered"
+        ? "random"
+        : "ordered";
+      const newSettings = { ...currentState.settings, mode: newMode };
+      return quizService.updateStudySettings(
+        currentState,
+        newSettings,
+        quiz.questions,
+      );
+    });
+  };
+
+  const handleFullscreen = () => {
+    setIsFullscreen(!isFullscreen);
+  };
+
+  const handleQuizModeSelect = (mode: QuizCompletionMode) => {
+    if (!studyState || !quiz?.questions || !mode) return;
+
+    const newState = quizService.switchQuizMode(
       studyState,
-      newSettings,
+      mode,
       quiz.questions,
     );
     setStudyState(newState);
   };
 
-  const handleFullscreen = () => {
-    setIsFullscreen(!isFullscreen);
+  const handleInfiniteToggle = () => {
+    if (!studyState || !quiz?.questions) return;
+
+    if (studyState.quizMode === "practice") {
+      // Exit infinite mode - start new quiz
+      const newState = quizService.initializeStudyState(
+        quiz.questions,
+        studyState.settings,
+        "initial",
+      );
+      setStudyState(newState);
+      setShowCompletionDialog(false);
+    } else {
+      // Enter infinite mode
+      const newState = quizService.switchQuizMode(
+        studyState,
+        "practice",
+        quiz.questions,
+      );
+      setStudyState(newState);
+      setShowCompletionDialog(false);
+    }
   };
 
   // Loading state
@@ -129,8 +241,7 @@ export default function QuizPage() {
             Quiz Not Found
           </h2>
           <p className="text-gray-600 dark:text-gray-400">
-            The quiz you're looking for doesn't exist or has been
-            removed.
+            The quiz you're looking for doesn't exist or has been removed.
           </p>
           <Button onClick={() => window.history.back()}>
             Go Back
@@ -161,7 +272,9 @@ export default function QuizPage() {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center space-y-4">
-          <p className="text-gray-600 dark:text-gray-400">No questions available</p>
+          <p className="text-gray-600 dark:text-gray-400">
+            No questions available
+          </p>
           <Button onClick={() => window.history.back()}>Go Back</Button>
         </div>
       </div>
@@ -193,7 +306,12 @@ export default function QuizPage() {
             {quiz.title}
           </h1>
           {quiz.difficulty_level && (
-            <Badge variant="secondary" className={quizService.getDifficultyColorClass(quiz.difficulty_level)}>
+            <Badge
+              variant="secondary"
+              className={quizService.getDifficultyColorClass(
+                quiz.difficulty_level,
+              )}
+            >
               {quizService.formatDifficultyLevel(quiz.difficulty_level)}
             </Badge>
           )}
@@ -234,7 +352,15 @@ export default function QuizPage() {
       </div>
 
       {/* Main Quiz Area */}
-      <div className="flex-1 flex flex-col justify-center">
+      <div
+        className={cn(
+          "flex-1 flex flex-col",
+          (studyState.quizMode === "review" ||
+              studyState.quizMode === "practice")
+            ? "justify-start"
+            : "justify-center",
+        )}
+      >
         {/* Question Container */}
         <div className="flex-1 flex items-center justify-center">
           <div className="relative w-full flex justify-center items-center">
@@ -243,31 +369,54 @@ export default function QuizPage() {
               answerState={studyState.currentAnswerState}
               onAnswerSelect={handleAnswerSelect}
               onNext={handleNextQuestion}
+              onPrevious={handlePreviousQuestion}
               isFullscreen={isFullscreen}
+              isFinalQuestion={quizService.isOnFinalQuestion(studyState)}
+              quizMode={studyState.quizMode}
+              correctAnswers={studyState.progress.correctAnswers}
+              userAnswers={studyState.progress.userAnswers}
+              canNavigatePrevious={quizService.canNavigatePreviousInReview(
+                studyState,
+              )}
+              canNavigateNext={quizService.canNavigateNextInReview(studyState)}
             />
           </div>
         </div>
 
-        {/* Progress Bar - Fixed height container to prevent layout shift */}
-        <div className="h-16 mb-4">
-          {trackProgress && (
-            <QuizControls
-              settings={studyState.settings}
-              onSettingsChange={(newSettings) => {
-                if (!quiz?.questions) return;
-                const newState = quizService.updateStudySettings(
-                  studyState,
-                  newSettings,
-                  quiz.questions,
-                );
-                setStudyState(newState);
-              }}
-              progress={studyState.progress}
-              onNext={handleNextQuestion}
-              onPrevious={handlePreviousQuestion}
-              canNavigateNext={studyState.currentAnswerState.hasAnswered}
-              canNavigatePrevious={true}
-            />
+        {/* Progress Bar - Dynamic height to prevent excessive spacing */}
+        <div
+          className={cn(
+            "mb-2 flex items-end w-full",
+            studyState.quizMode === "review"
+              ? "h-2"
+              : studyState.quizMode === "practice"
+              ? "h-6"
+              : "h-16",
+          )}
+        >
+          {studyState.quizMode !== "review" && (
+            <div className="w-full">
+              <QuizControls
+                settings={studyState.settings}
+                onSettingsChange={(newSettings) => {
+                  if (!quiz?.questions) return;
+                  setStudyState((currentState) => {
+                    if (!currentState) return currentState;
+                    return quizService.updateStudySettings(
+                      currentState,
+                      newSettings,
+                      quiz.questions,
+                    );
+                  });
+                }}
+                progress={studyState.progress}
+                onNext={handleNextQuestion}
+                onPrevious={handlePreviousQuestion}
+                canNavigateNext={studyState.currentAnswerState.hasAnswered}
+                canNavigatePrevious={true}
+                quizMode={studyState.quizMode}
+              />
+            </div>
           )}
         </div>
 
@@ -284,13 +433,28 @@ export default function QuizPage() {
               onClick={handleRandomize}
               variant="ghost"
               size="icon"
+              disabled={studyState.quizMode === "review"}
               className={cn(
                 "cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                 studyState?.settings.mode === "random" &&
                   "bg-sidebar-accent text-sidebar-accent-foreground",
+                studyState.quizMode === "review" &&
+                  "cursor-not-allowed opacity-50",
               )}
             >
               <Shuffle className="h-4 w-4" />
+            </Button>
+            <Button
+              onClick={handleInfiniteToggle}
+              variant="ghost"
+              size="icon"
+              className={cn(
+                "cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                studyState.quizMode === "practice" &&
+                  "bg-sidebar-accent text-sidebar-accent-foreground",
+              )}
+            >
+              <Infinity className="h-4 w-4" />
             </Button>
             <Button
               onClick={handleEditMode}
@@ -302,28 +466,19 @@ export default function QuizPage() {
             </Button>
           </div>
 
-          {/* Center Progress Text */}
-          <div className="flex items-center gap-4">
-            <span className="text-sm font-medium">{progressText}</span>
-            {studyState.progress.answeredQuestions.size > 0 && (
-              <Badge variant="outline">
-                Score: {studyState.progress.correctAnswers.size}/{studyState.progress.answeredQuestions.size}
-              </Badge>
-            )}
-          </div>
-
           {/* Right Controls */}
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <label className="text-xs text-muted-foreground">
-                Track progress
-              </label>
-              <Checkbox
-                checked={trackProgress}
-                onCheckedChange={(checked) =>
-                  setTrackProgress(checked === true)}
-              />
-            </div>
+          <div className="flex items-center gap-2">
+            {studyState.quizMode === "review" && (
+              <Button
+                onClick={() => handleQuizModeSelect("retake")}
+                variant="ghost"
+                size="sm"
+                className="cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-accent-foreground gap-1"
+              >
+                <RotateCcw className="h-4 w-4" />
+                Retake
+              </Button>
+            )}
             <Button
               onClick={handleFullscreen}
               variant="ghost"
@@ -359,6 +514,16 @@ export default function QuizPage() {
             {renderContent()}
           </div>
         </div>
+      )}
+
+      {/* Quiz Completion Dialog */}
+      {studyState && (
+        <QuizCompletionDialog
+          open={showCompletionDialog}
+          onOpenChange={setShowCompletionDialog}
+          progress={studyState.progress}
+          onModeSelect={handleQuizModeSelect}
+        />
       )}
     </>
   );

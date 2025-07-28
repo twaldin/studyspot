@@ -44,6 +44,7 @@ export interface QuizWithQuestions extends Quiz {
 
 // Study mode types
 export type StudyMode = 'random' | 'ordered';
+export type QuizMode = 'initial' | 'review' | 'retake' | 'practice';
 
 export interface StudySettings {
   mode: StudyMode;
@@ -53,6 +54,7 @@ export interface StudyProgress {
   currentQuestionIndex: number;
   answeredQuestions: Set<string>; // question ids that have been answered
   correctAnswers: Set<string>; // question ids that were answered correctly
+  userAnswers: Map<string, 'A' | 'B' | 'C' | 'D'>; // question id -> user's selected answer
   totalQuestions: number;
   isComplete: boolean;
   score: number; // percentage (0-100)
@@ -71,6 +73,7 @@ export interface StudyState {
   progress: StudyProgress;
   shuffledQuestions?: QuizQuestion[];
   currentAnswerState: QuestionAnswerState;
+  quizMode: QuizMode;
 }
 
 // Edit mode types
