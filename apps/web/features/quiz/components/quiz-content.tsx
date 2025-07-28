@@ -7,11 +7,13 @@ import { renderMarkdownWithLatex } from "@/lib/renderMarkdown";
 interface QuizContentProps {
   content: string;
   className?: string;
+  style?: React.CSSProperties;
 }
 
 export const QuizContent: React.FC<QuizContentProps> = ({
   content,
   className = "",
+  style,
 }) => {
   // Initialize with content as fallback for SSR
   const [html, setHtml] = useState(content);
@@ -134,6 +136,7 @@ export const QuizContent: React.FC<QuizContentProps> = ({
   return (
     <div
       className={`quiz-content leading-relaxed ${className}`}
+      style={style}
       dangerouslySetInnerHTML={createMarkup()}
     />
   );
