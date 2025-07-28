@@ -1,10 +1,11 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Check, ChevronRight, X } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, X } from "lucide-react";
 import {
   OptionLabel,
   QuestionAnswerState,
+  QuizMode,
   QuizQuestion as QuizQuestionType,
 } from "@/lib/types/QuizTypes";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,9 +18,16 @@ interface QuizQuestionProps {
   answerState: QuestionAnswerState;
   onAnswerSelect: (answer: OptionLabel) => void;
   onNext?: () => void;
+  onPrevious?: () => void;
   disabled?: boolean;
   className?: string;
   isFullscreen?: boolean;
+  isFinalQuestion?: boolean;
+  quizMode?: QuizMode;
+  correctAnswers?: Set<string>; // For review mode
+  userAnswers?: Map<string, 'A' | 'B' | 'C' | 'D'>; // For review mode
+  canNavigatePrevious?: boolean;
+  canNavigateNext?: boolean;
 }
 
 export function QuizQuestion({
@@ -27,18 +35,46 @@ export function QuizQuestion({
   answerState,
   onAnswerSelect,
   onNext,
+  onPrevious,
   disabled = false,
   className,
   isFullscreen = false,
+  isFinalQuestion = false,
+  quizMode = 'initial',
+  correctAnswers,
+  userAnswers,
+  canNavigatePrevious = false,
+  canNavigateNext = false,
 }: QuizQuestionProps) {
-  const options = [
+  const allOptions = [
     { label: "A" as OptionLabel, text: question.option_a },
     { label: "B" as OptionLabel, text: question.option_b },
     { label: "C" as OptionLabel, text: question.option_c },
     { label: "D" as OptionLabel, text: question.option_d },
   ];
 
+  // Filter options when user answered incorrectly - only show selected and correct answers
+  const options = answerState.hasAnswered && !answerState.isCorrect
+    ? allOptions.filter(option => 
+        option.label === answerState.selectedAnswer || 
+        option.label === question.correct_answer
+      )
+    : allOptions;
+
   const getOptionState = (optionLabel: OptionLabel) => {
+    // In review mode, show the results based on the original answer
+    if (quizMode === 'review') {
+      const isCorrect = question.correct_answer === optionLabel;
+      const wasAnsweredCorrectly = correctAnswers?.has(question.id) ?? false;
+      const userSelectedAnswer = userAnswers?.get(question.id);
+      const wasUserSelection = userSelectedAnswer === optionLabel;
+      
+      if (isCorrect && wasAnsweredCorrectly) return "correct";
+      if (isCorrect && !wasAnsweredCorrectly) return "reveal-correct";
+      if (wasUserSelection && !wasAnsweredCorrectly) return "incorrect";
+      return "disabled";
+    }
+
     if (!answerState.hasAnswered) return "default";
 
     const isSelected = answerState.selectedAnswer === optionLabel;
@@ -89,6 +125,35 @@ export function QuizQuestion({
         className,
       )}
     >
+      {/* Review Mode Navigation Arrows - positioned at card edges */}
+      {quizMode === 'review' && (
+        <>
+          {/* Left Arrow */}
+          {canNavigatePrevious && onPrevious && (
+            <Button
+              onClick={onPrevious}
+              variant="ghost"
+              size="icon"
+              className="absolute left-0 top-1/2 cursor-pointer -translate-y-1/2 -translate-x-full ml-4 rounded-full bg-white hover:bg-gray-100/80 dark:bg-black dark:hover:bg-card shadow-lg"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+          )}
+          
+          {/* Right Arrow */}
+          {canNavigateNext && onNext && (
+            <Button
+              onClick={onNext}
+              variant="ghost"
+              size="icon"
+              className="absolute right-0 top-1/2 cursor-pointer -translate-y-1/2 translate-x-full mr-4 rounded-full bg-white hover:bg-gray-100/80 dark:bg-black dark:hover:bg-card shadow-lg"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </Button>
+          )}
+        </>
+      )}
+
       {/* Question Card */}
       <Card className="w-full bg-card shadow-lg rounded-xl mb-6">
         <CardContent className="py-0 px-6">
@@ -102,21 +167,34 @@ export function QuizQuestion({
             </div>
 
             {/* Multiple Choice Options */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-8">
+            <motion.div 
+              layout
+              className={cn(
+                "grid gap-3 mt-8",
+                // Adjust grid based on number of visible options
+                options.length <= 2 
+                  ? "grid-cols-2 max-w-3xl mx-auto" 
+                  : "grid-cols-1 md:grid-cols-2"
+              )}
+            >
               {options.map((option) => {
                 const state = getOptionState(option.label);
-                const canClick = !disabled && !answerState.hasAnswered;
+                const canClick = !disabled && !answerState.hasAnswered && quizMode !== 'review';
 
                 return (
                   <motion.div
                     key={option.label}
                     layout
+                    initial={{ opacity: 1, scale: 1 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    transition={{ duration: 0.3, ease: "easeInOut" }}
                     whileHover={canClick ? { scale: 1.02 } : undefined}
                     whileTap={canClick ? { scale: 0.98 } : undefined}
                   >
                     <Card
                       className={cn(
-                        "border-2 transition-all duration-200",
+                        "border-2 transition-all duration-300",
                         getOptionClassName(state),
                         canClick && "hover:shadow-md",
                       )}
@@ -147,7 +225,7 @@ export function QuizQuestion({
                   </motion.div>
                 );
               })}
-            </div>
+            </motion.div>
 
             {/* Feedback Section */}
             {!answerState.hasAnswered && (
@@ -199,7 +277,7 @@ export function QuizQuestion({
                             size="sm"
                             className="gap-2"
                           >
-                            Next Question
+                            {isFinalQuestion ? "Finish Quiz" : "Next Question"}
                             <ChevronRight className="h-4 w-4" />
                           </Button>
                         </div>

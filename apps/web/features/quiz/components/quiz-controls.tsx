@@ -1,6 +1,6 @@
 "use client";
 
-import { StudyProgress, StudySettings } from "@/lib/types/QuizTypes";
+import { QuizMode, StudyProgress, StudySettings } from "@/lib/types/QuizTypes";
 import { quizService } from "../services/quiz.service";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,7 @@ import {
   ArrowRight,
   CheckCircle2,
   List,
+  Play,
   Shuffle,
   Target,
 } from "lucide-react";
@@ -22,6 +23,7 @@ interface QuizControlsProps {
   onPrevious: () => void;
   canNavigateNext: boolean;
   canNavigatePrevious: boolean;
+  quizMode?: QuizMode;
 }
 
 export function QuizControls({
@@ -32,6 +34,7 @@ export function QuizControls({
   onPrevious,
   canNavigateNext,
   canNavigatePrevious,
+  quizMode = "initial",
 }: QuizControlsProps) {
   const progressPercentage = quizService.getProgressPercentage(progress);
   const progressText = quizService.getProgressText(progress);
@@ -41,6 +44,25 @@ export function QuizControls({
     const newMode = settings.mode === "ordered" ? "random" : "ordered";
     onSettingsChange({ ...settings, mode: newMode });
   };
+
+  // Show different displays based on quiz mode
+  if (quizMode === "practice") {
+    // Infinite practice mode - simple score tracker with minimal spacing
+    return (
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Play className="h-4 w-4 text-blue-500" />
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            Infinite Mode
+          </span>
+        </div>
+        <Badge variant="secondary" className="flex items-center gap-1">
+          <Target className="h-3 w-3" />
+          {scoreText}
+        </Badge>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -65,7 +87,7 @@ export function QuizControls({
             </Badge>
           </div>
         </div>
-        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+        <div className="w-full bg-gray-200 dark:bg-card rounded-full h-2">
           <div
             className={cn(
               "h-2 rounded-full transition-all duration-300",
@@ -74,28 +96,7 @@ export function QuizControls({
             style={{ width: `${progressPercentage}%` }}
           />
         </div>
-
-        {/* Score Display */}
-        {progress.answeredQuestions.size > 0 && (
-          <div className="text-center">
-            <span className="text-sm text-gray-600 dark:text-gray-400">
-              Current Score:{" "}
-              {progress.correctAnswers.size}/{progress.answeredQuestions.size}
-              {" "}
-              correct
-              {progress.answeredQuestions.size > 0 && (
-                <>
-                  ({Math.round(
-                    (progress.correctAnswers.size /
-                      progress.answeredQuestions.size) * 100,
-                  )}%)
-                </>
-              )}
-            </span>
-          </div>
-        )}
       </div>
     </div>
   );
 }
-

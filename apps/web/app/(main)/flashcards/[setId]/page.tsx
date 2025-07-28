@@ -14,7 +14,6 @@ import {
 } from "@/lib/types/FlashcardTypes";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   ArrowLeft,
   ArrowRight,
@@ -30,12 +29,14 @@ import {
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { cn } from "@/lib/utils";
+import { useConfetti } from "@/hooks/use-confetti";
 
 export default function FlashcardSetPage() {
   const params = useParams();
   const setId = params.setId as string;
 
   const { data: flashcardSet, isLoading, error } = useFlashcardSet(setId);
+  const { fireFlashcardComplete } = useConfetti();
 
   // Disable body scrolling when component mounts
   useEffect(() => {
@@ -48,7 +49,6 @@ export default function FlashcardSetPage() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [studyState, setStudyState] = useState<StudyState | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [trackProgress, setTrackProgress] = useState(true);
 
   // Initialize study state when flashcard set loads
   useEffect(() => {
@@ -79,6 +79,14 @@ export default function FlashcardSetPage() {
   const handleNextCard = () => {
     if (!studyState) return;
     const newState = flashcardService.navigateToNextCard(studyState);
+
+    // Fire confetti when completing the set
+    if (newState.progress.isComplete && !studyState.progress.isComplete) {
+      setTimeout(() => {
+        fireFlashcardComplete();
+      }, 300);
+    }
+
     setStudyState(newState);
   };
 
@@ -273,9 +281,14 @@ export default function FlashcardSetPage() {
           </div>
         </div>
 
-        {/* Progress Bar - Fixed height container to prevent layout shift */}
-        <div className="h-16 mb-4">
-          {trackProgress && (
+        {/* Progress Bar - Dynamic height to prevent excessive spacing */}
+        <div
+          className={cn(
+            "mb-2 flex items-end w-full",
+            "h-16",
+          )}
+        >
+          <div className="w-full">
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-foreground">
@@ -307,7 +320,7 @@ export default function FlashcardSetPage() {
                 />
               </div>
             </div>
-          )}
+          </div>
         </div>
 
         {/* Bottom Controls */}
@@ -349,23 +362,8 @@ export default function FlashcardSetPage() {
             </Button>
           </div>
 
-          {/* Center Progress Text */}
-          <div className="flex items-center gap-4">
-            <span className="text-sm font-medium">{progressText}</span>
-          </div>
-
           {/* Right Controls */}
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <label className="text-xs text-muted-foreground">
-                Track progress
-              </label>
-              <Checkbox
-                checked={trackProgress}
-                onCheckedChange={(checked) =>
-                  setTrackProgress(checked === true)}
-              />
-            </div>
+          <div className="flex items-center gap-2">
             <Button
               onClick={handleFullscreen}
               variant="ghost"
