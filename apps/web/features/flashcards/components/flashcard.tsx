@@ -28,20 +28,19 @@ export function Flashcard({
   return (
     <div
       className={cn(
-        "relative w-full mx-auto",
-        isFullscreen ? "w-[90vw]" : "w-full max-w-4xl",
+        "relative w-full h-full mx-auto flex items-center justify-center",
         className,
       )}
       style={{ perspective: "5000px" }}
     >
       {/* Card Container */}
       <motion.div
-        className="relative preserve-3d cursor-pointer"
+        className="relative preserve-3d cursor-pointer w-full h-full"
         style={{
           transformStyle: "preserve-3d",
           transformOrigin: "center center",
-          height: isFullscreen ? "60vh" : "auto", // Match the card height
-          aspectRatio: isFullscreen ? "auto" : "3/2",
+          maxHeight: "100%",
+          minHeight: "200px",
         }}
         animate={{ rotateX: isFlipped ? 180 : 0 }}
         onClick={onFlip}
@@ -55,20 +54,17 @@ export function Flashcard({
           }}
         >
           <Card
-            className={cn(
-              "w-full bg-card shadow-lg hover:shadow-xl transition-shadow rounded-xl",
-              isFullscreen ? "h-[60vh]" : "aspect-[3/2] h-auto",
-            )}
+            className="w-full h-full bg-card shadow-lg hover:shadow-xl transition-shadow rounded-xl"
           >
-            <CardContent className="h-full flex flex-col items-center justify-center p-8 text-center">
-              <div className="space-y-4 w-full">
+            <CardContent className="h-full flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 text-center">
+              <div className="space-y-2 sm:space-y-4 w-full">
                 <FlashcardContent
                   content={!isFlipped
                     ? displayText
                     : (showSide === "side1" ? card.side2 : card.side1)}
-                  className="text-2xl md:text-3xl font-medium text-gray-900 dark:text-gray-100 text-center"
+                  className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-medium text-gray-900 dark:text-gray-100 text-center leading-tight"
                 />
-                <div className="text-sm text-gray-500 dark:text-gray-400 mt-6">
+                <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-2 sm:mt-4 md:mt-6">
                   Click to flip
                 </div>
               </div>
@@ -86,10 +82,7 @@ export function Flashcard({
           }}
         >
           <Card
-            className={cn(
-              "w-full bg-card shadow-lg hover:shadow-xl transition-shadow rounded-xl",
-              isFullscreen ? "h-[60vh]" : "aspect-[3/2] h-auto",
-            )}
+            className="w-full h-full bg-card shadow-lg hover:shadow-xl transition-shadow rounded-xl"
           >
             <CardContent className="h-full flex flex-col items-center justify-center p-8 text-center">
               <div className="space-y-4 w-full">

@@ -41,6 +41,24 @@ export class ChatStreamingService {
   private constructor() { }
 
   /**
+   * Filters out thinking content from the assistant response
+   * Removes everything from <thinking> tags until the closing </thinking> tag is found
+   */
+  private filterThinkingContent(content: string): string {
+    // Remove complete thinking blocks
+    let filtered = content.replace(/<thinking>[\s\S]*?<\/thinking>/g, '');
+    
+    // If there's an unclosed <thinking> tag, remove everything from that point
+    const thinkingStart = filtered.lastIndexOf('<thinking>');
+    if (thinkingStart !== -1) {
+      filtered = filtered.substring(0, thinkingStart);
+    }
+    
+    return filtered.trim();
+  }
+
+
+  /**
    * Processes a streaming assistant API response, incrementally updating the assistant message content
    */
   async processStreamingResponse(
@@ -82,11 +100,14 @@ export class ChatStreamingService {
 
               if (data.chunk) {
                 fullResponse += data.chunk;
-                this.updateAssistantMessage(context.setMessages, fullResponse);
+                
+                // Filter out thinking content for display
+                const displayContent = this.filterThinkingContent(fullResponse);
+                this.updateAssistantMessage(context.setMessages, displayContent);
 
-                // Update streaming context for navigation persistence
+                // Update streaming context for navigation persistence (with filtered content)
                 if (context.chatId && context.updateStreamingMessage) {
-                  context.updateStreamingMessage(context.chatId, fullResponse);
+                  context.updateStreamingMessage(context.chatId, displayContent);
                 }
               } else if (data.done) {
                 console.info({
@@ -98,16 +119,19 @@ export class ChatStreamingService {
                 const linkedResourceRefs = data.linkedResources || [];
                 linkedResources = await this.convertRefsToResources(linkedResourceRefs);
                 
+                // Use filtered content for final message
+                const finalDisplayContent = this.filterThinkingContent(fullResponse);
+                this.updateAssistantMessage(context.setMessages, finalDisplayContent);
                 this.updateAssistantMessageWithResources(
                   context.setMessages,
                   linkedResources,
                 );
 
-                // Update streaming context with final linked resources
+                // Update streaming context with final linked resources (with filtered content)
                 if (context.chatId && context.updateStreamingMessage) {
                   context.updateStreamingMessage(
                     context.chatId,
-                    fullResponse,
+                    finalDisplayContent,
                     linkedResources,
                   );
                 }
