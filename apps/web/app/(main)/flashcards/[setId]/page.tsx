@@ -201,14 +201,9 @@ export default function FlashcardSetPage() {
   const timeAgo = flashcardService.formatTimeAgo(flashcardSet.created_at);
 
   const renderContent = () => (
-    <>
-      {/* Header Section */}
-      <div
-        className={cn(
-          "space-y-3",
-          isFullscreen ? "mb-6" : "mb-4",
-        )}
-      >
+    <div className="flex flex-col h-full">
+      {/* Header Section - Fixed at top */}
+      <div className="flex-shrink-0 space-y-3 mb-4">
         <h1
           className={cn(
             "font-bold font-crimson-text text-foreground",
@@ -248,77 +243,70 @@ export default function FlashcardSetPage() {
         </div>
       </div>
 
-      {/* Main Flashcard Area */}
-      <div className="flex-1 flex flex-col justify-center">
-        {/* Flashcard Container */}
-        <div className="flex-1 flex items-center justify-center">
-          <div className="relative w-full flex justify-center items-center">
-            <Flashcard
-              card={currentCard}
-              isFlipped={studyState.isFlipped}
-              showSide={displaySide}
-              onFlip={handleFlipCard}
-              isFullscreen={isFullscreen}
-            />
+      {/* Main Flashcard Area - Takes remaining space */}
+      <div className="flex-1 flex items-center justify-center min-h-0">
+        <div className="relative w-full h-full max-w-4xl flex justify-center items-center">
+          <Flashcard
+            card={currentCard}
+            isFlipped={studyState.isFlipped}
+            showSide={displaySide}
+            onFlip={handleFlipCard}
+            isFullscreen={isFullscreen}
+          />
 
-            {/* Navigation Arrows - positioned at card edges */}
-            <Button
-              onClick={handlePrevCard}
-              variant="ghost"
-              size="icon"
-              className="absolute left-0 top-1/2 cursor-pointer -translate-y-1/2 -translate-x-full ml-4 rounded-full bg-white hover:bg-gray-100/80 dark:bg-black dark:hover:bg-card shadow-lg"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <Button
-              onClick={handleNextCard}
-              variant="ghost"
-              size="icon"
-              className="absolute right-0 top-1/2 cursor-pointer -translate-y-1/2 translate-x-full mr-4 rounded-full bg-white hover:bg-gray-100/80 dark:bg-black dark:hover:bg-card shadow-lg"
-            >
-              <ArrowRight className="h-5 w-5" />
-            </Button>
-          </div>
+          {/* Navigation Arrows - positioned at card edges */}
+          <Button
+            onClick={handlePrevCard}
+            variant="ghost"
+            size="icon"
+            className="absolute left-0 top-1/2 cursor-pointer -translate-y-1/2 -translate-x-full ml-4 rounded-full bg-white hover:bg-gray-100/80 dark:bg-black dark:hover:bg-card shadow-lg"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <Button
+            onClick={handleNextCard}
+            variant="ghost"
+            size="icon"
+            className="absolute right-0 top-1/2 cursor-pointer -translate-y-1/2 translate-x-full mr-4 rounded-full bg-white hover:bg-gray-100/80 dark:bg-black dark:hover:bg-card shadow-lg"
+          >
+            <ArrowRight className="h-5 w-5" />
+          </Button>
         </div>
+      </div>
 
-        {/* Progress Bar - Dynamic height to prevent excessive spacing */}
-        <div
-          className={cn(
-            "mb-2 flex items-end w-full",
-            "h-16",
-          )}
-        >
-          <div className="w-full">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-foreground">
-                  Study Progress
-                </span>
-                <Badge
-                  variant={studyState.progress.isComplete
-                    ? "default"
-                    : "secondary"}
-                >
-                  {flashcardService.getProgressText(studyState.progress)}
-                </Badge>
-              </div>
-              <div className="w-full bg-muted rounded-full h-2">
-                <div
-                  className={cn(
-                    "h-2 rounded-full transition-all duration-300",
-                    studyState.progress.isComplete
-                      ? "bg-green-500"
-                      : "bg-primary",
-                  )}
-                  style={{
-                    width: `${
-                      flashcardService.getProgressPercentage(
-                        studyState.progress,
-                      )
-                    }%`,
-                  }}
-                />
-              </div>
+      {/* Footer Section - Fixed at bottom */}
+      <div className="flex-shrink-0 space-y-4 mt-4">
+        {/* Progress Bar */}
+        <div className="w-full">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-foreground">
+                Study Progress
+              </span>
+              <Badge
+                variant={studyState.progress.isComplete
+                  ? "default"
+                  : "secondary"}
+              >
+                {flashcardService.getProgressText(studyState.progress)}
+              </Badge>
+            </div>
+            <div className="w-full bg-muted rounded-full h-2">
+              <div
+                className={cn(
+                  "h-2 rounded-full transition-all duration-300",
+                  studyState.progress.isComplete
+                    ? "bg-green-500"
+                    : "bg-primary",
+                )}
+                style={{
+                  width: `${
+                    flashcardService.getProgressPercentage(
+                      studyState.progress,
+                    )
+                  }%`,
+                }}
+              />
             </div>
           </div>
         </div>
@@ -326,7 +314,7 @@ export default function FlashcardSetPage() {
         {/* Bottom Controls */}
         <div
           className={cn(
-            "flex items-center justify-between bg-card rounded-lg shadow-sm flex-shrink-0",
+            "flex items-center justify-between bg-card rounded-lg shadow-sm",
             isFullscreen ? "p-6 mx-8" : "p-4",
           )}
         >
@@ -375,7 +363,7 @@ export default function FlashcardSetPage() {
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 
   return (
@@ -383,10 +371,10 @@ export default function FlashcardSetPage() {
       {/* Normal Layout */}
       {!isFullscreen && (
         <div
-          className="bg-background flex flex-col"
+          className="bg-background"
           style={{ height: "calc(100vh - 4rem)" }}
         >
-          <div className="max-w-4xl mx-auto p-6 h-full flex flex-col justify-center overflow-hidden">
+          <div className="max-w-4xl mx-auto p-6 h-full overflow-hidden">
             {renderContent()}
           </div>
         </div>
@@ -394,8 +382,8 @@ export default function FlashcardSetPage() {
 
       {/* Fullscreen Layout */}
       {isFullscreen && (
-        <div className="fixed inset-0 z-50 bg-background flex flex-col animate-in fade-in-0 duration-300">
-          <div className="max-w-[90vw] mx-auto p-8 h-full flex flex-col justify-center overflow-hidden">
+        <div className="fixed inset-0 z-50 bg-background animate-in fade-in-0 duration-300">
+          <div className="max-w-[90vw] mx-auto p-8 h-full overflow-hidden">
             {renderContent()}
           </div>
         </div>

@@ -20,6 +20,8 @@ import { Badge } from "@/components/ui/badge";
 import {
   BookOpen,
   Calendar,
+  ChevronLeft,
+  ChevronRight,
   Edit3,
   Infinity,
   Loader2,
@@ -288,14 +290,9 @@ export default function QuizPage() {
   const timeAgo = quizService.formatTimeAgo(quiz.created_at);
 
   const renderContent = () => (
-    <>
-      {/* Header Section */}
-      <div
-        className={cn(
-          "space-y-3",
-          isFullscreen ? "mb-6" : "mb-4",
-        )}
-      >
+    <div className="flex flex-col h-full">
+      {/* Header Section - Fixed at top */}
+      <div className="flex-shrink-0 space-y-3 mb-4">
         <div className="flex items-center gap-3">
           <h1
             className={cn(
@@ -351,79 +348,89 @@ export default function QuizPage() {
         </div>
       </div>
 
-      {/* Main Quiz Area */}
-      <div
-        className={cn(
-          "flex-1 flex flex-col",
-          (studyState.quizMode === "review" ||
-              studyState.quizMode === "practice")
-            ? "justify-start"
-            : "justify-center",
-        )}
-      >
-        {/* Question Container */}
-        <div className="flex-1 flex items-center justify-center">
-          <div className="relative w-full flex justify-center items-center">
-            <QuizQuestion
-              question={currentQuestion}
-              answerState={studyState.currentAnswerState}
-              onAnswerSelect={handleAnswerSelect}
+      {/* Main Quiz Area - Takes remaining space */}
+      <div className="flex-1 flex items-center justify-center min-h-0">
+        <div className="relative w-full h-full max-w-4xl flex justify-center items-center">
+          <QuizQuestion
+            question={currentQuestion}
+            answerState={studyState.currentAnswerState}
+            onAnswerSelect={handleAnswerSelect}
+            onNext={handleNextQuestion}
+            onPrevious={handlePreviousQuestion}
+            isFullscreen={isFullscreen}
+            isFinalQuestion={quizService.isOnFinalQuestion(studyState)}
+            quizMode={studyState.quizMode}
+            correctAnswers={studyState.progress.correctAnswers}
+            userAnswers={studyState.progress.userAnswers}
+            canNavigatePrevious={quizService.canNavigatePreviousInReview(
+              studyState,
+            )}
+            canNavigateNext={quizService.canNavigateNextInReview(studyState)}
+          />
+
+          {/* Review Mode Navigation Arrows - positioned at quiz area edges */}
+          {studyState.quizMode === 'review' && (
+            <>
+              {/* Left Arrow */}
+              {quizService.canNavigatePreviousInReview(studyState) && (
+                <Button
+                  onClick={handlePreviousQuestion}
+                  variant="ghost"
+                  size="icon"
+                  className="absolute left-0 top-1/2 cursor-pointer -translate-y-1/2 -translate-x-full ml-4 rounded-full bg-white hover:bg-gray-100/80 dark:bg-black dark:hover:bg-card shadow-lg"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </Button>
+              )}
+              
+              {/* Right Arrow */}
+              {quizService.canNavigateNextInReview(studyState) && (
+                <Button
+                  onClick={handleNextQuestion}
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-1/2 cursor-pointer -translate-y-1/2 translate-x-full mr-4 rounded-full bg-white hover:bg-gray-100/80 dark:bg-black dark:hover:bg-card shadow-lg"
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </Button>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Footer Section - Fixed at bottom */}
+      <div className="flex-shrink-0 space-y-4 mt-4">
+        {/* Progress Controls */}
+        {studyState.quizMode !== "review" && (
+          <div className="w-full">
+            <QuizControls
+              settings={studyState.settings}
+              onSettingsChange={(newSettings) => {
+                if (!quiz?.questions) return;
+                setStudyState((currentState) => {
+                  if (!currentState) return currentState;
+                  return quizService.updateStudySettings(
+                    currentState,
+                    newSettings,
+                    quiz.questions,
+                  );
+                });
+              }}
+              progress={studyState.progress}
               onNext={handleNextQuestion}
               onPrevious={handlePreviousQuestion}
-              isFullscreen={isFullscreen}
-              isFinalQuestion={quizService.isOnFinalQuestion(studyState)}
+              canNavigateNext={studyState.currentAnswerState.hasAnswered}
+              canNavigatePrevious={true}
               quizMode={studyState.quizMode}
-              correctAnswers={studyState.progress.correctAnswers}
-              userAnswers={studyState.progress.userAnswers}
-              canNavigatePrevious={quizService.canNavigatePreviousInReview(
-                studyState,
-              )}
-              canNavigateNext={quizService.canNavigateNextInReview(studyState)}
             />
           </div>
-        </div>
-
-        {/* Progress Bar - Dynamic height to prevent excessive spacing */}
-        <div
-          className={cn(
-            "mb-2 flex items-end w-full",
-            studyState.quizMode === "review"
-              ? "h-2"
-              : studyState.quizMode === "practice"
-              ? "h-6"
-              : "h-16",
-          )}
-        >
-          {studyState.quizMode !== "review" && (
-            <div className="w-full">
-              <QuizControls
-                settings={studyState.settings}
-                onSettingsChange={(newSettings) => {
-                  if (!quiz?.questions) return;
-                  setStudyState((currentState) => {
-                    if (!currentState) return currentState;
-                    return quizService.updateStudySettings(
-                      currentState,
-                      newSettings,
-                      quiz.questions,
-                    );
-                  });
-                }}
-                progress={studyState.progress}
-                onNext={handleNextQuestion}
-                onPrevious={handlePreviousQuestion}
-                canNavigateNext={studyState.currentAnswerState.hasAnswered}
-                canNavigatePrevious={true}
-                quizMode={studyState.quizMode}
-              />
-            </div>
-          )}
-        </div>
+        )}
 
         {/* Bottom Controls */}
         <div
           className={cn(
-            "flex items-center justify-between bg-card rounded-lg shadow-sm flex-shrink-0",
+            "flex items-center justify-between bg-card rounded-lg shadow-sm",
             isFullscreen ? "p-6 mx-8" : "p-4",
           )}
         >
@@ -490,7 +497,7 @@ export default function QuizPage() {
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 
   return (
@@ -498,10 +505,10 @@ export default function QuizPage() {
       {/* Normal Layout */}
       {!isFullscreen && (
         <div
-          className="bg-background flex flex-col"
+          className="bg-background"
           style={{ height: "calc(100vh - 4rem)" }}
         >
-          <div className="max-w-4xl mx-auto p-6 h-full flex flex-col justify-center overflow-hidden">
+          <div className="max-w-4xl mx-auto p-6 h-full overflow-hidden">
             {renderContent()}
           </div>
         </div>
@@ -509,8 +516,8 @@ export default function QuizPage() {
 
       {/* Fullscreen Layout */}
       {isFullscreen && (
-        <div className="fixed inset-0 z-50 bg-background flex flex-col animate-in fade-in-0 duration-300">
-          <div className="max-w-[90vw] mx-auto p-8 h-full flex flex-col justify-center overflow-hidden">
+        <div className="fixed inset-0 z-50 bg-background animate-in fade-in-0 duration-300">
+          <div className="max-w-[90vw] mx-auto p-8 h-full overflow-hidden">
             {renderContent()}
           </div>
         </div>

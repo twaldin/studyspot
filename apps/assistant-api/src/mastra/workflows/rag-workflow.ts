@@ -134,14 +134,9 @@ export class RAGWorkflowStreaming {
       let fullResponseContent = '';
 
       for await (const chunk of responseStream) {
-        const anyChunk = chunk as any;
-        // The chunk can be a string or an object with tool call info
-        if (typeof anyChunk === 'string') {
-          fullResponseContent += anyChunk;
-          yield { chunk: anyChunk };
-        } else if (typeof anyChunk === 'object' && anyChunk !== null) {
-          // Yield the whole object so consumers can see tool calls/results
-          yield anyChunk;
+        if (typeof chunk === 'string') {
+          fullResponseContent += chunk;
+          yield { chunk };
         }
       }
 
