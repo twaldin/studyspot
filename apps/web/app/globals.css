@@ -13,6 +13,44 @@
   backface-visibility: hidden;
 }
 
+/* Flashcard content styling */
+.flashcard-content {
+  /* Ensure math renders properly centered */
+  .katex-display {
+    margin: 0.5em 0;
+  }
+  
+  /* Style inline math */
+  .katex {
+    font-size: inherit;
+  }
+  
+  /* Handle paragraphs in flashcards */
+  p {
+    margin: 0.25em 0;
+  }
+  
+  /* Handle headings in flashcards */
+  h1, h2, h3, h4, h5, h6 {
+    margin: 0.25em 0;
+    font-weight: inherit;
+  }
+  
+  /* Handle lists in flashcards */
+  ul, ol {
+    margin: 0.25em 0;
+    padding-left: 1em;
+  }
+  
+  /* Handle code in flashcards */
+  code {
+    background-color: rgba(0, 0, 0, 0.1);
+    padding: 0.1em 0.3em;
+    border-radius: 0.25em;
+    font-size: 0.9em;
+  }
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {

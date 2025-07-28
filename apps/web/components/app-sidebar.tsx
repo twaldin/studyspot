@@ -48,7 +48,7 @@ import { Separator } from "@/components/ui/separator";
 import React from "react";
 import { useRouter } from "next/navigation";
 import { UserButton } from "@/components/user-button";
-import { SettingsButton } from "@/components/settings-button";
+import { DarkModeButton } from "@/components/dark-mode-button";
 
 // Custom hook to handle mobile sidebar closing
 const useMobileSidebarClose = () => {
@@ -203,7 +203,7 @@ export function AppSidebar() {
           <StudySpotLogo className="h-10 w-auto group-data-[collapsible=icon]:hidden" />
         </div>
         <Button
-          className="w-full justify-start gap-2 group-data-[collapsible=icon]:w-fit group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:self-center"
+          className="cursor-pointer w-full justify-start gap-2 group-data-[collapsible=icon]:w-fit group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:self-center"
           variant="secondary"
           onClick={onNewChatClick}
         >
@@ -250,7 +250,7 @@ export function AppSidebar() {
       {/* Footer with settings and user options - only show when right sidebar is collapsed */}
       <SidebarFooter className="border-t border-sidebar-border p-2 lg:hidden">
         <SidebarMenu>
-          <SettingsButton variant="sidebar" />
+          <DarkModeButton variant="sidebar" />
           <UserButton variant="sidebar" />
         </SidebarMenu>
       </SidebarFooter>

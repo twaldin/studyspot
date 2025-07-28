@@ -7,6 +7,7 @@ import { ConfigLoaderService, PromptOverrides } from '../../services/config-load
 import { SupabaseService } from '../../services/supabase.service.js';
 import { getSourcesFromStore, clearSourcesStore } from '../tools/set-sources.tool.js';
 import { getFlashcardSetsFromStore, clearFlashcardStore } from '../tools/generate-flashcard-set.tool.js';
+import { getQuizzesFromStore, clearQuizStore } from '../tools/generate-quiz.tool.js';
 
 // Input schema for the RAG workflow
 const RAGWorkflowInputSchema = z.object({
@@ -60,7 +61,7 @@ export class RAGWorkflowStreaming {
    */
   static async* executeStream(input: RAGWorkflowInput): AsyncGenerator<{
     chunk?: string;
-    linkedDocumentIds?: Array<{ type: 'document' | 'flashcard_set'; id: string }>;
+    linkedDocumentIds?: Array<{ type: 'document' | 'flashcard_set' | 'quiz'; id: string }>;
     done?: boolean;
     error?: string;
     toolCall?: any;
@@ -100,10 +101,11 @@ export class RAGWorkflowStreaming {
       }
 
       // Step 4: Stream response generation.
-      // Clear any previous sources and flashcards for this request.
+      // Clear any previous sources, flashcards, and quizzes for this request.
       if (input.courseId) {
         clearSourcesStore(input.courseId);
         clearFlashcardStore(input.courseId);
+        clearQuizStore(input.courseId);
       }
 
       let finalUserMessage = input.question;
@@ -132,19 +134,14 @@ export class RAGWorkflowStreaming {
       let fullResponseContent = '';
 
       for await (const chunk of responseStream) {
-        const anyChunk = chunk as any;
-        // The chunk can be a string or an object with tool call info
-        if (typeof anyChunk === 'string') {
-          fullResponseContent += anyChunk;
-          yield { chunk: anyChunk };
-        } else if (typeof anyChunk === 'object' && anyChunk !== null) {
-          // Yield the whole object so consumers can see tool calls/results
-          yield anyChunk;
+        if (typeof chunk === 'string') {
+          fullResponseContent += chunk;
+          yield { chunk };
         }
       }
 
       // After streaming, get linked resources from tools used.
-      const linkedResources: Array<{ type: 'document' | 'flashcard_set'; id: string }> = [];
+      const linkedResources: Array<{ type: 'document' | 'flashcard_set' | 'quiz'; id: string }> = [];
       
       // Add documents from set_sources tool
       if (input.courseId) {
@@ -158,6 +155,13 @@ export class RAGWorkflowStreaming {
         const flashcardSetIds = getFlashcardSetsFromStore(input.courseId);
         flashcardSetIds.forEach(id => linkedResources.push({ type: 'flashcard_set', id }));
         console.log(`[RAGWorkflow] Found ${flashcardSetIds.length} flashcard sets from generate_flashcard tool.`);
+      }
+      
+      // Add quizzes created during this session
+      if (input.courseId) {
+        const quizIds = getQuizzesFromStore(input.courseId);
+        quizIds.forEach(id => linkedResources.push({ type: 'quiz', id }));
+        console.log(`[RAGWorkflow] Found ${quizIds.length} quizzes from generate_quiz tool using courseId: ${input.courseId}. Quiz IDs: ${quizIds.join(', ')}`);
       }
 
       console.log(`[RAGWorkflow] Final linked resources to save: ${linkedResources.length}`);
@@ -183,6 +187,7 @@ export class RAGWorkflowStreaming {
       if (input.courseId) {
         clearSourcesStore(input.courseId);
         clearFlashcardStore(input.courseId);
+        clearQuizStore(input.courseId);
       }
 
       // Send final result with metadata

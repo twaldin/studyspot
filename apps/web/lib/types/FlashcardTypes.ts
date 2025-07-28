@@ -20,12 +20,15 @@ export interface FlashcardSet {
   user_id: string;
   created_at: string;
   updated_at: string;
+  edited_from?: string; // Foreign key to original flashcard set
   // Computed fields for display
   card_count?: number;
   creator_name?: string;
   creator_profile_image?: string;
   course_name?: string;
   course_code?: string;
+  original_title?: string; // Title of the original set if this is an edit
+  is_owned_by_current_user?: boolean; // Whether current user owns this set
 }
 
 export interface FlashcardSetWithCards extends FlashcardSet {
@@ -85,6 +88,7 @@ export interface SaveFlashcardSetRequest {
   title: string;
   description: string;
   course_id: string;
+  edited_from?: string; // ID of the original flashcard set if this is an edit
   cards: Array<{
     side1: string;
     side2: string;

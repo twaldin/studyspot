@@ -3,9 +3,15 @@
 import { FlashcardSet } from "@/lib/types/FlashcardTypes";
 import { flashcardService } from "../services/flashcard.service";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, User, Calendar, FileText, Play, Edit } from "lucide-react";
+import { BookOpen, Calendar, Edit, FileText, Play, User } from "lucide-react";
 import Image from "next/image";
 
 interface FlashcardSetPreviewProps {
@@ -65,7 +71,9 @@ export function FlashcardSetPreview({
         <div className="flex items-center space-x-3">
           <div className="flex items-center space-x-2">
             <User className="h-4 w-4 text-gray-400" />
-            <span className="text-sm text-gray-600 dark:text-gray-400">Created by</span>
+            <span className="text-sm text-gray-600 dark:text-gray-400">
+              Created by
+            </span>
           </div>
           <div className="flex items-center space-x-2">
             {flashcardSet.creator_profile_image && (
@@ -114,10 +122,13 @@ export function FlashcardSetPreview({
           </div>
           <div className="mt-4 text-sm text-gray-500 dark:text-gray-400">
             <p>
-              <strong>Study:</strong> Practice with these flashcards using different modes and settings
+              <strong>Study:</strong>{" "}
+              Practice with these flashcards using different modes and settings
             </p>
             <p className="mt-1">
-              <strong>Edit:</strong> Modify the cards and save your own version for collaborative learning
+              <strong>Edit:</strong>{" "}
+              Modify the cards and save your own version for collaborative
+              learning
             </p>
           </div>
         </CardContent>
@@ -134,25 +145,33 @@ export function FlashcardSetPreview({
               <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                 {flashcardSet.card_count || 0}
               </div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">Total Cards</div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">
+                Total Cards
+              </div>
             </div>
             <div className="space-y-1">
               <div className="text-2xl font-bold text-green-600 dark:text-green-400">
                 {flashcardSet.course_code}
               </div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">Course</div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">
+                Course
+              </div>
             </div>
             <div className="space-y-1">
               <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
                 {timeAgo}
               </div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">Created</div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">
+                Created
+              </div>
             </div>
             <div className="space-y-1">
               <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
                 Public
               </div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">Visibility</div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">
+                Visibility
+              </div>
             </div>
           </div>
         </CardContent>
@@ -160,3 +179,4 @@ export function FlashcardSetPreview({
     </div>
   );
 }
+

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { FlashcardSetResponse, FlashcardSetWithCards } from "@/lib/types/FlashcardTypes";
 import { supabaseService } from "@/lib/services/database/supabase.service";
-import { auth } from "@clerk/nextjs/server";
+import { auth, clerkClient } from "@clerk/nextjs/server";
 
 export async function GET(
   request: NextRequest,
@@ -31,6 +31,7 @@ export async function GET(
         user_id,
         created_at,
         updated_at,
+        edited_from,
         courses!flashcard_set_course_id_fkey (
           title,
           code
@@ -54,10 +55,36 @@ export async function GET(
     // The flashcards are now part of flashcardSetData
     const flashcardsData = (flashcardSetData as any).flashcards;
 
-    // For now, we'll skip creator information until we have a users table
-    // This can be enhanced later when user profiles are implemented
-    const creatorName = undefined;
-    const creatorProfileImage = undefined;
+    // Get creator information from Clerk
+    let creatorName = undefined;
+    let creatorProfileImage = undefined;
+    
+    try {
+      const client = await clerkClient();
+      const creator = await client.users.getUser(flashcardSetData.user_id);
+      creatorName = creator.firstName && creator.lastName 
+        ? `${creator.firstName} ${creator.lastName}`
+        : creator.firstName || creator.lastName || creator.emailAddresses?.[0]?.emailAddress || 'Unknown User';
+      creatorProfileImage = creator.imageUrl;
+    } catch (error) {
+      console.warn("Could not fetch creator information:", error);
+      creatorName = 'Unknown User';
+    }
+
+    // Get original title if this is an edited set
+    let originalTitle = undefined;
+    if (flashcardSetData.edited_from) {
+      try {
+        const { data: originalSet } = await supabase
+          .from('flashcard_sets')
+          .select('title')
+          .eq('id', flashcardSetData.edited_from)
+          .single();
+        originalTitle = originalSet?.title;
+      } catch (error) {
+        console.warn("Could not fetch original set title:", error);
+      }
+    }
 
     // Construct the response
     const flashcardSet: FlashcardSetWithCards = {
@@ -68,11 +95,14 @@ export async function GET(
       user_id: flashcardSetData.user_id,
       created_at: flashcardSetData.created_at,
       updated_at: flashcardSetData.updated_at,
+      edited_from: flashcardSetData.edited_from,
       card_count: flashcardsData?.length || 0,
       creator_name: creatorName,
       creator_profile_image: creatorProfileImage,
       course_name: (flashcardSetData.courses as any)?.title,
       course_code: (flashcardSetData.courses as any)?.code,
+      original_title: originalTitle,
+      is_owned_by_current_user: flashcardSetData.user_id === userId,
       cards: flashcardsData || [],
     };
 

@@ -63,16 +63,36 @@ export class FlashcardService {
     const needsReshuffle = currentState.settings.mode !== newSettings.mode;
     
     let shuffledCards = currentState.shuffledCards;
+    let newCurrentIndex = currentState.progress.currentCardIndex;
+    
     if (needsReshuffle) {
-      shuffledCards = newSettings.mode === 'random'
-        ? this.shuffleArray([...originalCards])
-        : [...originalCards].sort((a, b) => a.card_number - b.card_number);
+      const currentCard = this.getCurrentCard(currentState);
+      
+      if (newSettings.mode === 'random') {
+        shuffledCards = this.intelligentShuffle(
+          originalCards, 
+          currentState.progress.completedCards, 
+          currentCard
+        );
+      } else {
+        shuffledCards = [...originalCards].sort((a, b) => a.card_number - b.card_number);
+      }
+      
+      // Find the index of the current card in the new arrangement
+      if (currentCard) {
+        const newIndex = shuffledCards.findIndex(card => card.card_id === currentCard.card_id);
+        newCurrentIndex = newIndex >= 0 ? newIndex : 0;
+      }
     }
 
     return {
       ...currentState,
       settings: newSettings,
       shuffledCards,
+      progress: {
+        ...currentState.progress,
+        currentCardIndex: newCurrentIndex,
+      },
       isFlipped: false, // Reset flip state when settings change
     };
   }
@@ -105,6 +125,33 @@ export class FlashcardService {
       currentCardIndex: nextIndex,
       completedCards: newCompletedCards,
       isComplete,
+    };
+
+    return {
+      ...currentState,
+      progress: newProgress,
+      isFlipped: false, // Reset flip state for new card
+    };
+  }
+
+  /**
+   * Navigate to the previous card in study mode
+   */
+  navigateToPreviousCard(currentState: StudyState): StudyState {
+    const { progress, shuffledCards } = currentState;
+    
+    if (!shuffledCards || shuffledCards.length === 0) {
+      return currentState;
+    }
+
+    // Calculate previous index (loop infinitely in reverse)
+    const prevIndex = progress.currentCardIndex === 0 
+      ? shuffledCards.length - 1 
+      : progress.currentCardIndex - 1;
+
+    const newProgress: StudyProgress = {
+      ...progress,
+      currentCardIndex: prevIndex,
     };
 
     return {
@@ -235,6 +282,43 @@ export class FlashcardService {
       course_id: courseId,
       cards,
     };
+  }
+
+  /**
+   * Intelligent shuffle that prioritizes unseen cards and keeps current card in place
+   */
+  private intelligentShuffle(
+    originalCards: Flashcard[], 
+    completedCards: Set<string>, 
+    currentCard: Flashcard | null
+  ): Flashcard[] {
+    // Separate cards into seen and unseen
+    const unseenCards = originalCards.filter(card => !completedCards.has(card.card_id));
+    const seenCards = originalCards.filter(card => completedCards.has(card.card_id));
+    
+    // If we have unseen cards, prioritize them
+    let result: Flashcard[];
+    if (unseenCards.length > 0) {
+      // Shuffle unseen cards and put them first
+      const shuffledUnseen = this.shuffleArray(unseenCards);
+      const shuffledSeen = this.shuffleArray(seenCards);
+      result = [...shuffledUnseen, ...shuffledSeen];
+    } else {
+      // All cards have been seen, shuffle everything
+      result = this.shuffleArray(originalCards);
+    }
+    
+    // If we have a current card, move it to the front
+    if (currentCard) {
+      const currentIndex = result.findIndex(card => card.card_id === currentCard.card_id);
+      if (currentIndex > 0) {
+        // Remove current card from its position and put it at the front
+        const [card] = result.splice(currentIndex, 1);
+        result.unshift(card);
+      }
+    }
+    
+    return result;
   }
 
   /**
