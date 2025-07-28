@@ -4,13 +4,15 @@ import { motion } from "framer-motion";
 import { Flashcard as FlashcardType } from "@/lib/types/FlashcardTypes";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { FlashcardContent } from "./flashcard-content";
 
 interface FlashcardProps {
   card: FlashcardType;
   isFlipped: boolean;
-  showSide: 'side1' | 'side2';
+  showSide: "side1" | "side2";
   onFlip: () => void;
   className?: string;
+  isFullscreen?: boolean;
 }
 
 export function Flashcard({
@@ -19,31 +21,50 @@ export function Flashcard({
   showSide,
   onFlip,
   className,
+  isFullscreen = false,
 }: FlashcardProps) {
-  const displayText = showSide === 'side1' ? card.side1 : card.side2;
+  const displayText = showSide === "side1" ? card.side1 : card.side2;
 
   return (
-    <div className={cn("relative w-full max-w-2xl mx-auto", className)}>
+    <div
+      className={cn(
+        "relative w-full h-full mx-auto flex items-center justify-center",
+        className,
+      )}
+      style={{ perspective: "5000px" }}
+    >
       {/* Card Container */}
       <motion.div
-        className="relative preserve-3d cursor-pointer"
-        style={{ transformStyle: 'preserve-3d' }}
-        animate={{ rotateY: isFlipped ? 180 : 0 }}
-        transition={{ duration: 0.6, ease: "easeInOut" }}
+        className="relative preserve-3d cursor-pointer w-full h-full"
+        style={{
+          transformStyle: "preserve-3d",
+          transformOrigin: "center center",
+          maxHeight: "100%",
+          minHeight: "200px",
+        }}
+        animate={{ rotateX: isFlipped ? 180 : 0 }}
         onClick={onFlip}
       >
         {/* Front Side */}
         <motion.div
-          className="absolute inset-0 backface-hidden"
-          style={{ backfaceVisibility: 'hidden' }}
+          className="absolute inset-0"
+          style={{
+            backfaceVisibility: "hidden",
+            transformOrigin: "center center",
+          }}
         >
-          <Card className="h-80 w-full bg-white dark:bg-gray-800 border-2 border-blue-200 dark:border-blue-700 shadow-lg hover:shadow-xl transition-shadow">
-            <CardContent className="h-full flex flex-col items-center justify-center p-8 text-center">
-              <div className="space-y-4">
-                <div className="text-2xl md:text-3xl font-medium text-gray-900 dark:text-gray-100 leading-relaxed">
-                  {!isFlipped ? displayText : (showSide === 'side1' ? card.side2 : card.side1)}
-                </div>
-                <div className="text-sm text-gray-500 dark:text-gray-400 mt-6">
+          <Card
+            className="w-full h-full bg-card shadow-lg hover:shadow-xl transition-shadow rounded-xl"
+          >
+            <CardContent className="h-full flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 text-center">
+              <div className="space-y-2 sm:space-y-4 w-full">
+                <FlashcardContent
+                  content={!isFlipped
+                    ? displayText
+                    : (showSide === "side1" ? card.side2 : card.side1)}
+                  className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-medium text-gray-900 dark:text-gray-100 text-center leading-tight"
+                />
+                <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-2 sm:mt-4 md:mt-6">
                   Click to flip
                 </div>
               </div>
@@ -53,18 +74,24 @@ export function Flashcard({
 
         {/* Back Side */}
         <motion.div
-          className="absolute inset-0 backface-hidden"
-          style={{ 
-            backfaceVisibility: 'hidden',
-            transform: 'rotateY(180deg)'
+          className="absolute inset-0"
+          style={{
+            backfaceVisibility: "hidden",
+            transform: "rotateX(180deg)",
+            transformOrigin: "center center",
           }}
         >
-          <Card className="h-80 w-full bg-white dark:bg-gray-800 border-2 border-green-200 dark:border-green-700 shadow-lg hover:shadow-xl transition-shadow">
+          <Card
+            className="w-full h-full bg-card shadow-lg hover:shadow-xl transition-shadow rounded-xl"
+          >
             <CardContent className="h-full flex flex-col items-center justify-center p-8 text-center">
-              <div className="space-y-4">
-                <div className="text-2xl md:text-3xl font-medium text-gray-900 dark:text-gray-100 leading-relaxed">
-                  {isFlipped ? displayText : (showSide === 'side1' ? card.side2 : card.side1)}
-                </div>
+              <div className="space-y-4 w-full">
+                <FlashcardContent
+                  content={isFlipped
+                    ? displayText
+                    : (showSide === "side1" ? card.side2 : card.side1)}
+                  className="text-2xl md:text-3xl font-medium text-gray-900 dark:text-gray-100 text-center"
+                />
                 <div className="text-sm text-gray-500 dark:text-gray-400 mt-6">
                   Click to flip back
                 </div>
@@ -75,7 +102,7 @@ export function Flashcard({
       </motion.div>
 
       {/* Card Number Indicator */}
-      <div className="absolute -top-4 -right-4 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-xs font-bold rounded-full w-8 h-8 flex items-center justify-center shadow-lg">
+      <div className="absolute -top-4 -right-4 bg-card dark:bg-background text-gray-900 dark:text-white text-xs font-bold rounded-full w-8 h-8 flex items-center justify-center shadow-lg">
         {card.card_number}
       </div>
     </div>

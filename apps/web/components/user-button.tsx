@@ -84,7 +84,7 @@ export function UserButton({ variant = "right-sidebar", className }: UserButtonP
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild
-              className="group-data-[collapsible=icon]:justify-center w-full"
+              className="cursor-pointer group-data-[collapsible=icon]:justify-center w-full"
             >
               <div className="flex items-center gap-2">
                 <User className="h-4 w-4 shrink-0" />
@@ -115,7 +115,7 @@ export function UserButton({ variant = "right-sidebar", className }: UserButtonP
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="secondary" className={`gap-2 ${className || ""}`}>
+        <Button variant="secondary" className={`cursor-pointer gap-2 ${className || ""}`}>
           <User className="h-4 w-4" />
           {user?.fullName || ""}
         </Button>

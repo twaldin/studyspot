@@ -48,34 +48,77 @@ export async function POST(
       );
     }
 
-    const newSetId = randomUUID();
-    const now = new Date().toISOString();
-
-    // Create the new flashcard set
-    const { error: setError } = await supabase
+    // Check if user owns the original set
+    const { data: originalSet, error: originalSetError } = await supabase
       .from('flashcard_sets')
-      .insert({
-        id: newSetId,
-        title: saveRequest.title,
-        description: saveRequest.description,
-        course_id: saveRequest.course_id,
-        user_id: userId,
-        created_at: now,
-        updated_at: now
-      });
+      .select('user_id')
+      .eq('id', originalSetId)
+      .single();
 
-    if (setError) {
-      console.error("Error creating flashcard set:", setError);
+    if (originalSetError) {
       return NextResponse.json<SaveFlashcardSetResponse>(
-        { success: false, data: null, error: "Failed to create flashcard set" },
-        { status: 500 }
+        { success: false, data: null, error: "Original set not found" },
+        { status: 404 }
       );
     }
 
-    // Create the flashcards
+    const isOwner = originalSet.user_id === userId;
+    const now = new Date().toISOString();
+    let setId = originalSetId;
+
+    if (isOwner) {
+      // Update the existing set
+      const { error: setError } = await supabase
+        .from('flashcard_sets')
+        .update({
+          title: saveRequest.title,
+          description: saveRequest.description,
+          updated_at: now
+        })
+        .eq('id', originalSetId);
+
+      if (setError) {
+        console.error("Error updating flashcard set:", setError);
+        return NextResponse.json<SaveFlashcardSetResponse>(
+          { success: false, data: null, error: "Failed to update flashcard set" },
+          { status: 500 }
+        );
+      }
+
+      // Delete existing cards first
+      await supabase
+        .from('flashcards')
+        .delete()
+        .eq('set_id', originalSetId);
+    } else {
+      // Create a new set
+      setId = randomUUID();
+      const { error: setError } = await supabase
+        .from('flashcard_sets')
+        .insert({
+          id: setId,
+          title: saveRequest.title,
+          description: saveRequest.description,
+          course_id: saveRequest.course_id,
+          user_id: userId,
+          edited_from: saveRequest.edited_from,
+          created_at: now,
+          updated_at: now
+        });
+
+      if (setError) {
+        console.error("Error creating flashcard set:", setError);
+        return NextResponse.json<SaveFlashcardSetResponse>(
+          { success: false, data: null, error: "Failed to create flashcard set" },
+          { status: 500 }
+        );
+      }
+    }
+
+    // Create/update the flashcards
     const flashcardsToInsert = saveRequest.cards.map((card, index) => ({
       card_id: randomUUID(),
-      set_id: newSetId,
+      set_id: setId,
       side1: card.side1,
       side2: card.side2,
       card_number: card.card_number || index + 1
@@ -88,11 +131,13 @@ export async function POST(
     if (cardsError) {
       console.error("Error creating flashcards:", cardsError);
       
-      // Clean up the set if cards failed
-      await supabase
-        .from('flashcard_sets')
-        .delete()
-        .eq('id', newSetId);
+      // Clean up the set if cards failed and we created a new one
+      if (!isOwner) {
+        await supabase
+          .from('flashcard_sets')
+          .delete()
+          .eq('id', setId);
+      }
 
       return NextResponse.json<SaveFlashcardSetResponse>(
         { success: false, data: null, error: "Failed to create flashcards" },
@@ -102,7 +147,7 @@ export async function POST(
 
     return NextResponse.json<SaveFlashcardSetResponse>({
       success: true,
-      data: { set_id: newSetId }
+      data: { set_id: setId }
     });
 
   } catch (error) {

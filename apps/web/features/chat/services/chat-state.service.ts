@@ -23,6 +23,23 @@ export class ChatStateService {
   private constructor() {}
 
   /**
+   * Filters out thinking content from the assistant response
+   * Removes everything from <thinking> tags until the closing </thinking> tag is found
+   */
+  private filterThinkingContent(content: string): string {
+    // Remove complete thinking blocks
+    let filtered = content.replace(/<thinking>[\s\S]*?<\/thinking>/g, '');
+    
+    // If there's an unclosed <thinking> tag, remove everything from that point
+    const thinkingStart = filtered.lastIndexOf('<thinking>');
+    if (thinkingStart !== -1) {
+      filtered = filtered.substring(0, thinkingStart);
+    }
+    
+    return filtered.trim();
+  }
+
+  /**
    * Loads chat messages from database and converts them to UI format
    */
   loadChatFromDatabase(chat: { id: string; chats?: unknown }): Message[] {
@@ -33,7 +50,7 @@ export class ChatStateService {
     const messages = Array.isArray(chat.chats) ? chat.chats : [];
     const convertedMessages = messages.map((msg: any, index: number) => ({
       id: index.toString(),
-      content: msg.content,
+      content: msg.role === 'assistant' ? this.filterThinkingContent(msg.content) : msg.content,
       role: msg.role,
       linkedResources: [], // Will be populated by client-side conversion  
       linkedResourceRefs: msg.linked_resources || [], // Store raw refs for conversion
