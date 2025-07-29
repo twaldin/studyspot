@@ -133,12 +133,18 @@ export class RAGWorkflowStreaming {
 
       let fullResponseContent = '';
 
+      let chunkCount = 0;
       for await (const chunk of responseStream) {
         if (typeof chunk === 'string') {
+          chunkCount++;
           fullResponseContent += chunk;
+          console.log(`[RAGWorkflow] Streaming chunk ${chunkCount}: ${chunk.substring(0, 50)}...`);
           yield { chunk };
+        } else {
+          console.log(`[RAGWorkflow] Received non-string chunk:`, typeof chunk, chunk);
         }
       }
+      console.log(`[RAGWorkflow] Text streaming completed. Total chunks: ${chunkCount}, total length: ${fullResponseContent.length}`);
 
       // After streaming, get linked resources from tools used.
       const linkedResources: Array<{ type: 'document' | 'flashcard_set' | 'quiz'; id: string }> = [];

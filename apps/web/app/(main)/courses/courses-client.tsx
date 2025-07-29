@@ -19,7 +19,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Pencil, PlusCircle, Search, X } from "lucide-react";
+import { Pencil, PlusCircle, Search, X, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import React from "react";
 import { CreateCourseDialog } from "@/components/create-course-dialog";
@@ -27,6 +27,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { OnboardingSuccessDialog } from "@/components/onboarding-success-dialog";
 import Link from "next/link";
 import toast from "react-hot-toast";
+import { useDeveloperMode } from "@/contexts/developer-mode-context";
 import {
   useCourses,
   useJoinCourse,
@@ -34,6 +35,7 @@ import {
   useLeaveCourse,
   useSelectedCourse,
   useSetSelectedCourse,
+  useDeleteCourse,
 } from "@/hooks/api/courses";
 import { ICourse } from "@/features/courses/course.model";
 
@@ -54,6 +56,8 @@ export function CoursesPageContent() {
   const joinCourseMutation = useJoinCourse();
   const leaveCourseMutation = useLeaveCourse();
   const setSelectedCourseMutation = useSetSelectedCourse();
+  const deleteCourseMutation = useDeleteCourse();
+  const { isDeveloperModeEnabled } = useDeveloperMode();
 
   
   // Auto-focus the search input when component mounts
@@ -124,6 +128,17 @@ export function CoursesPageContent() {
     });
   };
 
+  const handleDeleteCourse = (courseId: string, courseName: string) => {
+    deleteCourseMutation.mutate(courseId, {
+      onSuccess: () => {
+        toast.success(`Successfully deleted ${courseName}`);
+      },
+      onError: (error: any) => {
+        toast.error(error.message || "Failed to delete course");
+      },
+    });
+  };
+
   return (
     <>
       <div className="mx-auto w-full max-w-3xl h-full flex flex-col p-6 gap-4 @container">
@@ -184,7 +199,42 @@ export function CoursesPageContent() {
                     joinedCourses.includes(course.id);
                   const isJoinedLoading = isJoinedCoursesLoading;
                   return (
-                    <Card key={i} className="flex flex-col">
+                    <Card key={i} className="flex flex-col relative group">
+                      {/* Developer Mode Delete Button */}
+                      {isDeveloperModeEnabled && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="absolute top-2 right-2 z-10 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete course?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will permanently delete the course "{course.code}" and all associated documents and chats. This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleDeleteCourse(course.id, course.code)}
+                                disabled={deleteCourseMutation.isPending && deleteCourseMutation.variables === course.id}
+                                className="bg-red-600 hover:bg-red-700"
+                              >
+                                {deleteCourseMutation.isPending && deleteCourseMutation.variables === course.id
+                                  ? "Deleting..."
+                                  : "Delete Course"}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
+                      
                       <CardHeader className="flex-1">
                         <div className="flex items-start gap-4">
                           {/*<course.icon className="h-6 w-6 text-muted-foreground mt-1" />*/}

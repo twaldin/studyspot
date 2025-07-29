@@ -191,8 +191,17 @@ export class StudySpotAgent {
 
       // Return async generator for streaming chunks
       return (async function* () {
-        for await (const chunk of stream.textStream) {
-          yield chunk;
+        try {
+          for await (const chunk of stream.textStream) {
+            if (chunk && typeof chunk === 'string' && chunk.length > 0) {
+              console.log(`[StudySpotAgent] Streaming chunk: ${chunk.substring(0, 50)}...`);
+              yield chunk;
+            }
+          }
+          console.log('[StudySpotAgent] Text streaming completed');
+        } catch (streamError) {
+          console.error('[StudySpotAgent] Error in text streaming:', streamError);
+          throw streamError;
         }
       })();
 

@@ -100,6 +100,7 @@ export class ChatStreamingService {
 
               if (data.chunk) {
                 fullResponse += data.chunk;
+                console.log(`[ChatStreaming] Received chunk: ${data.chunk.substring(0, 50)}...`);
                 
                 // Filter out thinking content for display
                 const displayContent = this.filterThinkingContent(fullResponse);
