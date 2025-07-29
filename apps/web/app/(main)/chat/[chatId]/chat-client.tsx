@@ -37,6 +37,7 @@ export function ChatPageContent() {
   const [isAtBottom, setIsAtBottom] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const chatContainerRef = useRef<HTMLDivElement>(null)
+  const hasStartedStreamingRef = useRef<boolean>(false)
 
 
   // Scroll to bottom function
@@ -64,6 +65,8 @@ export function ChatPageContent() {
 
     // Clear messages when chat changes
     setMessages([])
+    // Reset streaming flag for new chat
+    hasStartedStreamingRef.current = false
     
     // Check for initial message in sessionStorage
     const storedInitialMessage = sessionStorage.getItem(`initial-message-${chatId}`)
@@ -132,7 +135,7 @@ export function ChatPageContent() {
 
   // Handle initial message streaming
   useEffect(() => {
-    if (initialMessage && selectedCourse && chat && chatId && !streamingManager.isStreaming(chatId)) {
+    if (initialMessage && selectedCourse && chat && chatId && !streamingManager.isStreaming(chatId) && !hasStartedStreamingRef.current) {
       // This logic is specifically for the first message in a new chat.
       // It looks for a user message followed by an empty assistant message.
       const shouldStartStreaming = messages.length === 2 &&
@@ -142,6 +145,9 @@ export function ChatPageContent() {
         messages[1].content === ''
 
       if (shouldStartStreaming) {
+        // Mark that we've started streaming to prevent duplicate calls
+        hasStartedStreamingRef.current = true
+        console.log('[ChatClient] Starting initial message streaming (preventing duplicates)');
         setIsReplying(true)
         
         // Update streaming status
@@ -214,6 +220,11 @@ export function ChatPageContent() {
   const handleFormSubmit = useCallback(async (values: { message: string }) => {
     if (!selectedCourse || !chatId) {
       setError('Please select a course first')
+      return
+    }
+
+    if (isReplying || streamingManager.isStreaming(chatId)) {
+      console.log('[ChatClient] Preventing duplicate submission - already streaming')
       return
     }
 

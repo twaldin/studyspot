@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, useRef } from "react"
 import { useRouter } from "next/navigation"
+import { useUser } from "@clerk/nextjs"
 import { ChatInputBar } from "@/components/chat-input-bar"
 import { UserMessage } from "@/components/user-message"
 import AssistantMessage from "@/components/assistant-message"
@@ -16,6 +17,7 @@ import logger from "@/lib/logger"
 
 export function ChatPageContent({ chatId }: { chatId?: string }) {
   const router = useRouter()
+  const { user } = useUser()
   const { data: selectedCourse } = useSelectedCourse()
 
   // Local state for this chat instance
@@ -85,6 +87,7 @@ export function ChatPageContent({ chatId }: { chatId?: string }) {
     }
     
     if (isReplying) {
+      console.log('[ChatClient] Preventing duplicate submission - already replying')
       return // Prevent double submissions
     }
     
@@ -100,7 +103,9 @@ export function ChatPageContent({ chatId }: { chatId?: string }) {
       const response = await chatStreamingService.sendMessage(
         messageContent,
         conversationHistory,
-        selectedCourse.id
+        selectedCourse.id,
+        targetChatId,  // Add missing chatId parameter
+        user?.id // Add userId parameter
       )
 
       await chatStreamingService.processStreamingResponse(response, {
