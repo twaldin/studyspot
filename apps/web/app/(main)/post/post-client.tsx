@@ -3,7 +3,7 @@
 import { ArrowLeft, Heart, MessageSquare, Flag } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Textarea } from '@/components/ui/textarea'
+import { Textarea } from '@workspace/ui/components/textarea'
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
 
