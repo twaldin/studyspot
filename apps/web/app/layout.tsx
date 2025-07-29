@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import { Crimson_Text } from "next/font/google";
-import "./globals.css";
+/* import "./globals.css"; */
 import { ThemeProvider } from "@/components/theme-provider";
 import { ClerkThemeProvider } from "@/components/clerk-theme-provider";
 import { cn } from "@/lib/utils";
 import { QueryProvider } from "@/lib/providers/query-provider";
 import { DeveloperModeProvider } from "@/contexts/developer-mode-context";
+
+import "@workspace/ui/styles/globals.css";
+import "./globals.css";
 
 const crimsonText = Crimson_Text({
   weight: ["400", "600", "700"],
