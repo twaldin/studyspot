@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authService } from '@/lib/services/auth/auth.service';
+import { validateAuth, validateAuthWithSchool } from "@/features/auth/operations";
 import { supabaseService } from '@/lib/services/database/supabase.service';
 import { clerkClient } from '@clerk/nextjs/server';
 
@@ -8,7 +8,7 @@ export async function POST(
   { params }: { params: Promise<{ chatId: string }> }
 ) {
   try {
-    const auth = await authService.validateAuthWithSchool();
+    const auth = await validateAuthWithSchool();
     const { chatId } = await params;
     
     if (!chatId) {

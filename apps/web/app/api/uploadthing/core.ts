@@ -64,10 +64,11 @@ export const ourFileRouter = {
         fileKey: file.key,
         fileName: file.name,
         courseId
-      }), 'Upload complete, starting document ingestion');
+      }), 'Upload complete, ready for document processing');
 
-      // Document processing will be handled asynchronously by the client
-      // This allows the upload dialog to close immediately and show processing status
+      // Document ingestion will be handled by the client after upload completion
+      // This approach allows for better user experience with loading states and error handling
+      // The client will use the clientDocumentIngestionService to process the document
 
       return {
         uploadedBy: userId,

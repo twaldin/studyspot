@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { QuizWithQuestions, EditState } from "@/lib/types/QuizTypes";
+import { QuizWithQuestions, EditState } from "@/features/quiz/types";
 import { quizService } from "../services/quiz.service";
 import { useSaveQuiz } from "@/hooks/api/quizzes";
 import { Button } from "@/components/ui/button";

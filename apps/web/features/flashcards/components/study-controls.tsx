@@ -1,7 +1,7 @@
 "use client";
 
-import { StudySettings, StudyProgress } from "@/lib/types/FlashcardTypes";
-import { flashcardService } from "../services/flashcard.service";
+import { StudySettings, StudyProgress } from "@/features/flashcards/types";
+import { getProgressPercentage, getProgressText } from "../services/flashcard.service";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -31,8 +31,8 @@ export function StudyControls({
   onSkip,
   canNavigate,
 }: StudyControlsProps) {
-  const progressPercentage = flashcardService.getProgressPercentage(progress);
-  const progressText = flashcardService.getProgressText(progress);
+  const progressPercentage = getProgressPercentage(progress);
+  const progressText = getProgressText(progress);
 
   const handleModeToggle = () => {
     const newMode = settings.mode === 'ordered' ? 'random' : 'ordered';

@@ -55,11 +55,7 @@ export interface Chat {
   title: string;
   created_at: string;
   course_id: string;
-  chats: Array<{
-    role: 'user' | 'assistant';
-    content: string;
-    linkedResources?: LinkedResource[];
-  }>;
+  chats: Message[];
 }
 
 // Represents a chat summary for display in lists

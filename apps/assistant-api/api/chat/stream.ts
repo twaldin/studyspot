@@ -59,7 +59,8 @@ const StreamRequestSchema = z.object({
   promptOverrides: PromptOverrideSchema.optional()
 });
 
-// No longer needed - client will build resources from type/id
+// Request deduplication cache
+const activeRequests = new Map<string, Promise<void>>();
 
 /**
  * Mastra-based streaming chat endpoint
@@ -103,8 +104,33 @@ export default async function handler(req: SimpleRequest, res: SimpleResponse) {
     console.log(`[Mastra Stream API] Starting RAG stream`, {
       question: question.substring(0, 100),
       courseId,
-      sessionId
+      sessionId,
+      timestamp: new Date().toISOString()
     });
+
+    // Create deduplication key based on sessionId and question
+    const requestKey = `${sessionId}-${question}`;
+    
+    // Check if this exact request is already being processed
+    if (activeRequests.has(requestKey)) {
+      console.log(`[Mastra Stream API] Duplicate request detected, waiting for existing request`, {
+        requestKey,
+        sessionId
+      });
+      
+      // Wait for the existing request to complete
+      try {
+        await activeRequests.get(requestKey);
+      } catch (error) {
+        // If the existing request failed, we can proceed with this one
+        console.log(`[Mastra Stream API] Existing request failed, proceeding with new request`);
+      }
+      
+      // Send empty response since the original request should have handled it
+      res.write(`data: ${JSON.stringify({ done: true, linkedResources: [] })}\n\n`);
+      res.end();
+      return;
+    }
 
     // Prepare input for RAG workflow
     const workflowInput: RAGWorkflowInput = {
@@ -120,47 +146,71 @@ export default async function handler(req: SimpleRequest, res: SimpleResponse) {
     // Start streaming response using Mastra RAG workflow
     const streamGenerator = RAGWorkflowStreaming.executeStream(workflowInput);
 
-    let hasStarted = false;
+    // Create a promise for this request and store it in the active requests map
+    const requestPromise = (async () => {
+      let hasStarted = false;
 
-    for await (const response of streamGenerator) {
-      if (!hasStarted) {
-        hasStarted = true;
-        // Send initial connection confirmation (matching original API)
-        res.write(`data: ${JSON.stringify({ connected: true })}\n\n`);
+      for await (const response of streamGenerator) {
+        if (!hasStarted) {
+          hasStarted = true;
+          // Send initial connection confirmation (matching original API)
+          res.write(`data: ${JSON.stringify({ connected: true })}\n\n`);
+        }
+
+        if (response.error) {
+          // Error response (matching original API format)
+          res.write(`data: ${JSON.stringify({ error: response.error })}\n\n`);
+          break;
+        } else if (response.chunk) {
+          // Text chunk response (matching original API format)
+          res.write(`data: ${JSON.stringify({ chunk: response.chunk })}\n\n`);
+        } else if (response.toolActivity) {
+          // Tool activity event (enhanced thinking indicator)
+          console.log(`[Stream API] Received tool activity event from workflow:`, response.toolActivity);
+          res.write(`data: ${JSON.stringify({ toolActivity: response.toolActivity })}\n\n`);
+        } else if (response.done) {
+          console.log(`[Stream API] Processing done response with linkedDocumentIds:`, response.linkedDocumentIds);
+          
+          // Send simple type/id pairs to client - client will fetch details
+          const linkedResources = response.linkedDocumentIds || [];
+          
+          console.log(`[Stream API] Sending ${linkedResources.length} linked resources to client:`, linkedResources);
+          
+          // Send final response
+          res.write(`data: ${JSON.stringify({ 
+            done: true, 
+            linkedResources
+          })}\n\n`);
+          break;
+        }
       }
 
-      if (response.error) {
-        // Error response (matching original API format)
-        res.write(`data: ${JSON.stringify({ error: response.error })}\n\n`);
-        break;
-      } else if (response.chunk) {
-        // Text chunk response (matching original API format)
-        res.write(`data: ${JSON.stringify({ chunk: response.chunk })}\n\n`);
-      } else if (response.done) {
-        console.log(`[Stream API] Processing done response with linkedDocumentIds:`, response.linkedDocumentIds);
-        
-        // Send simple type/id pairs to client - client will fetch details
-        const linkedResources = response.linkedDocumentIds || [];
-        
-        console.log(`[Stream API] Sending ${linkedResources.length} linked resources to client:`, linkedResources);
-        
-        // Send final response
-        res.write(`data: ${JSON.stringify({ 
-          done: true, 
-          linkedResources
-        })}\n\n`);
-        break;
-      }
+      res.end();
+      console.log(`[Mastra Stream API] Stream completed`, { courseId, sessionId });
+    })();
+
+    // Store the request promise
+    activeRequests.set(requestKey, requestPromise);
+
+    try {
+      // Wait for the request to complete
+      await requestPromise;
+    } finally {
+      // Clean up the request from the active requests map
+      activeRequests.delete(requestKey);
     }
-
-    res.end();
-    console.log(`[Mastra Stream API] Stream completed`, { courseId, sessionId });
 
   } catch (error) {
     console.error(`[Mastra Stream API] Error in stream handler:`, {
       error,
       body: req.body
     });
+    
+    // Clean up the request if we have the parsed body
+    if (req.body && req.body.sessionId && req.body.question) {
+      const requestKey = `${req.body.sessionId}-${req.body.question}`;
+      activeRequests.delete(requestKey);
+    }
     
     if (!res.headersSent) {
       res.setHeader('Content-Type', 'application/json');

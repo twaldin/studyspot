@@ -8,23 +8,27 @@ import {
 import { API_CONSTANTS } from "@/lib/constants";
 import logger from "@/lib/logger";
 
-class OpenAIService {
-  private client: OpenAI | null = null;
+let openaiClient: OpenAI | null = null;
 
+function getOpenAIClient(): OpenAI {
+  if (!openaiClient) {
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error(
+        "The OPENAI_API_KEY environment variable is missing or empty",
+      );
+    }
+    openaiClient = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+  return openaiClient;
+}
+
+class OpenAIService {
   constructor() {}
 
   private getClient(): OpenAI {
-    if (!this.client) {
-      if (!process.env.OPENAI_API_KEY) {
-        throw new Error(
-          "The OPENAI_API_KEY environment variable is missing or empty",
-        );
-      }
-      this.client = new OpenAI({
-        apiKey: process.env.OPENAI_API_KEY,
-      });
-    }
-    return this.client;
+    return getOpenAIClient();
   }
 
   async generateEmbeddings(

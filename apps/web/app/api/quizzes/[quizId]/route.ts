@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { QuizResponse, QuizWithQuestions } from "@/lib/types/QuizTypes";
+import { QuizResponse, QuizWithQuestions } from "@/features/quiz/types";
 import { supabaseService } from "@/lib/services/database/supabase.service";
 import { auth, clerkClient } from "@clerk/nextjs/server";
 

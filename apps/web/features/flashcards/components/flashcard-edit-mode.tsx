@@ -1,8 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { FlashcardSetWithCards, EditState } from "@/lib/types/FlashcardTypes";
-import { flashcardService } from "../services/flashcard.service";
+import { FlashcardSetWithCards, EditState } from "@/features/flashcards/types";
+import {
+  initializeEditState,
+  updateCardInEditMode,
+  convertEditStateToSaveRequest,
+} from "../services/flashcard.service";
 import { useSaveFlashcardSet } from "@/hooks/api/flashcards";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,7 +32,7 @@ export function FlashcardEditMode({
   const saveFlashcardSetMutation = useSaveFlashcardSet();
   
   const [editState, setEditState] = useState<EditState>(() =>
-    flashcardService.initializeEditState(flashcardSet.cards)
+    initializeEditState(flashcardSet.cards)
   );
   
   const [setTitle, setSetTitle] = useState(flashcardSet.title);
@@ -38,7 +42,7 @@ export function FlashcardEditMode({
     const originalCard = flashcardSet.cards.find(c => c.card_id === cardId);
     if (!originalCard) return;
 
-    const updatedEditState = flashcardService.updateCardInEditMode(
+    const updatedEditState = updateCardInEditMode(
       editState,
       cardId,
       { [field]: value },
@@ -54,7 +58,7 @@ export function FlashcardEditMode({
     }
 
     try {
-      const saveRequest = flashcardService.convertEditStateToSaveRequest(
+      const saveRequest = convertEditStateToSaveRequest(
         editState,
         setTitle,
         setDescription,

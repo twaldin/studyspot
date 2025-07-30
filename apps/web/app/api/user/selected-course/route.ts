@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import { authService } from '@/lib/services/auth/auth.service';
+import { validateAuth, validateAuthWithSchool } from "@/features/auth/operations";
 import { getSelectedCourseForUser, setSelectedCourseForUser, clearSelectedCourseForUser } from '@/lib/clerk';
 import logger, { LogContext } from '@/lib/logger';
 
 export async function GET(request: Request) {
   try {
-    const auth = await authService.validateAuth();
+    const auth = await validateAuth();
     logger.info(LogContext.api('user/selected-course', auth.userId), 'Getting selected course');
 
     const courseId = await getSelectedCourseForUser(auth.userId);
@@ -30,11 +30,20 @@ export async function GET(request: Request) {
     }
 
     if (!course) {
-      logger.info(LogContext.api('user/selected-course', auth.userId, { courseId }), 'Course not found in database');
+      logger.info(LogContext.api('user/selected-course', auth.userId, { courseId }), 'Course not found in database - clearing user metadata');
+      
+      // Clear the selected course from user metadata since it no longer exists
+      try {
+        await clearSelectedCourseForUser(auth.userId);
+        logger.info(LogContext.api('user/selected-course', auth.userId, { courseId }), 'Cleared invalid selected course from user metadata');
+      } catch (cleanupError) {
+        logger.error(LogContext.api('user/selected-course', auth.userId, { courseId }), 'Failed to clear invalid selected course from user metadata', { error: cleanupError });
+      }
+      
       return NextResponse.json({ 
         selectedCourse: null, 
         message: 'Course not found' 
-      }, { status: 404 });
+      }, { status: 200 }); // Changed to 200 since we successfully cleaned up
     }
 
     logger.info(LogContext.api('user/selected-course', auth.userId), 'Course found');
@@ -47,7 +56,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const auth = await authService.validateAuthWithSchool();
+    const auth = await validateAuthWithSchool();
     const { courseId } = await request.json();
     
     if (!courseId) {
@@ -84,7 +93,7 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const auth = await authService.validateAuth();
+    const auth = await validateAuth();
     logger.info(LogContext.api('user/selected-course', auth.userId), 'Clearing selected course');
 
     await clearSelectedCourseForUser(auth.userId);

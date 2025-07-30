@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
-import { authService } from '@/lib/services/auth/auth.service';
+import { validateAuth, validateAuthWithSchool } from "@/features/auth/operations";
 import type { School } from '@/features/auth/types';
 import { clerkClient } from '@clerk/nextjs/server';
 import logger from '@/lib/logger';
 
 export async function GET(request: Request) {
   try {
-    const auth = await authService.validateAuthWithSchool();
+    const auth = await validateAuthWithSchool();
     const supabase = auth.supabase;
 
     const { data: school, error } = await supabase
@@ -35,7 +35,7 @@ export async function GET(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const auth = await authService.validateAuth();
+    const auth = await validateAuth();
     logger.info({ userId: auth.userId }, '[User School] Removing school selection');
 
     const client = await clerkClient();

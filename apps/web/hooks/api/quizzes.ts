@@ -5,7 +5,7 @@ import {
   QuizResponse,
   SaveQuizRequest,
   SaveQuizResponse,
-} from "@/lib/types/QuizTypes";
+} from "@/features/quiz/types";
 
 /**
  * Hook to fetch a quiz with all its questions
