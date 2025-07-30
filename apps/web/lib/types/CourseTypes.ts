@@ -83,32 +83,6 @@ export interface SyllabusProcessingResult {
   message?: string;
 }
 
-// Error types
-export class CourseServiceError extends Error {
-  public code?: string;
-  public type?:
-    | "validation"
-    | "duplicate"
-    | "not_found"
-    | "external_api"
-    | "database"
-    | "ingestion";
-  public confidence?: number;
-
-  constructor(
-    message: string,
-    type?: CourseServiceError["type"],
-    code?: string,
-    confidence?: number,
-  ) {
-    super(message);
-    this.name = "CourseServiceError";
-    this.type = type;
-    this.code = code;
-    this.confidence = confidence;
-    Object.setPrototypeOf(this, CourseServiceError.prototype);
-  }
-}
 
 // Pattern validation types (for course code validation)
 export interface PatternValidationResult {
@@ -128,10 +102,3 @@ export interface DepartmentCodeVariations {
   [key: string]: string[];
 }
 
-// Service configuration
-export interface CourseServiceConfig {
-  cacheEnabled?: boolean;
-  cacheTTL?: number;
-  maxRetries?: number;
-  openAIModel?: string;
-}

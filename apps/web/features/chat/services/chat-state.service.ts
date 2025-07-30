@@ -27,6 +27,12 @@ export class ChatStateService {
    * Removes everything from <thinking> tags until the closing </thinking> tag is found
    */
   private filterThinkingContent(content: string): string {
+    // Ensure content is a string
+    if (typeof content !== 'string') {
+      console.warn('[ChatState] filterThinkingContent received non-string content:', typeof content, content);
+      return String(content || '');
+    }
+    
     // Remove complete thinking blocks
     let filtered = content.replace(/<thinking>[\s\S]*?<\/thinking>/g, '');
     

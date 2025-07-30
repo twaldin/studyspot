@@ -4,12 +4,13 @@ import { ConfigLoaderService } from '../../services/config-loader.service.js';
 import { SupabaseService } from '../../services/supabase.service.js';
 
 /**
- * Response schema for query reformulation
+ * Response schema for simple query analysis (RAG decision only)
  */
-export interface QueryReformulationResult {
+export interface QueryAnalysisResult {
   ragNeeded: boolean;
   question: string;
   search_query: string;
+  reasoning: string;
 }
 
 /**
@@ -52,79 +53,102 @@ export class QueryReformulationAgent {
     }
   }
 
+
   /**
-   * Analyze a query and determine if RAG is needed
+   * Simple query analysis to determine if RAG is needed
    */
   static async analyzeQuery(
     question: string,
     conversationHistory: any[] = [],
-    timeZone?: string
-  ): Promise<QueryReformulationResult> {
+    timeZone?: string,
+    courseId?: string
+  ): Promise<QueryAnalysisResult> {
     try {
       const agent = await this.getInstance();
       const currentDate = SupabaseService.getFormattedDate(timeZone);
-
-      // Format the RAG decision prompt with current date
-      const contextualizedPrompt = ConfigLoaderService.formatPromptTemplate(
-        await ConfigLoaderService.getRAGDecisionPrompt(),
-        {
-          currentDate,
-          responseFormat: JSON.stringify({
-            ragNeeded: "boolean",
-            question: "string - standalone question if ragNeeded is true, otherwise original question",
-            search_query: "string - descriptive search terms if ragNeeded is true, otherwise empty string"
-          }, null, 2)
+      
+      // Get course context if available
+      let courseContext = 'General academic context';
+      if (courseId) {
+        const courseDetails = await SupabaseService.getCourseDetails(courseId);
+        if (courseDetails) {
+          courseContext = `${courseDetails.code} - ${courseDetails.title}`;
         }
-      );
+      }
 
-      // Prepare the analysis prompt
-      const analysisPrompt = `${contextualizedPrompt}
+      const ragDecisionPrompt = `
+You are an expert at determining whether a student query requires searching through course materials.
 
-Conversation History:
-${conversationHistory.map(msg => `${msg.role}: ${msg.content}`).join('\n')}
+Context:
+- Course: ${courseContext}
+- Current Date: ${currentDate}
+- Previous conversation: ${conversationHistory.map(msg => `${msg.role}: ${msg.content}`).join('\n')}
 
-Latest User Message: "${question}"
+Query: "${question}"
 
-Analyze this query and respond with the required JSON format.`;
+Determine if this query requires searching through course documents and materials (RAG needed) or if it can be answered with general knowledge.
 
-      console.log(`[QueryReformulationAgent] Analyzing query: "${question.substring(0, 100)}${question.length > 100 ? '...' : ''}"`);
+RAG IS NEEDED for:
+- Questions about specific course content, concepts, or materials
+- Requests to create study materials (quizzes, flashcards) from course content
+- Questions that reference course-specific information
+- Questions about assignments, exams, or course logistics
+
+RAG IS NOT NEEDED for:
+- General academic questions that don't require course-specific materials
+- Basic concept explanations that are universally applicable
+- Simple calculations or formulas
+
+Return structured JSON with:
+{
+  "ragNeeded": true/false,
+  "reasoning": "brief explanation of why RAG is or isn't needed",
+  "search_query": "if RAG needed, provide optimized search query, otherwise empty string"
+}`;
+
+      console.log(`[QueryReformulationAgent] Running RAG decision analysis for: "${question.substring(0, 100)}${question.length > 100 ? '...' : ''}"`);
 
       // Generate analysis
       const response = await agent.generate([
         {
           role: 'user',
-          content: analysisPrompt
+          content: ragDecisionPrompt
         }
-      ], {
-        instructions: contextualizedPrompt
-      });
+      ]);
 
       // Parse JSON response
-      let analysisResult: QueryReformulationResult;
       try {
+        console.log(`[QueryReformulationAgent] Raw LLM response: ${response.text.substring(0, 500)}...`);
+        
         // Extract JSON from response (handle potential markdown wrapping)
         const jsonMatch = response.text.match(/```json\n([\s\S]*?)\n```/) || response.text.match(/\{[\s\S]*\}/);
         const jsonString = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : response.text;
         
+        console.log(`[QueryReformulationAgent] Extracted JSON string: ${jsonString}`);
+        
         const parsed = JSON.parse(jsonString);
-        analysisResult = {
-          ragNeeded: parsed.ragNeeded || false,
-          question: parsed.question || question,
-          search_query: parsed.search_query || ''
+        console.log(`[QueryReformulationAgent] Parsed JSON:`, parsed);
+        
+        const analysisResult: QueryAnalysisResult = {
+          ragNeeded: parsed.ragNeeded !== undefined ? parsed.ragNeeded : true,
+          question: question,
+          search_query: parsed.search_query || question,
+          reasoning: parsed.reasoning || 'Basic RAG decision'
         };
+        
+        console.log(`[QueryReformulationAgent] Analysis result: RAG needed: ${analysisResult.ragNeeded}`);
+        return analysisResult;
+        
       } catch (parseError) {
-        console.warn('[QueryReformulationAgent] Failed to parse JSON response, falling back to defaults:', parseError);
-        // Fallback: assume RAG is needed for most queries
-        analysisResult = {
+        console.warn('[QueryReformulationAgent] Failed to parse LLM response, using fallback:', parseError);
+        // Fallback: assume RAG is needed
+        return {
           ragNeeded: true,
           question: question,
-          search_query: question
+          search_query: question,
+          reasoning: 'Fallback - assuming RAG needed due to parsing error'
         };
       }
-
-      console.log(`[QueryReformulationAgent] Analysis result: RAG needed: ${analysisResult.ragNeeded}, reformulated: "${analysisResult.question.substring(0, 50)}${analysisResult.question.length > 50 ? '...' : ''}"`);
-
-      return analysisResult;
 
     } catch (error) {
       console.error('[QueryReformulationAgent] Error analyzing query:', error);
@@ -133,7 +157,8 @@ Analyze this query and respond with the required JSON format.`;
       return {
         ragNeeded: true,
         question: question,
-        search_query: question
+        search_query: question,
+        reasoning: 'Fallback due to analysis error'
       };
     }
   }

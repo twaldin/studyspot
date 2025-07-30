@@ -1,30 +1,22 @@
 import { NextResponse } from "next/server";
-import { authService } from "@/lib/services/auth/auth.service";
-import { courseService } from "@/features/courses/course.service";
+import { validateAuthWithSchool } from "@/features/auth/operations";
+import { fetchCourses, verifyCourse, createCourse } from "@/features/courses/operations";
 
 export async function GET(request: Request) {
   try {
-    const auth = await authService.validateAuthWithSchool();
-    const result = await courseService.fetchCourses(auth.supabase, {
-      schoolId: auth.selectedSchool,
-    });
+    const auth = await validateAuthWithSchool();
+    const courses = await fetchCourses(auth.supabase, auth.selectedSchool);
 
-    if (!result.success) {
-      throw new Error(result.message || "Failed to fetch courses");
-    }
-
-    return NextResponse.json({ courses: result.courses });
+    return NextResponse.json({ courses });
   } catch (error) {
-    const message = error instanceof Error
-      ? error.message
-      : "An unknown error occurred";
+    const message = error instanceof Error ? error.message : "An unknown error occurred";
     return NextResponse.json({ message }, { status: 500 });
   }
 }
 
 export async function POST(request: Request) {
   try {
-    const auth = await authService.validateAuthWithSchool();
+    const auth = await validateAuthWithSchool();
     const { title, code, uploadedFileUrl, tempFileKeys } = await request.json();
 
     if (!title || !code) {
@@ -35,12 +27,12 @@ export async function POST(request: Request) {
     }
 
     // First verify the course before creating it
-    const verificationResult = await courseService.verifyCourse(auth.supabase, {
-      courseCode: code,
-      schoolId: auth.selectedSchool,
-      schoolName: auth.selectedSchoolName,
-      schoolDomain: auth.selectedSchoolDomain || "",
-    });
+    const verificationResult = await verifyCourse(
+      auth.supabase,
+      code,
+      auth.selectedSchool,
+      auth.selectedSchoolName,
+    );
 
     if (!verificationResult.verified) {
       return NextResponse.json(
@@ -48,8 +40,6 @@ export async function POST(request: Request) {
           message: verificationResult.message || "Course verification failed",
           details: {
             reason: verificationResult.reason,
-            confidence: verificationResult.confidence,
-            type: verificationResult.type,
           },
         },
         { status: 400 },
@@ -57,7 +47,7 @@ export async function POST(request: Request) {
     }
 
     // Create the course
-    const result = await courseService.createCourse(auth.supabase, {
+    const result = await createCourse(auth.supabase, {
       title,
       code,
       schoolId: auth.selectedSchool,
@@ -65,31 +55,13 @@ export async function POST(request: Request) {
       tempFileKeys,
     });
 
-    if (!result.success) {
-      return NextResponse.json(
-        {
-          message: result.message || "Failed to create course",
-          details: { type: result.type, confidence: result.confidence },
-        },
-        { status: result.type === "duplicate" ? 409 : 500 },
-      );
-    }
-
-    if (result.type === "partial_success") {
-      return NextResponse.json(
-        { course: result.course, type: result.type, message: result.message },
-        { status: 201 },
-      );
-    }
-
     return NextResponse.json(
       { course: result.course, type: result.type, message: result.message },
       { status: 201 },
     );
   } catch (error) {
-    const message = error instanceof Error
-      ? error.message
-      : "An unknown error occurred";
-    return NextResponse.json({ message }, { status: 500 });
+    const message = error instanceof Error ? error.message : "An unknown error occurred";
+    const status = error instanceof Error && error.message.includes("already exists") ? 409 : 500;
+    return NextResponse.json({ message }, { status });
   }
 }

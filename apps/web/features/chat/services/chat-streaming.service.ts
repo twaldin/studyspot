@@ -19,6 +19,8 @@ export interface StreamingContext {
     partialMessage: string,
     linkedResources?: LinkedResource[],
   ) => void;
+  setToolActivity?: React.Dispatch<React.SetStateAction<string | null>>;
+  setIsTextStreaming?: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 export interface StreamingResponse {
@@ -26,6 +28,7 @@ export interface StreamingResponse {
   done?: boolean;
   linkedResources?: LinkedResourceRef[]; // Simple type/id pairs
   error?: string;
+  toolActivity?: string;
 }
 
 export class ChatStreamingService {
@@ -45,6 +48,12 @@ export class ChatStreamingService {
    * Removes everything from <thinking> tags until the closing </thinking> tag is found
    */
   private filterThinkingContent(content: string): string {
+    // Ensure content is a string
+    if (typeof content !== 'string') {
+      console.warn('[ChatStreaming] filterThinkingContent received non-string content:', typeof content, content);
+      return String(content || '');
+    }
+    
     // Remove complete thinking blocks
     let filtered = content.replace(/<thinking>[\s\S]*?<\/thinking>/g, '');
     
@@ -56,7 +65,6 @@ export class ChatStreamingService {
     
     return filtered.trim();
   }
-
 
   /**
    * Processes a streaming assistant API response, incrementally updating the assistant message content
@@ -78,6 +86,16 @@ export class ChatStreamingService {
     try {
       let chunkCount = 0;
       let linkedResources: LinkedResource[] = [];
+      let lastChunkTime = Date.now();
+      let pauseTimeoutId: NodeJS.Timeout | null = null;
+
+      // Clear any existing pause timeout and reset states
+      if (pauseTimeoutId) {
+        clearTimeout(pauseTimeoutId);
+      }
+      if (context.setIsTextStreaming) {
+        context.setIsTextStreaming(false);
+      }
 
       while (true) {
         const { done, value } = await reader.read();
@@ -86,6 +104,14 @@ export class ChatStreamingService {
             chunkCount,
             fullResponseLength: fullResponse.length,
           }, "Streaming completed successfully");
+          
+          // Clear streaming states when done
+          if (context.setIsTextStreaming) {
+            context.setIsTextStreaming(false);
+          }
+          if (pauseTimeoutId) {
+            clearTimeout(pauseTimeoutId);
+          }
           break;
         }
 
@@ -100,7 +126,23 @@ export class ChatStreamingService {
 
               if (data.chunk) {
                 fullResponse += data.chunk;
-                console.log(`[ChatStreaming] Received chunk: ${data.chunk.substring(0, 50)}...`);
+                
+                // Mark as actively text streaming
+                if (context.setIsTextStreaming) {
+                  context.setIsTextStreaming(true);
+                }
+                
+                // Clear any existing pause timeout
+                if (pauseTimeoutId) {
+                  clearTimeout(pauseTimeoutId);
+                }
+                
+                // Set up pause detection (1 second)
+                pauseTimeoutId = setTimeout(() => {
+                  if (context.setIsTextStreaming) {
+                    context.setIsTextStreaming(false);
+                  }
+                }, 1000);
                 
                 // Filter out thinking content for display
                 const displayContent = this.filterThinkingContent(fullResponse);
@@ -110,6 +152,12 @@ export class ChatStreamingService {
                 if (context.chatId && context.updateStreamingMessage) {
                   context.updateStreamingMessage(context.chatId, displayContent);
                 }
+                
+                lastChunkTime = Date.now();
+              } else if (data.toolActivity !== undefined && context.setToolActivity) {
+                // Update tool activity for enhanced thinking indicator (including null to clear)
+                context.setToolActivity(data.toolActivity);
+                // Don't change text streaming state - tool activity can show alongside text
               } else if (data.done) {
                 console.info({
                   finalResponseLength: fullResponse.length,
@@ -136,6 +184,14 @@ export class ChatStreamingService {
                     linkedResources,
                   );
                 }
+
+                // Clear tool activity and text streaming when done
+                if (context.setToolActivity) {
+                  context.setToolActivity(null);
+                }
+                if (context.setIsTextStreaming) {
+                  context.setIsTextStreaming(false);
+                }
                 break;
               } else if (data.error) {
                 throw new Error(data.error);
@@ -153,6 +209,10 @@ export class ChatStreamingService {
       reader.releaseLock();
       // Set isReplying to false when streaming is complete
       context.setIsReplying(false);
+      // Clear streaming states
+      if (context.setIsTextStreaming) {
+        context.setIsTextStreaming(false);
+      }
     }
   }
 
@@ -298,7 +358,19 @@ export class ChatStreamingService {
     });
 
     if (!response.ok) {
-      throw new Error(`Assistant API error! status: ${response.status}`);
+      let errorMessage = `Assistant API error! status: ${response.status}`;
+      
+      // Try to get more detailed error info
+      try {
+        const errorText = await response.text();
+        if (errorText) {
+          errorMessage += ` - ${errorText}`;
+        }
+      } catch (e) {
+        // Ignore if we can't read the error text
+      }
+      
+      throw new Error(errorMessage);
     }
 
     return response;
@@ -307,4 +379,3 @@ export class ChatStreamingService {
 
 // Export singleton instance
 export const chatStreamingService = ChatStreamingService.getInstance();
-

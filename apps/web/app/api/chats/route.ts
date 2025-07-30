@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authService } from '@/lib/services/auth/auth.service';
+import { validateAuth, validateAuthWithSchool } from "@/features/auth/operations";
 import { chatService } from '@/features/chat/services/chat.service';
+import { getSelectedCourseForUser } from '@/lib/clerk';
 
 export async function GET(request: Request) {
   try {
-    const auth = await authService.validateAuthWithSchool();
+    const auth = await validateAuthWithSchool();
     const result = await chatService.getChats(auth.userId, auth.selectedSchool);
     return NextResponse.json({ chats: result.chats });
   } catch (error) {
@@ -24,7 +25,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const auth = await authService.validateAuthWithSchool();
+    const auth = await validateAuthWithSchool();
     const { title, initialMessages } = await request.json();
 
     if (!initialMessages || initialMessages.length === 0) {
@@ -35,7 +36,7 @@ export async function POST(request: Request) {
     }
 
     // Get user's selected course
-    const selectedCourseId = await chatService.getUserSelectedCourse(auth.userId);
+    const selectedCourseId = await getSelectedCourseForUser(auth.userId);
     
     if (!selectedCourseId) {
       return NextResponse.json(

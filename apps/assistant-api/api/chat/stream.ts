@@ -164,6 +164,10 @@ export default async function handler(req: SimpleRequest, res: SimpleResponse) {
         } else if (response.chunk) {
           // Text chunk response (matching original API format)
           res.write(`data: ${JSON.stringify({ chunk: response.chunk })}\n\n`);
+        } else if (response.toolActivity) {
+          // Tool activity event (enhanced thinking indicator)
+          console.log(`[Stream API] Received tool activity event from workflow:`, response.toolActivity);
+          res.write(`data: ${JSON.stringify({ toolActivity: response.toolActivity })}\n\n`);
         } else if (response.done) {
           console.log(`[Stream API] Processing done response with linkedDocumentIds:`, response.linkedDocumentIds);
           

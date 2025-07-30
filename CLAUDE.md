@@ -125,23 +125,40 @@ apps/web/
 │   ├── (main)/            # Protected route group
 │   │   ├── chat/          # Chat interface routes
 │   │   ├── courses/       # Course management
-│   │   └── content/       # Content browsing
+│   │   ├── content/       # Content browsing
+│   │   └── flashcards/    # Flashcard study interface
 │   ├── api/               # API routes for database operations
 │   └── onboarding/        # User onboarding flow
 ├── features/              # Domain-driven feature modules
 │   ├── chat/              # Chat functionality
-│   │   ├── services/      # Chat streaming, navigation, state management
-│   │   ├── chat.types.ts  # Type definitions
-│   │   └── *Context.tsx   # React contexts
+│   │   ├── chat-operations.ts      # Database operations (functions)
+│   │   ├── services/               # Specialized services
+│   │   │   ├── chat-streaming.service.ts    # Real-time streaming
+│   │   │   ├── chat-title-generator.ts      # AI title generation
+│   │   │   ├── resource-augmentor.ts        # Resource fetching
+│   │   │   └── chat.service.ts              # Orchestration layer
+│   │   ├── utils/                  # Navigation utilities
+│   │   │   └── navigation.ts       # Router utility functions
+│   │   ├── chat.types.ts           # Type definitions
+│   │   └── *Context.tsx            # React contexts
+│   ├── flashcards/        # Flashcard system
+│   │   ├── types.ts                # TypeScript interfaces
+│   │   ├── services/               # Business logic functions
+│   │   │   └── flashcard.service.ts # Pure utility functions
+│   │   └── components/             # React components
+│   ├── assistant/         # AI assistant functionality
+│   │   └── operations.ts           # Suggested queries functions
 │   ├── courses/           # Course management
-│   ├── document/          # Document processing and upload
-│   └── auth/              # Authentication utilities
+│   │   └── operations.ts           # Course-related functions
+│   ├── auth/              # Authentication utilities
+│   │   └── operations.ts           # Auth helper functions
+│   └── document/          # Document processing and upload
 ├── components/            # Shared UI components
 │   ├── ui/                # Radix-based design system components
 │   └── *.tsx              # App-specific components
 ├── hooks/api/             # TanStack Query hooks for data fetching
 └── lib/                   # Core utilities and services
-    ├── services/          # Business logic services
+    ├── services/          # External integrations
     │   ├── ai/            # AI service integrations
     │   ├── database/      # Supabase service layer
     │   ├── document-ingestion/ # Document processing pipeline
@@ -150,8 +167,14 @@ apps/web/
 ```
 
 #### Key Architectural Patterns
-- **Service Layer Pattern**: Singleton services for core functionality (`*.service.ts`)
-- **Feature Modules**: Domain-specific folders with services, components, and types
+- **Function-Based Operations**: Pure functions for business logic in `*-operations.ts` and `*.service.ts` files
+- **Selective Service Layer**: Singleton services only for stateful operations (streaming, global state)
+- **Feature Modules**: Domain-specific folders with clear separation of concerns
+  - `operations.ts` - Database operations and pure business logic
+  - `services/` - Specialized services for complex stateful operations
+  - `utils/` - Simple utility functions
+  - `types.ts` - TypeScript interface definitions
+  - `components/` - React components
 - **Context Providers**: Global state management for chat navigation and pending chats
 - **Custom Hooks**: API integration layer using TanStack Query
 - **Security-First**: Comprehensive file validation, content sanitization, access controls
@@ -249,33 +272,42 @@ apps/assistant-api/
   - `user.ts`: User preferences and onboarding state
 
 #### Chat System Architecture
-- **Chat Streaming Service** (`apps/web/features/chat/services/chat-streaming.service.ts`): 
-  - SSE response processing with incremental message updates
-  - Conversation history management
-  - Document linking and source attribution
+- **Modular Chat System** with clean separation of concerns:
+  - **Chat Operations** (`features/chat/chat-operations.ts`): Pure database functions
+  - **Chat Streaming Service** (`features/chat/services/chat-streaming.service.ts`): Real-time SSE processing
+  - **Chat Title Generator** (`features/chat/services/chat-title-generator.ts`): AI-powered title generation
+  - **Resource Augmentor** (`features/chat/services/resource-augmentor.ts`): Document and resource fetching
+  - **Chat Service** (`features/chat/services/chat.service.ts`): Orchestration layer maintaining backward compatibility
+  - **Navigation Utils** (`features/chat/utils/navigation.ts`): Router utility functions
 - **Chat Navigation Context**: Persistent chat state during navigation
 - **Pending Chat Context**: Temporary chat state for new conversations
 
 ## Code Conventions & Patterns
 
 ### Service Architecture Patterns
-- **Singleton Services**: All services use static `getInstance()` method pattern for consistent state management
+- **Function-First Approach**: Pure functions for stateless business logic and database operations
+- **Selective Singletons**: Singleton pattern only for legitimate use cases (streaming services, global state)
+- **Operations Pattern**: Database operations and business logic in `*-operations.ts` files using pure functions
+- **Service Layer**: Complex stateful operations in `services/` directories when singleton pattern is justified
 - **Error Handling**: Custom error service with specific error codes and context (`error-response.service.ts`)
 - **Type Safety**: Comprehensive TypeScript interfaces for all API requests/responses
 - **Logging**: Pino logger with structured logging and pretty formatting in development
 
 ### File Naming & Organization
-- **Services**: `*.service.ts` - Business logic and data access layers
+- **Operations**: `*-operations.ts` - Database operations and pure business logic functions
+- **Services**: `*.service.ts` - Complex stateful business logic (use sparingly, prefer operations)
 - **Types**: `*.types.ts` - TypeScript interface definitions  
 - **Components**: `*.tsx` - React components with PascalCase naming
 - **Hooks**: `use-*.ts` - Custom React hooks with camelCase naming
-- **Utils**: `*.ts` - Pure utility functions
+- **Utils**: `*.ts` - Pure utility functions for simple transformations
 
 ### Import Conventions
 - **Path Aliases**: `@/*` maps to application root in web app
 - **Absolute Imports**: Prefer absolute imports over relative for clarity
-- **Service Imports**: Always import singleton instances, not classes
+- **Function Imports**: Import individual functions from operations and utility files
+- **Service Imports**: Import singleton instances for legitimate stateful services
 - **Type-Only Imports**: Use `import type` for TypeScript interfaces
+- **AI Service Layer**: Always use consolidated AI services (`lib/services/ai/`) instead of direct client imports
 
 ### AI Provider Integration
 - **Multi-Provider Support**: Anthropic Claude 3.5, OpenAI (embeddings), Google Gemini
@@ -283,6 +315,26 @@ apps/assistant-api/
 - **Model Configuration**: Environment-based model selection and API key management
 - **Streaming Architecture**: Real-time response streaming with tool-calling capabilities
 - **Context Management**: Conversation history with course-specific context and memory
+
+## Architecture Design Principles
+
+### Function-First Architecture
+- **Pure Functions Preferred**: Stateless business logic implemented as pure functions for better testability
+- **Operations Pattern**: Database operations and business logic in dedicated `*-operations.ts` files
+- **Selective Complexity**: Use classes/singletons only when truly needed for stateful operations
+
+### Anti-Patterns Eliminated
+- ❌ **Singleton Abuse**: No more singleton classes for stateless operations
+- ❌ **Unnecessary Abstraction**: Removed wrapper classes around simple operations
+- ❌ **Mixed Responsibilities**: Clear separation between database, business logic, and presentation layers
+- ❌ **Direct Client Imports**: All AI integrations go through service layer
+
+### Current Best Practices
+- ✅ **Feature-Driven Organization**: Domain-specific code in `features/` directories
+- ✅ **Clear Separation of Concerns**: Operations, services, utils, and components have distinct roles
+- ✅ **Testable Architecture**: Pure functions and modular design enable comprehensive testing
+- ✅ **Type Safety**: Strong TypeScript throughout with minimal `any` usage
+- ✅ **Service Layer**: Consolidated AI services with consistent interfaces
 
 ## Environment Setup
 

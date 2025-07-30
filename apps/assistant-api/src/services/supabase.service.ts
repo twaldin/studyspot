@@ -582,11 +582,19 @@ export class SupabaseService {
 
   /**
    * Update the last assistant message in a chat with the final content and linked resources
+   * Extended to support stream content for persistent tool call storage
    */
   static async updateAssistantMessageInChat(
     chatId: string,
     finalContent: string,
-    linkedResources: Array<{ type: 'document' | 'flashcard_set' | 'quiz'; id: string }>
+    linkedResources: Array<{ type: 'document' | 'flashcard_set' | 'quiz'; id: string }>,
+    streamContent?: {
+      items: Array<
+        | { type: 'text'; content: string }
+        | { type: 'toolCall'; data: any }
+      >;
+      fullText: string;
+    }
   ): Promise<{ success: boolean; error?: string }> {
     try {
       const client = this.getClient();
@@ -612,6 +620,13 @@ export class SupabaseService {
         if (messages[i].role === 'assistant') {
           messages[i].content = finalContent;
           messages[i].linked_resources = linkedResources; // Use the new format
+          
+          // Add streamContent for persistent tool call storage (if provided)
+          if (streamContent) {
+            messages[i].stream_content = streamContent;
+            console.log(`[SupabaseService] Storing stream content with ${streamContent.items.length} items`);
+          }
+          
           messageUpdated = true;
           break;
         }

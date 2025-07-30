@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import { authService } from '@/lib/services/auth/auth.service';
+import { validateAuth, validateAuthWithSchool } from "@/features/auth/operations";
 import { clerkClient } from '@clerk/nextjs/server';
 import logger from '@/lib/logger';
 
 export async function POST(request: Request) {
   try {
-    const auth = await authService.validateAuth();
+    const auth = await validateAuth();
     const { selectedSchool, selectedSchoolName, selectedSchoolDomain } = await request.json();
 
     logger.info({ 

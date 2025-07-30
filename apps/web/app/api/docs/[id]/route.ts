@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { authService } from '@/lib/services/auth/auth.service';
+import { validateAuth, validateAuthWithSchool } from "@/features/auth/operations";
 import { deleteUploadThingFile } from '@/lib/services/file/uploadthing-cleanup';
 import logger from '@/lib/logger';
 
@@ -8,7 +8,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const auth = await authService.validateAuthWithSchool();
+    const auth = await validateAuthWithSchool();
     const supabase = auth.supabase;
     const { id: documentId } = await params;
 

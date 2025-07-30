@@ -7,7 +7,7 @@ import {
   QuestionAnswerState,
   QuizMode,
   QuizQuestion as QuizQuestionType,
-} from "@/lib/types/QuizTypes";
+} from "@/features/quiz/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
