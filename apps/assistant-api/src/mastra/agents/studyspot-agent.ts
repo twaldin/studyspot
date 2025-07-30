@@ -4,7 +4,6 @@ import { anthropic } from '@ai-sdk/anthropic';
 import { getFullDocumentTool } from '../tools/get-full-document.tool.js';
 import { listAllDocumentsTool } from '../tools/list-all-documents.tool.js';
 import { semanticSearchTool } from '../tools/semantic-search.tool.js';
-import { setSourcesTool } from '../tools/set-sources.tool.js';
 import { generateFlashcardSetTool } from '../tools/generate-flashcard-set.tool.js';
 import { generateQuizTool } from '../tools/generate-quiz.tool.js';
 import { ConfigLoaderService } from '../../services/config-loader.service.js';
@@ -47,7 +46,6 @@ export class StudySpotAgent {
           get_full_document: getFullDocumentTool,
           list_all_documents: listAllDocumentsTool,
           semantic_search: semanticSearchTool,
-          set_sources: setSourcesTool,
           create_flashcards: generateFlashcardSetTool,
           create_quiz: generateQuizTool
         }
@@ -67,6 +65,7 @@ export class StudySpotAgent {
     question: string,
     conversationHistory: any[] = [],
     courseId?: string,
+    userId?: string,
     timeZone?: string
   ): Promise<string> {
     try {
@@ -108,6 +107,9 @@ export class StudySpotAgent {
       if (courseId) {
         runtimeContext.set('courseId', courseId);
       }
+      if (userId) {
+        runtimeContext.set('userId', userId);
+      }
       if (timeZone) {
         runtimeContext.set('timeZone', timeZone);
       }
@@ -127,78 +129,93 @@ export class StudySpotAgent {
     }
   }
 
+
   /**
-   * Stream a response (for real-time interaction)
+   * Generate a streaming response with course context and retry logic
    */
-  static async streamResponse(
+  static async generateStreamingResponse(
     question: string,
     conversationHistory: any[] = [],
     courseId?: string,
     userId?: string,
     timeZone?: string
-  ): Promise<AsyncGenerator<string, void, unknown>> {
-    try {
-      const agent = await this.getInstance();
+  ): Promise<any> {
+    const MAX_RETRIES = 3;
+    const RETRY_DELAY = 1000; // 1 second
 
-      // Build context for the prompt
-      let courseContext = 'a college course';
-      if (courseId) {
-        const courseDetails = await SupabaseService.getCourseDetails(courseId);
-        if (courseDetails) {
-          courseContext = `${courseDetails.code} - ${courseDetails.title}`;
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const agent = await this.getInstance();
+
+        // Build context for the prompt
+        let courseContext = 'a college course';
+        if (courseId) {
+          const courseDetails = await SupabaseService.getCourseDetails(courseId);
+          if (courseDetails) {
+            courseContext = `${courseDetails.code} - ${courseDetails.title}`;
+          }
         }
-      }
 
-      const currentDate = SupabaseService.getFormattedDate(timeZone);
-      
-      // Format the system prompt with dynamic context
-      const contextualizedPrompt = ConfigLoaderService.formatPromptTemplate(
-        await ConfigLoaderService.getSystemPrompt(),
-        {
-          courseDetails: courseContext,
-          currentDate
+        const currentDate = SupabaseService.getFormattedDate(timeZone);
+        
+        // Format the system prompt with dynamic context
+        const contextualizedPrompt = ConfigLoaderService.formatPromptTemplate(
+          await ConfigLoaderService.getSystemPrompt(),
+          {
+            courseDetails: courseContext,
+            currentDate
+          }
+        );
+
+        // Prepare messages
+        const messages = [
+          ...conversationHistory,
+          {
+            role: 'user',
+            content: question
+          }
+        ];
+
+        console.log(`[StudySpotAgent] Starting streaming response (attempt ${attempt}/${MAX_RETRIES}) for course: ${courseId || 'none'}, question length: ${question.length}`);
+
+        // Create runtime context for tools
+        const runtimeContext = new RuntimeContext();
+        if (courseId) {
+          runtimeContext.set('courseId', courseId);
         }
-      );
-
-      // Prepare messages
-      const messages = [
-        ...conversationHistory,
-        {
-          role: 'user',
-          content: question
+        if (userId) {
+          runtimeContext.set('userId', userId);
         }
-      ];
-
-      console.log(`[StudySpotAgent] Starting stream response for course: ${courseId || 'none'}`);
-
-      // Create runtime context for tools
-      const runtimeContext = new RuntimeContext();
-      if (courseId) {
-        runtimeContext.set('courseId', courseId);
-      }
-      if (userId) {
-        runtimeContext.set('userId', userId);
-      }
-      if (timeZone) {
-        runtimeContext.set('timeZone', timeZone);
-      }
-
-      // Stream response with runtime context
-      const stream = await agent.stream(messages, {
-        instructions: contextualizedPrompt,
-        runtimeContext
-      });
-
-      // Return async generator for streaming chunks
-      return (async function* () {
-        for await (const chunk of stream.textStream) {
-          yield chunk;
+        if (timeZone) {
+          runtimeContext.set('timeZone', timeZone);
         }
-      })();
 
-    } catch (error) {
-      console.error('[StudySpotAgent] Error streaming response:', error);
-      throw error;
+        // Generate streaming response with runtime context
+        const streamResponse = await agent.stream(messages, {
+          instructions: contextualizedPrompt,
+          runtimeContext
+        });
+
+        console.log(`[StudySpotAgent] Started streaming response successfully on attempt ${attempt}`);
+        return streamResponse;
+
+      } catch (error: any) {
+        console.error(`[StudySpotAgent] Error on attempt ${attempt}/${MAX_RETRIES}:`, error);
+        
+        // Check if it's an overload error and we have retries left
+        const isOverloadError = error?.message?.includes?.('Overloaded') || 
+                               error?.error?.type === 'overloaded_error' ||
+                               error?.status === 503;
+        
+        if (isOverloadError && attempt < MAX_RETRIES) {
+          console.log(`[StudySpotAgent] API overloaded, retrying in ${RETRY_DELAY}ms (attempt ${attempt + 1}/${MAX_RETRIES})`);
+          await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * attempt)); // Exponential backoff
+          continue;
+        }
+        
+        // If final attempt or non-retryable error, throw
+        throw error;
+      }
     }
   }
 

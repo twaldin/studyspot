@@ -6,8 +6,24 @@ import {
   QuizResource,
   LinkedResource,
 } from "@/features/chat/chat.types";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { DocumentCard } from "@/components/document-card";
+import { Trash2 } from "lucide-react";
+import { useDeveloperMode } from "@/contexts/developer-mode-context";
+import { useDeleteDocument } from "@/hooks/api/documents";
+import toast from "react-hot-toast";
 
 interface LinkedResourceCardProps {
   resource: LinkedResource;
@@ -16,6 +32,20 @@ interface LinkedResourceCardProps {
 export const LinkedResourceCard: React.FC<LinkedResourceCardProps> = (
   { resource },
 ) => {
+  const { isDeveloperModeEnabled } = useDeveloperMode();
+  const deleteDocumentMutation = useDeleteDocument();
+
+  const handleDeleteDocument = (documentId: string, fileName: string) => {
+    deleteDocumentMutation.mutate(documentId, {
+      onSuccess: () => {
+        toast.success(`Successfully deleted ${fileName}`);
+      },
+      onError: (error: any) => {
+        toast.error(error.message || "Failed to delete document");
+      },
+    });
+  };
+
   // Handle document resources using existing DocumentCard
   if (resource.type === "document") {
     const documentResource = resource as DocumentResource;
@@ -45,6 +75,7 @@ export const LinkedResourceCard: React.FC<LinkedResourceCardProps> = (
       }
     }
 
+    // Since DocumentCard already handles the delete button, we can just use it directly
     return (
       <DocumentCard
         url={documentResource.file_url}

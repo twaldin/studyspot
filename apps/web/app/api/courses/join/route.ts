@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { authService } from "@/lib/services/auth/auth.service";
+import { validateAuth } from "@/features/auth/operations";
 import { clerkClient } from "@clerk/nextjs/server";
 
 export async function POST(request: Request) {
   try {
-    const auth = await authService.validateAuth();
+    const auth = await validateAuth();
     const { courseId } = await request.json();
 
     if (!courseId || typeof courseId !== "string") {
@@ -43,10 +43,7 @@ export async function POST(request: Request) {
       joinedCourses: updatedJoinedCourses,
     });
   } catch (error) {
-    console.error("Error joining course:", error);
-    const message = error instanceof Error
-      ? error.message
-      : "An unknown error occurred";
+    const message = error instanceof Error ? error.message : "An unknown error occurred";
     return NextResponse.json({ message }, { status: 500 });
   }
 }

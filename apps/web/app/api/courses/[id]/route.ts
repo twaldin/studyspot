@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
-import { authService } from "@/lib/services/auth/auth.service";
-import { courseService } from "@/features/courses/course.service";
+import { validateAuth } from "@/features/auth/operations";
+import { deleteCourse } from "@/features/courses/operations";
 
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const auth = await authService.validateAuth();
+    const auth = await validateAuth();
     const { id: courseId } = await params;
 
     if (!courseId) {
@@ -17,17 +17,11 @@ export async function DELETE(
       );
     }
 
-    const result = await courseService.deleteCourse(auth.supabase, courseId);
-
-    if (!result.success) {
-      throw new Error(result.error || "Failed to delete course");
-    }
+    await deleteCourse(auth.supabase, courseId);
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    const message = error instanceof Error
-      ? error.message
-      : "An unknown error occurred";
+    const message = error instanceof Error ? error.message : "An unknown error occurred";
     return NextResponse.json({ message }, { status: 500 });
   }
 }

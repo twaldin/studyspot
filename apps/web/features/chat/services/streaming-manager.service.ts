@@ -37,10 +37,12 @@ class StreamingManagerService {
     courseId: string,
     context: StreamingContext
   ): Promise<void> {
-    // If already streaming for this chat, don't start a new one
+    // If already streaming for this chat, stop the previous one and start new
     if (this.activeStreams.has(chatId)) {
-      logger.info({ chatId }, 'Streaming already active for this chat');
-      return;
+      logger.info({ chatId }, 'Stopping existing stream and starting new one');
+      this.stopStreaming(chatId);
+      // Wait a moment for cleanup
+      await new Promise(resolve => setTimeout(resolve, 100));
     }
 
     logger.info({ chatId }, 'Starting new streaming session');

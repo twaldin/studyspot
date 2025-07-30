@@ -1,6 +1,6 @@
 "use client";
 
-import { QuizMode, StudyProgress, StudySettings } from "@/lib/types/QuizTypes";
+import { QuizMode, StudyProgress, StudySettings } from "@/features/quiz/types";
 import { quizService } from "../services/quiz.service";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

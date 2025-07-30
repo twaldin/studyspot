@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { extractCourseInfo } from '@/features/document/services/course-extraction.service';
+import { extractCourseInfo } from '@/features/courses/course-extraction';
 
 export async function POST(request: Request) {
   try {

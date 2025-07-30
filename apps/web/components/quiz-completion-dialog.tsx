@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { CheckCircle2, RotateCcw, Eye, Play } from "lucide-react"
-import { StudyProgress } from "@/lib/types/QuizTypes"
+import { StudyProgress } from "@/features/quiz/types"
 
 export type QuizCompletionMode = 'review' | 'retake' | 'practice' | null
 

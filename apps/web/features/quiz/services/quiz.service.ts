@@ -9,7 +9,7 @@ import {
   StudyProgress,
   StudySettings,
   StudyState,
-} from "@/lib/types/QuizTypes";
+} from "@/features/quiz/types";
 
 /**
  * Service for managing quiz business logic

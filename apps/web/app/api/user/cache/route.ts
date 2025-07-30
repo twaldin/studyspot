@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import { authService } from '@/lib/services/auth/auth.service';
+import { validateAuth, validateAuthWithSchool } from "@/features/auth/operations";
 import { clearUserCache } from '@/lib/clerk';
 import logger from '@/lib/logger';
 
 export async function DELETE(request: Request) {
   try {
-    const auth = await authService.validateAuth();
+    const auth = await validateAuth();
     const { userId } = await request.json();
     
     // Ensure user can only clear their own cache

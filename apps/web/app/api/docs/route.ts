@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
-import { authService } from '@/lib/services/auth/auth.service';
+import { validateAuth, validateAuthWithSchool } from "@/features/auth/operations";
 import { clerkClient } from '@clerk/nextjs/server';
 
 export async function GET(request: Request) {
   try {
-    const auth = await authService.validateAuthWithSchool();
+    const auth = await validateAuthWithSchool();
     const { searchParams } = new URL(request.url);
     const courseId = searchParams.get('courseId');
     const ids = searchParams.get('ids');
