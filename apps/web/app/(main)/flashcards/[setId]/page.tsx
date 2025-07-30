@@ -3,7 +3,18 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useFlashcardSet } from "@/hooks/api/flashcards";
-import { flashcardService } from "@/features/flashcards/services/flashcard.service";
+import {
+  initializeStudyState,
+  flipCard,
+  navigateToNextCard,
+  navigateToPreviousCard,
+  updateStudySettings,
+  getCurrentCard,
+  getCardDisplaySide,
+  getProgressText,
+  getProgressPercentage,
+  formatTimeAgo,
+} from "@/features/flashcards/services/flashcard.service";
 import { Flashcard } from "@/features/flashcards/components/flashcard";
 import { FlashcardEditMode } from "@/features/flashcards/components/flashcard-edit-mode";
 import {
@@ -11,7 +22,7 @@ import {
   StudyMode,
   StudySettings,
   StudyState,
-} from "@/lib/types/FlashcardTypes";
+} from "@/features/flashcards/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -53,7 +64,7 @@ export default function FlashcardSetPage() {
   // Initialize study state when flashcard set loads
   useEffect(() => {
     if (flashcardSet?.cards && flashcardSet.cards.length > 0 && !studyState) {
-      const initialStudyState = flashcardService.initializeStudyState(
+      const initialStudyState = initializeStudyState(
         flashcardSet.cards,
       );
       setStudyState(initialStudyState);
@@ -72,13 +83,13 @@ export default function FlashcardSetPage() {
   // Study handlers
   const handleFlipCard = () => {
     if (!studyState) return;
-    const newState = flashcardService.flipCard(studyState);
+    const newState = flipCard(studyState);
     setStudyState(newState);
   };
 
   const handleNextCard = () => {
     if (!studyState) return;
-    const newState = flashcardService.navigateToNextCard(studyState);
+    const newState = navigateToNextCard(studyState);
 
     // Fire confetti when completing the set
     if (newState.progress.isComplete && !studyState.progress.isComplete) {
@@ -92,7 +103,7 @@ export default function FlashcardSetPage() {
 
   const handlePrevCard = () => {
     if (!studyState) return;
-    const newState = flashcardService.navigateToPreviousCard(studyState);
+    const newState = navigateToPreviousCard(studyState);
     setStudyState(newState);
   };
 
@@ -102,7 +113,7 @@ export default function FlashcardSetPage() {
       ? "random"
       : "ordered";
     const newSettings = { ...studyState.settings, mode: newMode };
-    const newState = flashcardService.updateStudySettings(
+    const newState = updateStudySettings(
       studyState,
       newSettings,
       flashcardSet.cards,
@@ -118,7 +129,7 @@ export default function FlashcardSetPage() {
         ? "side2-first"
         : "side1-first",
     };
-    const newState = flashcardService.updateStudySettings(
+    const newState = updateStudySettings(
       studyState,
       newSettings,
       flashcardSet?.cards || [],
@@ -180,8 +191,8 @@ export default function FlashcardSetPage() {
     return null;
   }
 
-  const currentCard = flashcardService.getCurrentCard(studyState);
-  const displaySide = flashcardService.getCardDisplaySide(studyState);
+  const currentCard = getCurrentCard(studyState);
+  const displaySide = getCardDisplaySide(studyState);
 
   if (!currentCard) {
     return (
@@ -198,7 +209,7 @@ export default function FlashcardSetPage() {
     studyState.progress.currentCardIndex + 1
   } / ${studyState.progress.totalCards}`;
 
-  const timeAgo = flashcardService.formatTimeAgo(flashcardSet.created_at);
+  const timeAgo = formatTimeAgo(flashcardSet.created_at);
 
   const renderContent = () => (
     <div className="flex flex-col h-full">
@@ -288,7 +299,7 @@ export default function FlashcardSetPage() {
                   ? "default"
                   : "secondary"}
               >
-                {flashcardService.getProgressText(studyState.progress)}
+                {getProgressText(studyState.progress)}
               </Badge>
             </div>
             <div className="w-full bg-muted rounded-full h-2">
@@ -301,7 +312,7 @@ export default function FlashcardSetPage() {
                 )}
                 style={{
                   width: `${
-                    flashcardService.getProgressPercentage(
+                    getProgressPercentage(
                       studyState.progress,
                     )
                   }%`,

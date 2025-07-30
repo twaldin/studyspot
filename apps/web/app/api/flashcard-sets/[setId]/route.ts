@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { FlashcardSetResponse, FlashcardSetWithCards } from "@/lib/types/FlashcardTypes";
+import { FlashcardSetResponse, FlashcardSetWithCards } from "@/features/flashcards/types";
 import { supabaseService } from "@/lib/services/database/supabase.service";
 import { auth, clerkClient } from "@clerk/nextjs/server";
 

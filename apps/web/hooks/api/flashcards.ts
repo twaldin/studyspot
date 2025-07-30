@@ -5,7 +5,7 @@ import {
   FlashcardSetResponse,
   SaveFlashcardSetRequest,
   SaveFlashcardSetResponse,
-} from "@/lib/types/FlashcardTypes";
+} from "@/features/flashcards/types";
 
 /**
  * Hook to fetch a flashcard set with all its cards

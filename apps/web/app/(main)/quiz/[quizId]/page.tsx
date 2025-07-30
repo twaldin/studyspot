@@ -14,7 +14,7 @@ import {
   StudyMode,
   StudySettings,
   StudyState,
-} from "@/lib/types/QuizTypes";
+} from "@/features/quiz/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {

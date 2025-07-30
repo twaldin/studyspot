@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import { authService } from '@/lib/services/auth/auth.service';
+import { validateAuth, validateAuthWithSchool } from "@/features/auth/operations";
 import type { School } from '@/features/auth/types';
 import logger from '@/lib/logger';
 
 export async function GET(request: Request) {
   try {
-    const auth = await authService.validateAuth();
+    const auth = await validateAuth();
     const supabase = auth.supabase;
 
     const { data: schools, error } = await supabase

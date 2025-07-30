@@ -24,6 +24,8 @@ export function ChatPageContent({ chatId }: { chatId?: string }) {
   const [messages, setMessages] = useState<Message[]>([])
   const [isReplying, setIsReplying] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [toolActivity, setToolActivity] = useState<string | null>(null)
+  const [isTextStreaming, setIsTextStreaming] = useState(false)
 
   // Only fetch chat data if chatId is provided
   const { data: chat, isLoading: isLoadingChat, error: chatError } = useChat(chatId)
@@ -68,6 +70,8 @@ export function ChatPageContent({ chatId }: { chatId?: string }) {
     
     if (shouldClear) {
       chatStateService.clearChatState({ messages, setMessages, setIsReplying, setError }, 'Real chat navigation')
+      setToolActivity(null)
+      setIsTextStreaming(false)
     }
     
     chatNavigationService.logNavigationTransition(previousChatId, chatId, shouldClear)
@@ -116,7 +120,9 @@ export function ChatPageContent({ chatId }: { chatId?: string }) {
         chatId: targetChatId,
         router,
         selectedCourse,
-        setIsReplying
+        setIsReplying,
+        setToolActivity,
+        setIsTextStreaming
       })
     } catch (error) {
       chatStateService.handleMessageError({ messages, setMessages, setIsReplying, setError }, error as Error)
@@ -172,16 +178,37 @@ export function ChatPageContent({ chatId }: { chatId?: string }) {
       
       <div>
         
-        {showThinkingIndicator && (
+        {(showThinkingIndicator || (toolActivity && isTextStreaming)) && (
           <div className="mx-auto w-full max-w-3xl flex justify-start mb-4">
             <div className="py-0 max-w-xl">
               <div className="flex items-center space-x-2 text-gray-500">
-                <div className="flex space-x-1">
-                  <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                  <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                  <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></div>
-                </div>
-                <span className="text-sm">StudySpot is thinking...</span>
+                <span className="text-sm">
+                  StudySpot is {
+                    toolActivity === 'searching' ? 'searching' :
+                    toolActivity === 'reading documents' ? 'reading documents' :
+                    toolActivity === 'generating flashcards' ? 'generating flashcards' :
+                    toolActivity === 'generating a quiz' ? 'generating a quiz' :
+                    toolActivity === 'finding available materials' ? 'finding available materials' :
+                    toolActivity === 'working' ? 'working' :
+                    toolActivity ? toolActivity :
+                    'thinking'
+                  }...
+                </span>
+                <svg 
+                  className="h-5 w-5 animate-pulse" 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  width="24" 
+                  height="24" 
+                  viewBox="0 0 24 24" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  strokeWidth="2" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round"
+                >
+                  <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+                  <path d="m15 5 4 4"></path>
+                </svg>
               </div>
             </div>
           </div>

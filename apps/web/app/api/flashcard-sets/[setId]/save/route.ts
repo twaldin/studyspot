@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { SaveFlashcardSetRequest, SaveFlashcardSetResponse } from "@/lib/types/FlashcardTypes";
+import { SaveFlashcardSetRequest, SaveFlashcardSetResponse } from "@/features/flashcards/types";
 import { supabaseService } from "@/lib/services/database/supabase.service";
 import { auth } from "@clerk/nextjs/server";
 import { randomUUID } from 'crypto';

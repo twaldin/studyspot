@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import { authService } from '@/lib/services/auth/auth.service';
+import { validateAuth, validateAuthWithSchool } from "@/features/auth/operations";
 import { getSelectedCourseForUser, setSelectedCourseForUser, clearSelectedCourseForUser } from '@/lib/clerk';
 import logger, { LogContext } from '@/lib/logger';
 
 export async function GET(request: Request) {
   try {
-    const auth = await authService.validateAuth();
+    const auth = await validateAuth();
     logger.info(LogContext.api('user/selected-course', auth.userId), 'Getting selected course');
 
     const courseId = await getSelectedCourseForUser(auth.userId);
@@ -56,7 +56,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const auth = await authService.validateAuthWithSchool();
+    const auth = await validateAuthWithSchool();
     const { courseId } = await request.json();
     
     if (!courseId) {
@@ -93,7 +93,7 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const auth = await authService.validateAuth();
+    const auth = await validateAuth();
     logger.info(LogContext.api('user/selected-course', auth.userId), 'Clearing selected course');
 
     await clearSelectedCourseForUser(auth.userId);

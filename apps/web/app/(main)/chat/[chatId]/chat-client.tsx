@@ -13,7 +13,7 @@ import { Message } from "@/features/chat/chat.types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollToBottomButton } from "@/components/scroll-to-bottom";
 import { chatStateService } from "@/features/chat/services/chat-state.service";
-import { chatStreamingService } from "@/features/chat/services/chat-streaming.service";
+import { chatStreamingService, type StreamingResponse } from "@/features/chat/services/chat-streaming.service";
 import { streamingManager } from "@/features/chat/services/streaming-manager.service";
 import { useStreamingChats } from "@/features/chat/PendingChatContext";
 import logger from "@/lib/logger";
@@ -35,6 +35,8 @@ export function ChatPageContent() {
   const [isReplying, setIsReplying] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isAtBottom, setIsAtBottom] = useState(true)
+  const [toolActivity, setToolActivity] = useState<string | null>(null)
+  const [isTextStreaming, setIsTextStreaming] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const chatContainerRef = useRef<HTMLDivElement>(null)
   const hasStartedStreamingRef = useRef<boolean>(false)
@@ -67,6 +69,9 @@ export function ChatPageContent() {
     setMessages([])
     // Reset streaming flag for new chat
     hasStartedStreamingRef.current = false
+    // Clear tool activity and streaming state
+    setToolActivity(null)
+    setIsTextStreaming(false)
     
     // Check for initial message in sessionStorage
     const storedInitialMessage = sessionStorage.getItem(`initial-message-${chatId}`)
@@ -171,7 +176,9 @@ export function ChatPageContent() {
                 router,
                 selectedCourse,
                 setIsReplying,
-                updateStreamingMessage
+                updateStreamingMessage,
+                setToolActivity,
+                setIsTextStreaming
               }
             );
             
@@ -263,7 +270,9 @@ export function ChatPageContent() {
           router,
           selectedCourse,
           setIsReplying,
-          updateStreamingMessage
+          updateStreamingMessage,
+          setToolActivity,
+          setIsTextStreaming
         }
       );
 
@@ -365,16 +374,38 @@ export function ChatPageContent() {
       />
       
       <div>
-        {showThinkingIndicator && (
+
+        {(showThinkingIndicator || (toolActivity && isTextStreaming)) && (
           <div className="mx-auto w-full max-w-3xl flex justify-start mb-4">
             <div className="py-0 max-w-xl">
               <div className="flex items-center space-x-2 text-gray-500">
-                <div className="flex space-x-1">
-                  <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                  <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                  <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></div>
-                </div>
-                <span className="text-sm">StudySpot is thinking...</span>
+                <span className="text-sm">
+                  StudySpot is {
+                    toolActivity === 'searching' ? 'searching' :
+                    toolActivity === 'reading documents' ? 'reading documents' :
+                    toolActivity === 'generating flashcards' ? 'generating flashcards' :
+                    toolActivity === 'generating a quiz' ? 'generating a quiz' :
+                    toolActivity === 'finding available materials' ? 'finding available materials' :
+                    toolActivity === 'working' ? 'working' :
+                    toolActivity ? toolActivity :
+                    'thinking'
+                  }...
+                </span>
+                <svg 
+                  className="h-5 w-5 animate-pulse" 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  width="24" 
+                  height="24" 
+                  viewBox="0 0 24 24" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  strokeWidth="2" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round"
+                >
+                  <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+                  <path d="m15 5 4 4"></path>
+                </svg>
               </div>
             </div>
           </div>

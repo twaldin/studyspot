@@ -1,22 +1,30 @@
-name: Sync Preview URLs
+name: Deploy Preview Environment
 on:
   pull_request:
     types: [opened, synchronize]
     paths:
-      - 'apps/web/**'
       - 'apps/assistant-api/**'
+      - 'config/**'
 
 jobs:
-  sync-preview-urls:
+  deploy-preview:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Wait for initial deployments
-        run: |
-          echo "Waiting 2 minutes for initial deployments to start..."
-          sleep 120
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'apps/web/package-lock.json'
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
 
       - name: Construct Render Preview URL
         id: render-url
@@ -26,40 +34,22 @@ jobs:
           echo "render_url=$RENDER_PREVIEW_URL" >> $GITHUB_OUTPUT
           echo "Render preview URL: $RENDER_PREVIEW_URL"
 
-      - name: Update Vercel Environment Variable
+      - name: Pull Vercel Environment Information
+        run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+        working-directory: apps/web
+
+      - name: Build Project Artifacts
+        run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
+        working-directory: apps/web
+
+      - name: Deploy to Vercel Preview
+        id: vercel-deploy
         run: |
           RENDER_URL="${{ steps.render-url.outputs.render_url }}"
-          
-          # Update the environment variable for this specific PR branch
-          curl -X POST "https://api.vercel.com/v9/projects/${{ secrets.VERCEL_PROJECT_ID }}/env" \
-            -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d '{
-              "key": "NEXT_PUBLIC_ASSISTANT_API_URL",
-              "value": "'$RENDER_URL'",
-              "type": "encrypted",
-              "target": ["preview"],
-              "gitBranch": "${{ github.head_ref }}"
-            }' || echo "Environment variable may already exist"
-
-      - name: Trigger Vercel Redeployment
-        run: |
-          # Get the latest deployment for this branch
-          DEPLOYMENT_RESPONSE=$(curl -s "https://api.vercel.com/v6/deployments?projectId=${{ secrets.VERCEL_PROJECT_ID }}&gitSource=github&limit=1" \
-            -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}")
-          
-          DEPLOYMENT_ID=$(echo $DEPLOYMENT_RESPONSE | jq -r '.deployments[0].uid')
-          
-          if [ "$DEPLOYMENT_ID" != "null" ]; then
-            # Redeploy the latest deployment
-            curl -X POST "https://api.vercel.com/v13/deployments/$DEPLOYMENT_ID/redeploy" \
-              -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" \
-              -H "Content-Type: application/json" \
-              -d '{}'
-            echo "Triggered redeployment of $DEPLOYMENT_ID"
-          else
-            echo "No deployment found to redeploy"
-          fi
+          DEPLOYMENT_URL=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }} -b NEXT_PUBLIC_ASSISTANT_API_URL="$RENDER_URL")
+          echo "deployment_url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+          echo "Deployed to: $DEPLOYMENT_URL"
+        working-directory: apps/web
 
       - name: Wait and verify Render deployment
         run: |
@@ -81,6 +71,7 @@ jobs:
         with:
           script: |
             const renderUrl = '${{ steps.render-url.outputs.render_url }}';
+            const vercelUrl = '${{ steps.vercel-deploy.outputs.deployment_url }}';
             const prNumber = context.issue.number;
             
             github.rest.issues.createComment({
@@ -89,7 +80,7 @@ jobs:
               repo: context.repo.repo,
               body: `🚀 **Preview Deployments Ready**
               
-              - 📱 **Web App**: Will be available at Vercel preview URL once redeployment completes
+              - 📱 **Web App**: ${vercelUrl}
               - 🤖 **Assistant API**: ${renderUrl}
               
               The web app has been configured to use the assistant API preview URL automatically.`

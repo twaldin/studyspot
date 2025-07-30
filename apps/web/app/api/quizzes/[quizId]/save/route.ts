@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { SaveQuizRequest, SaveQuizResponse } from "@/lib/types/QuizTypes";
+import { SaveQuizRequest, SaveQuizResponse } from "@/features/quiz/types";
 import { supabaseService } from "@/lib/services/database/supabase.service";
 import { auth } from "@clerk/nextjs/server";
 import { randomUUID } from 'crypto';

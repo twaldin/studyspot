@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
-import { authService } from '@/lib/services/auth/auth.service';
+import { validateAuth, validateAuthWithSchool } from "@/features/auth/operations";
+import { getUserOnboardingStatus } from '@/lib/clerk';
 
 export async function GET(request: Request) {
   try {
-    const auth = await authService.validateAuth();
-    const onboardingStatus = await authService.getOnboardingStatus(auth.userId);
+    const auth = await validateAuth();
+    const onboardingStatus = await getUserOnboardingStatus(auth.userId);
     return NextResponse.json(onboardingStatus);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'An unknown error occurred';

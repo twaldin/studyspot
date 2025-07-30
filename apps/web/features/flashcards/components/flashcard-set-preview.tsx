@@ -1,7 +1,7 @@
 "use client";
 
-import { FlashcardSet } from "@/lib/types/FlashcardTypes";
-import { flashcardService } from "../services/flashcard.service";
+import { FlashcardSet } from "@/features/flashcards/types";
+import { formatTimeAgo } from "../services/flashcard.service";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -25,7 +25,7 @@ export function FlashcardSetPreview({
   onStudy,
   onEdit,
 }: FlashcardSetPreviewProps) {
-  const timeAgo = flashcardService.formatTimeAgo(flashcardSet.created_at);
+  const timeAgo = formatTimeAgo(flashcardSet.created_at);
 
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">

@@ -1,1 +1,1 @@
-export { suggestedQueriesService } from './suggested-queries.service';
+export { getSuggestedQueries, clearSuggestedQueriesCache, getSuggestedQueriesCacheStats } from '../operations';
