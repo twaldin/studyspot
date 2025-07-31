@@ -1,4 +1,5 @@
 import { createWorkflow, createStep } from '@mastra/core';
+import { RuntimeContext } from '@mastra/core/di';
 import { z } from 'zod';
 import { StudySpotAgent } from '../agents/studyspot-agent.js';
 import { ConfigLoaderService, PromptOverrides } from '../../services/config-loader.service.js';
@@ -45,9 +46,9 @@ const studySpotAgentStep = createStep({
   description: 'Execute StudySpot agent with tools for AI-powered response generation',
   inputSchema: RAGWorkflowInputSchema,
   outputSchema: RAGWorkflowOutputSchema,
-  execute: async (params) => {
+  execute: async ({ inputData, mastra }) => {
     console.log('[RAGWorkflow] Executing StudySpot agent step');
-    const { question, conversationHistory, courseId, userId, timeZone, sessionId, promptOverrides } = params.inputData;
+    const { question, conversationHistory, courseId, userId, timeZone, sessionId, promptOverrides } = inputData;
     
     // Apply prompt overrides
     if (promptOverrides) {
@@ -62,8 +63,58 @@ const studySpotAgentStep = createStep({
       clearQuizStore(courseId);
     }
     
+    // Use the agent directly instead of through Mastra for now
+    console.log('[RAGWorkflow] Using StudySpot agent directly');
+    const agent = await StudySpotAgent.getInstance();
+    
+    // Build context for the agent
+    let courseContext = 'a college course';
+    if (courseId) {
+      const courseDetails = await SupabaseService.getCourseDetails(courseId);
+      if (courseDetails) {
+        courseContext = `${courseDetails.code} - ${courseDetails.title}`;
+      }
+    }
+    
+    const currentDate = SupabaseService.getFormattedDate(timeZone);
+    
+    // Format the system prompt with dynamic context
+    const contextualizedPrompt = ConfigLoaderService.formatPromptTemplate(
+      await ConfigLoaderService.getSystemPrompt(),
+      {
+        courseDetails: courseContext,
+        currentDate
+      }
+    );
+    
+    // Prepare messages with proper typing
+    const messages = [
+      ...conversationHistory,
+      {
+        role: 'user' as const,
+        content: question
+      }
+    ];
+    
+    // Create runtime context for tools
+    const runtimeContext = new RuntimeContext();
+    if (courseId) {
+      runtimeContext.set('courseId', courseId);
+    }
+    if (userId) {
+      runtimeContext.set('userId', userId);
+    }
+    if (timeZone) {
+      runtimeContext.set('timeZone', timeZone);
+    }
+    
     // Generate response using agent (this will trigger tool calls)
-    const response = await StudySpotAgent.generateResponse(question, conversationHistory, courseId, userId, timeZone);
+    const agentResponse = await agent.generate(messages, {
+      instructions: contextualizedPrompt,
+      runtimeContext
+    });
+    
+    const response = agentResponse.text;
     
     // Collect linked resources
     const linkedDocumentIds: string[] = [];
@@ -139,7 +190,7 @@ export class RAGWorkflowStreaming {
     toolActivity?: string;
   }> {
     try {
-      console.log('[RAGWorkflow] Starting Mastra workflow with native streaming and real-time tool events');
+      console.log('[RAGWorkflow] Starting native Mastra workflow streaming');
 
       // Tool name mapping for user-friendly messages
       const getToolActivityMessage = (toolName: string): string => {
@@ -149,17 +200,37 @@ export class RAGWorkflowStreaming {
           'list_all_documents': 'finding available materials',
           'generate_flashcard_set': 'generating flashcards',
           'generate_quiz': 'generating a quiz',
-          'create_quiz': 'generating a quiz'
+          'create_quiz': 'generating a quiz',
+          'create_flashcards': 'generating flashcards',
+          'declare_content_creation': 'initializing content generation',
+          'generate_content_plan': 'planning content structure',
+          'generate_single_question': 'generating questions',
+          'generate_single_flashcard': 'generating flashcards'
         };
         return activityMap[toolName] || 'working';
       };
 
-      let currentToolActivity: string | undefined = undefined;
-      let workflowResult: RAGWorkflowOutput | null = null;
-      let lastActivityYielded: string | undefined = undefined;
+      // Get the workflow from Mastra
+      const { mastra } = await import('../index.js');
+      const workflow = mastra.getWorkflow('ragWorkflow');
+      
+      if (!workflow) {
+        throw new Error('RAG workflow not found in Mastra instance');
+      }
+
+      // Create a new workflow run
+      const run = await workflow.createRunAsync();
+      
+      // Variables to track state
       let fullResponseText = '';
+      let currentToolActivity: string | undefined;
+      let lastActivityYielded: string | undefined;
+      let resourceIds: Array<{ type: 'document' | 'flashcard_set' | 'quiz'; id: string }> = [];
       
       try {
+        // Use agent streaming directly since workflow streaming may not capture tool events from nested agent calls
+        console.log('[RAGWorkflow] Using direct agent streaming for tool event detection');
+        
         // Apply prompt overrides first
         if (input.promptOverrides) {
           ConfigLoaderService.applyOverrides(input.promptOverrides as PromptOverrides);
@@ -173,172 +244,190 @@ export class RAGWorkflowStreaming {
           clearQuizStore(input.courseId);
         }
         
-        console.log('[RAGWorkflow] Starting agent streaming for real-time tool detection');
+        const agent = await StudySpotAgent.getInstance();
         
-        // Get streaming response directly from agent for real-time tool events
-        const agentStreamResponse = await StudySpotAgent.generateStreamingResponse(
-          input.question,
-          input.conversationHistory,
-          input.courseId,
-          input.userId,
-          input.timeZone
-        );
-        
-        console.log('[RAGWorkflow] Agent stream response:', typeof agentStreamResponse, Object.keys(agentStreamResponse || {}));
-        
-        // Check if we got a valid stream response
-        if (!agentStreamResponse) {
-          throw new Error('Failed to get streaming response from agent');
+        // Build context for the agent
+        let courseContext = 'a college course';
+        if (input.courseId) {
+          const courseDetails = await SupabaseService.getCourseDetails(input.courseId);
+          if (courseDetails) {
+            courseContext = `${courseDetails.code} - ${courseDetails.title}`;
+          }
         }
         
-        // Process fullStream events for real-time tool detection in background
-        const processFullStreamEvents = async () => {
-          if (!agentStreamResponse.fullStream) {
-            console.warn('[RAGWorkflow] No fullStream available from agent response');
+        const currentDate = SupabaseService.getFormattedDate(input.timeZone);
+        
+        // Format the system prompt with dynamic context
+        const contextualizedPrompt = ConfigLoaderService.formatPromptTemplate(
+          await ConfigLoaderService.getSystemPrompt(),
+          {
+            courseDetails: courseContext,
+            currentDate
+          }
+        );
+        
+        // Prepare messages with proper typing
+        const messages = [
+          ...input.conversationHistory,
+          {
+            role: 'user' as const,
+            content: input.question
+          }
+        ];
+        
+        // Create runtime context for tools
+        const runtimeContext = new RuntimeContext();
+        if (input.courseId) {
+          runtimeContext.set('courseId', input.courseId);
+        }
+        if (input.userId) {
+          runtimeContext.set('userId', input.userId);
+        }
+        if (input.timeZone) {
+          runtimeContext.set('timeZone', input.timeZone);
+        }
+        
+        // Stream the agent response directly
+        const agentStreamResponse = await agent.stream(messages, {
+          instructions: contextualizedPrompt,
+          runtimeContext
+        });
+        
+        console.log('[RAGWorkflow] Processing agent stream events');
+        
+        // Create a combined async generator that handles both streams
+        async function* combineStreams() {
+          const fullStreamIterator = agentStreamResponse.fullStream?.[Symbol.asyncIterator]();
+          const textStreamIterator = agentStreamResponse.textStream?.[Symbol.asyncIterator]();
+          
+          if (!fullStreamIterator || !textStreamIterator) {
+            console.warn('[RAGWorkflow] Missing stream iterators');
             return;
           }
           
-          console.log('[RAGWorkflow] Processing fullStream for real-time tool events');
+          let fullStreamDone = false;
+          let textStreamDone = false;
           
-          try {
-            for await (const event of agentStreamResponse.fullStream) {
-              console.log(`[RAGWorkflow] Stream event:`, event.type);
+          while (!fullStreamDone || !textStreamDone) {
+            // Create promises for both iterators
+            const promises: Promise<any>[] = [];
+            
+            if (!fullStreamDone) {
+              promises.push(
+                fullStreamIterator.next().then(result => ({ type: 'fullStream', result }))
+              );
+            }
+            
+            if (!textStreamDone) {
+              promises.push(
+                textStreamIterator.next().then(result => ({ type: 'textStream', result }))
+              );
+            }
+            
+            if (promises.length === 0) break;
+            
+            // Race the promises to handle whichever comes first
+            const { type, result } = await Promise.race(promises);
+            
+            if (type === 'fullStream') {
+              if (result.done) {
+                fullStreamDone = true;
+                continue;
+              }
               
-              // Handle tool call events - these fire when tools START
+              const event = result.value;
+              const eventAny = event as any;
+              console.log(`[RAGWorkflow] Agent event: ${event.type}`, eventAny.toolName || '');
+              
+              // Handle tool call events
               if (event.type === 'tool-call') {
-                const toolName = event.toolName || event.name || 'unknown';
+                const toolName = eventAny.toolName || eventAny.name || 'unknown';
                 console.log(`[RAGWorkflow] Tool call started: ${toolName}`);
                 const activityMessage = getToolActivityMessage(toolName);
                 
                 if (activityMessage !== currentToolActivity) {
                   currentToolActivity = activityMessage;
-                  console.log(`[RAGWorkflow] Set tool activity: ${activityMessage}`);
+                  yield { toolActivity: currentToolActivity };
+                  lastActivityYielded = currentToolActivity;
+                  console.log(`[RAGWorkflow] Yielded tool activity immediately: ${currentToolActivity}`);
                 }
-              } else if (event.type === 'tool-call-streaming-start') {
-                const toolName = event.toolName || event.name || 'unknown';
-                console.log(`[RAGWorkflow] Tool streaming started: ${toolName}`);
-                const activityMessage = getToolActivityMessage(toolName);
+              }
+              
+              // Handle tool streaming start
+              else if (event.type === 'tool-call-streaming-start') {
+                const streamingToolName = eventAny.toolName || eventAny.name || 'unknown';
+                console.log(`[RAGWorkflow] Tool streaming started: ${streamingToolName}`);
+                const streamingActivity = getToolActivityMessage(streamingToolName);
                 
-                if (activityMessage !== currentToolActivity) {
-                  currentToolActivity = activityMessage;
+                if (streamingActivity !== currentToolActivity) {
+                  currentToolActivity = streamingActivity;
+                  yield { toolActivity: currentToolActivity };
+                  lastActivityYielded = currentToolActivity;
+                  console.log(`[RAGWorkflow] Yielded tool streaming activity: ${currentToolActivity}`);
                 }
-              } else if (event.type === 'tool-result') {
-                console.log('[RAGWorkflow] Tool completed, clearing activity');
+              }
+              
+              // Handle tool result (tool execution complete)
+              else if (event.type === 'tool-result') {
+                console.log('[RAGWorkflow] Tool completed');
                 currentToolActivity = undefined;
+                yield { toolActivity: undefined };
+                lastActivityYielded = undefined;
+                console.log('[RAGWorkflow] Yielded tool completion (cleared activity)');
+              }
+              
+              // Handle text-delta events from fullStream
+              else if (event.type === 'text-delta') {
+                const textDelta = eventAny.textDelta;
+                if (textDelta) {
+                  fullResponseText += textDelta;
+                  yield { chunk: textDelta };
+                  console.log('[RAGWorkflow] Yielded text chunk:', textDelta.substring(0, 50));
+                }
               }
             }
-          } catch (error: any) {
-            console.error('[RAGWorkflow] Error processing fullStream events:', error);
-          }
-        };
-        
-        // Start processing fullStream events asynchronously
-        processFullStreamEvents();
-        
-        // Process the agent's textStream for text chunks
-        if (agentStreamResponse.textStream) {
-          console.log('[RAGWorkflow] Processing textStream for chunks');
-          for await (const chunk of agentStreamResponse.textStream) {
-            console.log('[RAGWorkflow] Received text chunk:', typeof chunk, chunk?.substring?.(0, 50));
-            fullResponseText += chunk;
             
-            // Yield text chunks for real-time streaming
-            yield { chunk };
-            
-            // Also yield tool activity updates if they changed
-            if (currentToolActivity !== lastActivityYielded) {
-              yield { toolActivity: currentToolActivity };
-              lastActivityYielded = currentToolActivity;
-              console.log(`[RAGWorkflow] Yielded tool activity during text stream: ${currentToolActivity}`);
+            else if (type === 'textStream') {
+              if (result.done) {
+                textStreamDone = true;
+                continue;
+              }
+              
+              const chunk = result.value;
+              if (chunk) {
+                fullResponseText += chunk;
+                yield { chunk };
+                console.log('[RAGWorkflow] Yielded text chunk:', chunk.substring(0, 50));
+              }
             }
           }
-        } else {
-          console.warn('[RAGWorkflow] No textStream available from agent response');
         }
         
-        // Continue yielding tool activity updates after text stream completes
-        console.log('[RAGWorkflow] Text streaming completed, monitoring tool activities...');
-        let checkCount = 0;
-        const maxChecks = 300; // Check for up to 30 seconds
-        
-        while (checkCount < maxChecks) {
-          // Yield tool activity updates if they changed
-          if (currentToolActivity !== lastActivityYielded) {
-            yield { toolActivity: currentToolActivity };
-            lastActivityYielded = currentToolActivity;
-            console.log(`[RAGWorkflow] Yielded tool activity post-text: ${currentToolActivity}`);
-          }
-          
-          // Small delay to avoid busy waiting
-          await new Promise(resolve => setTimeout(resolve, 100));
-          checkCount++;
-          
-          // Break if we've been idle (no tool activity) for a while
-          if (currentToolActivity === undefined && checkCount > 50) {
-            console.log('[RAGWorkflow] No tool activity for 5 seconds, assuming completion');
-            break;
-          }
+        // Process the combined stream
+        for await (const event of combineStreams()) {
+          yield event;
         }
         
-        console.log('[RAGWorkflow] Agent streaming completed, collecting resources...');
-        
-        // Wait for the agent response to complete and get the final result
-        let finalResponse;
-        try {
-          finalResponse = await agentStreamResponse;
-          console.log('[RAGWorkflow] Final agent response:', typeof finalResponse, finalResponse?.text?.length || 0);
-        } catch (error) {
-          console.error('[RAGWorkflow] Error waiting for final response:', error);
-          finalResponse = null;
-        }
-        
-        // Use the response text from streaming or final response
-        const responseText = fullResponseText || finalResponse?.text || '';
-        
-        // Collect linked resources (this mirrors the workflow step logic)
-        const linkedDocumentIds: string[] = [];
-        const resourceIds: Array<{ type: 'document' | 'flashcard_set' | 'quiz'; id: string }> = [];
-        
+        // Collect linked resources
         if (input.courseId) {
           const flashcardSetIds = getFlashcardSetsFromStore(input.courseId);
           flashcardSetIds.forEach(id => {
-            linkedDocumentIds.push(id);
             resourceIds.push({ type: 'flashcard_set', id });
           });
           
           const quizIds = getQuizzesFromStore(input.courseId);
           quizIds.forEach(id => {
-            linkedDocumentIds.push(id);
             resourceIds.push({ type: 'quiz', id });
           });
         }
         
-        // Create workflow result
-        workflowResult = {
-          response: responseText,
-          linkedDocumentIds,
-          resourceIds,
-          toolCalls: [],
-          metadata: {
-            ragUsed: true,
-            documentsFound: linkedDocumentIds.filter(id => resourceIds.find(r => r.id === id)?.type === 'document').length,
-            processingTime: Date.now() - Date.now()
-          }
-        };
-        
-        // Clean up stores
-        if (input.courseId) {
-          clearFlashcardStore(input.courseId);
-          clearQuizStore(input.courseId);
-        }
-        
         // Update chat if sessionId provided
-        if (input.sessionId && workflowResult) {
+        if (input.sessionId) {
           try {
             await SupabaseService.updateAssistantMessageInChat(
               input.sessionId, 
-              workflowResult.response, 
-              workflowResult.resourceIds || []
+              fullResponseText, 
+              resourceIds || []
             );
             console.log(`[RAGWorkflow] Successfully updated chat: ${input.sessionId}`);
           } catch (error) {
@@ -346,31 +435,32 @@ export class RAGWorkflowStreaming {
           }
         }
         
+        // Clean up stores
+        if (input.courseId) {
+          clearFlashcardStore(input.courseId);
+          clearQuizStore(input.courseId);
+        }
+        
+        console.log('[RAGWorkflow] Agent streaming completed');
+        
       } catch (error) {
-        console.error('[RAGWorkflow] Error in Mastra workflow streaming:', error);
+        console.error('[RAGWorkflow] Error in workflow streaming:', error);
         yield {
           error: error instanceof Error ? error.message : 'Unknown error occurred'
         };
         return;
       }
 
-      // Get linked resources from the workflow result
-      const linkedResources: Array<{ type: 'document' | 'flashcard_set' | 'quiz'; id: string }> = [];
-      
-      if (workflowResult?.resourceIds && Array.isArray(workflowResult.resourceIds)) {
-        console.log(`[RAGWorkflow] Using categorized resources from workflow result: ${workflowResult.resourceIds.length}`);
-        linkedResources.push(...workflowResult.resourceIds);
+      // Ensure tool activity is cleared
+      if (currentToolActivity !== undefined) {
+        yield { toolActivity: undefined };
       }
 
-      console.log(`[RAGWorkflow] Final linked resources: ${linkedResources.length}`);
-
-      // Clear final tool activity
-      yield { toolActivity: undefined };
-
-      // Send final result with metadata
+      // Send final result with resources
+      console.log(`[RAGWorkflow] Sending final result with ${resourceIds.length} resources`);
       yield {
         done: true,
-        linkedDocumentIds: linkedResources
+        linkedDocumentIds: resourceIds
       };
 
     } catch (error) {

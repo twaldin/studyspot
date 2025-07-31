@@ -5,10 +5,14 @@ import { z } from 'zod';
 // Prompt configuration schema matching existing config structure
 const PromptConfigSchema = z.object({
   name: z.string(),
-  systemPrompt: z.string(),
+  systemPrompt: z.union([z.string(), z.array(z.string())]),
   ragDecisionPrompt: z.string(),
   queryReformulationPrompt: z.string(),
   toolInstructions: z.string(),
+  contentPlannerPrompt: z.union([z.string(), z.array(z.string())]).optional(),
+  questionGeneratorPrompt: z.union([z.string(), z.array(z.string())]).optional(),
+  flashcardGeneratorPrompt: z.union([z.string(), z.array(z.string())]).optional(),
+  qualityReviewerPrompt: z.union([z.string(), z.array(z.string())]).optional(),
   temperature: z.number().optional().default(0.7),
   model: z.string().optional().default('claude-3-5-sonnet-20241022')
 });
@@ -105,6 +109,13 @@ export class ConfigLoaderService {
   }
 
   /**
+   * Helper method to convert array prompts to strings
+   */
+  private static arrayToString(prompt: string | string[]): string {
+    return Array.isArray(prompt) ? prompt.join('\n') : prompt;
+  }
+
+  /**
    * Get the system prompt with optional overrides applied
    */
   static async getSystemPrompt(): Promise<string> {
@@ -114,7 +125,7 @@ export class ConfigLoaderService {
       return this.currentOverrides.systemPrompt;
     }
     
-    return config.systemPrompt;
+    return this.arrayToString(config.systemPrompt);
   }
 
   /**
@@ -201,6 +212,38 @@ export class ConfigLoaderService {
    */
   static async getActiveConfig(): Promise<PromptConfig> {
     return this.loadConfig('active.json');
+  }
+
+  /**
+   * Get the content planner prompt
+   */
+  static async getContentPlannerPrompt(): Promise<string> {
+    const config = await this.loadConfig('active.json');
+    return this.arrayToString(config.contentPlannerPrompt || 'You are a content planner.');
+  }
+
+  /**
+   * Get the question generator prompt
+   */
+  static async getQuestionGeneratorPrompt(): Promise<string> {
+    const config = await this.loadConfig('active.json');
+    return this.arrayToString(config.questionGeneratorPrompt || 'You are a question generator.');
+  }
+
+  /**
+   * Get the flashcard generator prompt
+   */
+  static async getFlashcardGeneratorPrompt(): Promise<string> {
+    const config = await this.loadConfig('active.json');
+    return this.arrayToString(config.flashcardGeneratorPrompt || 'You are a flashcard generator.');
+  }
+
+  /**
+   * Get the quality reviewer prompt
+   */
+  static async getQualityReviewerPrompt(): Promise<string> {
+    const config = await this.loadConfig('active.json');
+    return this.arrayToString(config.qualityReviewerPrompt || 'You are a quality reviewer.');
   }
 
   /**

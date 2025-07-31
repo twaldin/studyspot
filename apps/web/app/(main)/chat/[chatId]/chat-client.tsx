@@ -37,6 +37,7 @@ export function ChatPageContent() {
   const [isAtBottom, setIsAtBottom] = useState(true)
   const [toolActivity, setToolActivity] = useState<string | null>(null)
   const [isTextStreaming, setIsTextStreaming] = useState(false)
+  const [showInlinePencil, setShowInlinePencil] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const chatContainerRef = useRef<HTMLDivElement>(null)
   const hasStartedStreamingRef = useRef<boolean>(false)
@@ -72,6 +73,7 @@ export function ChatPageContent() {
     // Clear tool activity and streaming state
     setToolActivity(null)
     setIsTextStreaming(false)
+    setShowInlinePencil(true)
     
     // Check for initial message in sessionStorage
     const storedInitialMessage = sessionStorage.getItem(`initial-message-${chatId}`)
@@ -178,7 +180,8 @@ export function ChatPageContent() {
                 setIsReplying,
                 updateStreamingMessage,
                 setToolActivity,
-                setIsTextStreaming
+                setIsTextStreaming,
+                setShowInlinePencil
               }
             );
             
@@ -272,7 +275,8 @@ export function ChatPageContent() {
           setIsReplying,
           updateStreamingMessage,
           setToolActivity,
-          setIsTextStreaming
+          setIsTextStreaming,
+          setShowInlinePencil
         }
       );
 
@@ -359,7 +363,9 @@ export function ChatPageContent() {
                   key={message.id || i} 
                   content={message.content}
                   linkedResources={message.linkedResources}
-                  isStreaming={isReplying && i === messages.length - 1 && message.content.trim().length > 0}
+                  isStreaming={(isReplying || toolActivity) && i === messages.length - 1}
+                  toolActivity={i === messages.length - 1 ? toolActivity : null}
+                  showInlinePencil={i === messages.length - 1 ? showInlinePencil : true}
                 />
               )
             )
@@ -374,43 +380,6 @@ export function ChatPageContent() {
       />
       
       <div>
-
-        {(showThinkingIndicator || (toolActivity && isTextStreaming)) && (
-          <div className="mx-auto w-full max-w-3xl flex justify-start mb-4">
-            <div className="py-0 max-w-xl">
-              <div className="flex items-center space-x-2 text-gray-500">
-                <span className="text-sm">
-                  StudySpot is {
-                    toolActivity === 'searching' ? 'searching' :
-                    toolActivity === 'reading documents' ? 'reading documents' :
-                    toolActivity === 'generating flashcards' ? 'generating flashcards' :
-                    toolActivity === 'generating a quiz' ? 'generating a quiz' :
-                    toolActivity === 'finding available materials' ? 'finding available materials' :
-                    toolActivity === 'working' ? 'working' :
-                    toolActivity ? toolActivity :
-                    'thinking'
-                  }...
-                </span>
-                <svg 
-                  className="h-5 w-5 animate-pulse" 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  width="24" 
-                  height="24" 
-                  viewBox="0 0 24 24" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  strokeWidth="2" 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round"
-                >
-                  <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
-                  <path d="m15 5 4 4"></path>
-                </svg>
-              </div>
-            </div>
-          </div>
-        )}
-        
         <ChatInputBar 
           onSubmit={handleFormSubmit} 
           isSubmitting={isReplying}
