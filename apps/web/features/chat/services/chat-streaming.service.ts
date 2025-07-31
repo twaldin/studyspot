@@ -21,7 +21,6 @@ export interface StreamingContext {
   ) => void;
   setToolActivity?: React.Dispatch<React.SetStateAction<string | null>>;
   setIsTextStreaming?: React.Dispatch<React.SetStateAction<boolean>>;
-  setShowInlinePencil?: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 export interface StreamingResponse {
@@ -97,9 +96,6 @@ export class ChatStreamingService {
       if (context.setIsTextStreaming) {
         context.setIsTextStreaming(false);
       }
-      if (context.setShowInlinePencil) {
-        context.setShowInlinePencil(true); // Start with inline pencil
-      }
 
       while (true) {
         const { done, value } = await reader.read();
@@ -112,9 +108,6 @@ export class ChatStreamingService {
           // Clear streaming states when done
           if (context.setIsTextStreaming) {
             context.setIsTextStreaming(false);
-          }
-          if (context.setShowInlinePencil) {
-            context.setShowInlinePencil(true); // Reset to default
           }
           if (pauseTimeoutId) {
             clearTimeout(pauseTimeoutId);
@@ -149,10 +142,8 @@ export class ChatStreamingService {
                   if (context.setIsTextStreaming) {
                     context.setIsTextStreaming(false);
                   }
-                  // When pause is detected, remove pencil from content and show tool activity below
-                  if (context.setShowInlinePencil && context.setToolActivity) {
-                    context.setShowInlinePencil(false);
-                  }
+                  // When pause is detected, just continue showing tool activity
+                  // The text streaming state will handle pencil display
                 }, 300);
                 
                 // Filter out thinking content for display
@@ -168,13 +159,8 @@ export class ChatStreamingService {
               } else if (data.toolActivity !== undefined && context.setToolActivity) {
                 // Update tool activity for enhanced thinking indicator (including null to clear)
                 context.setToolActivity(data.toolActivity);
-                // When tool activity starts, hide inline pencil and show activity below
-                if (data.toolActivity && context.setShowInlinePencil) {
-                  context.setShowInlinePencil(false);
-                } else if (!data.toolActivity && context.setShowInlinePencil) {
-                  // When tool activity ends, restore inline pencil if still streaming
-                  context.setShowInlinePencil(true);
-                }
+                // Tool activity and text streaming states work together
+                // No need for manual pencil display control
               } else if (data.done) {
                 console.info({
                   finalResponseLength: fullResponse.length,
@@ -209,9 +195,6 @@ export class ChatStreamingService {
                 if (context.setIsTextStreaming) {
                   context.setIsTextStreaming(false);
                 }
-                if (context.setShowInlinePencil) {
-                  context.setShowInlinePencil(true); // Reset to default
-                }
                 break;
               } else if (data.error) {
                 throw new Error(data.error);
@@ -232,9 +215,6 @@ export class ChatStreamingService {
       // Clear streaming states
       if (context.setIsTextStreaming) {
         context.setIsTextStreaming(false);
-      }
-      if (context.setShowInlinePencil) {
-        context.setShowInlinePencil(true); // Reset to default
       }
     }
   }

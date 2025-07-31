@@ -108,8 +108,8 @@ export default async function handler(req: SimpleRequest, res: SimpleResponse) {
       timestamp: new Date().toISOString()
     });
 
-    // Create deduplication key based on sessionId and question
-    const requestKey = `${sessionId}-${question}`;
+    // Create deduplication key based on userId, sessionId and question
+    const requestKey = `${userId || 'anonymous'}-${sessionId}-${question}`;
     
     // Check if this exact request is already being processed
     if (activeRequests.has(requestKey)) {
@@ -208,7 +208,7 @@ export default async function handler(req: SimpleRequest, res: SimpleResponse) {
     
     // Clean up the request if we have the parsed body
     if (req.body && req.body.sessionId && req.body.question) {
-      const requestKey = `${req.body.sessionId}-${req.body.question}`;
+      const requestKey = `${req.body.userId || 'anonymous'}-${req.body.sessionId}-${req.body.question}`;
       activeRequests.delete(requestKey);
     }
     

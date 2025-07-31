@@ -29,7 +29,7 @@ export function ChatPageContent() {
   const { data: chat, isLoading: isLoadingChat, error: chatError } = useChat(chatId)
   const { data: selectedCourse } = useSelectedCourse()
   const { userId } = useAuthenticatedUser()
-  const { setStreamingStatus, updateStreamingMessage, getStreamingMessage } = useStreamingChats()
+  const { setStreamingStatus, updateStreamingMessage, getStreamingMessage, removeOptimisticChat } = useStreamingChats()
   
   const [messages, setMessages] = useState<Message[]>([])
   const [isReplying, setIsReplying] = useState(false)
@@ -37,7 +37,6 @@ export function ChatPageContent() {
   const [isAtBottom, setIsAtBottom] = useState(true)
   const [toolActivity, setToolActivity] = useState<string | null>(null)
   const [isTextStreaming, setIsTextStreaming] = useState(false)
-  const [showInlinePencil, setShowInlinePencil] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const chatContainerRef = useRef<HTMLDivElement>(null)
   const hasStartedStreamingRef = useRef<boolean>(false)
@@ -73,7 +72,6 @@ export function ChatPageContent() {
     // Clear tool activity and streaming state
     setToolActivity(null)
     setIsTextStreaming(false)
-    setShowInlinePencil(true)
     
     // Check for initial message in sessionStorage
     const storedInitialMessage = sessionStorage.getItem(`initial-message-${chatId}`)
@@ -138,7 +136,22 @@ export function ChatPageContent() {
     }
   }, [chat, messages.length, chatId, getStreamingMessage, setMessages, setIsReplying, updateStreamingMessage])
 
-
+  // Clean up optimistic chats when real chat loads
+  useEffect(() => {
+    if (chat && chatId) {
+      // Check if this chat came from optimistic creation
+      // Look for any optimistic chats that have this as their real chat ID
+      const tempIds = sessionStorage.getItem(`temp-ids-for-${chatId}`);
+      if (tempIds) {
+        const tempIdList = JSON.parse(tempIds);
+        tempIdList.forEach((tempId: string) => {
+          removeOptimisticChat(tempId);
+        });
+        sessionStorage.removeItem(`temp-ids-for-${chatId}`);
+        logger.info('Cleaned up optimistic chats:', { chatId, tempIds: tempIdList });
+      }
+    }
+  }, [chat, chatId, removeOptimisticChat]);
 
   // Handle initial message streaming
   useEffect(() => {
@@ -180,8 +193,7 @@ export function ChatPageContent() {
                 setIsReplying,
                 updateStreamingMessage,
                 setToolActivity,
-                setIsTextStreaming,
-                setShowInlinePencil
+                setIsTextStreaming
               }
             );
             
@@ -275,8 +287,7 @@ export function ChatPageContent() {
           setIsReplying,
           updateStreamingMessage,
           setToolActivity,
-          setIsTextStreaming,
-          setShowInlinePencil
+          setIsTextStreaming
         }
       );
 
@@ -363,9 +374,9 @@ export function ChatPageContent() {
                   key={message.id || i} 
                   content={message.content}
                   linkedResources={message.linkedResources}
-                  isStreaming={(isReplying || toolActivity) && i === messages.length - 1}
+                  isStreaming={(isReplying || (i === messages.length - 1 && message.content === '')) && i === messages.length - 1}
+                  isTextStreaming={isTextStreaming && i === messages.length - 1}
                   toolActivity={i === messages.length - 1 ? toolActivity : null}
-                  showInlinePencil={i === messages.length - 1 ? showInlinePencil : true}
                 />
               )
             )
