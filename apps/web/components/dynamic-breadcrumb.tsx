@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useChat } from "@/hooks/api/chats";
 import { useFlashcardSet } from "@/hooks/api/flashcards";
+import { useQuiz } from "@/hooks/api/quizzes";
 import { useSelectedCourse } from "@/hooks/api/courses";
 import {
   Breadcrumb,
@@ -34,9 +35,14 @@ export function DynamicBreadcrumb() {
     ? pathname.split("/flashcards/")[1]
     : undefined;
 
+  const quizId = pathname.startsWith("/quiz/") && pathname !== "/quiz"
+    ? pathname.split("/quiz/")[1]
+    : undefined;
+
   // Fetch data based on detected IDs
   const { data: chat } = useChat(chatId);
   const { data: flashcardSet } = useFlashcardSet(flashcardSetId);
+  const { data: quiz } = useQuiz(quizId);
 
   const isBasePage = pathname === "/courses";
 
@@ -57,6 +63,15 @@ export function DynamicBreadcrumb() {
         featureName: "Flashcards",
         featureHref: "/content",
         itemTitle: flashcardSet.title,
+      };
+    }
+
+    // Quiz pages: /quiz/[quizId]
+    if (pathname.startsWith("/quiz/") && quiz) {
+      return {
+        featureName: "Practice Quizzes",
+        featureHref: "/content",
+        itemTitle: quiz.title,
       };
     }
 

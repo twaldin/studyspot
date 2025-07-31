@@ -4,6 +4,7 @@ import { anthropic } from '@ai-sdk/anthropic';
 import { getFullDocumentTool } from '../tools/get-full-document.tool.js';
 import { listAllDocumentsTool } from '../tools/list-all-documents.tool.js';
 import { semanticSearchTool } from '../tools/semantic-search.tool.js';
+import { setSourcesTool } from '../tools/set-sources.tool.js';
 import { generateFlashcardSetTool } from '../tools/generate-flashcard-set.tool.js';
 import { generateQuizTool } from '../tools/generate-quiz.tool.js';
 import { ConfigLoaderService } from '../../services/config-loader.service.js';
@@ -46,6 +47,7 @@ export class StudySpotAgent {
           get_full_document: getFullDocumentTool,
           list_all_documents: listAllDocumentsTool,
           semantic_search: semanticSearchTool,
+          set_sources: setSourcesTool,
           create_flashcards: generateFlashcardSetTool,
           create_quiz: generateQuizTool
         }

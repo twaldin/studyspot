@@ -10,12 +10,16 @@ interface AssistantMessageProps {
   content: string;
   linkedResources?: LinkedResource[];
   isStreaming?: boolean;
+  toolActivity?: string | null;
+  showInlinePencil?: boolean;
 }
 
 const AssistantMessage: React.FC<AssistantMessageProps> = ({
   content,
   linkedResources,
   isStreaming,
+  toolActivity,
+  showInlinePencil = true,
 }) => {
   // Initialize with content as fallback for SSR
   const [html, setHtml] = useState(content);
@@ -23,7 +27,7 @@ const AssistantMessage: React.FC<AssistantMessageProps> = ({
   // Parse the displayed content as Markdown
   useEffect(() => {
     // Only run on client side
-    if (typeof window === 'undefined') {
+    if (typeof window === "undefined") {
       return;
     }
 
@@ -140,7 +144,7 @@ const AssistantMessage: React.FC<AssistantMessageProps> = ({
 
     let rawHtml = html;
 
-    if (isStreaming) {
+    if (isStreaming && showInlinePencil) {
       const pencilSvg =
         `<svg class="inline-block h-5 w-5 animate-pulse" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path><path d="m15 5 4 4"></path></svg>`;
 
@@ -169,12 +173,60 @@ const AssistantMessage: React.FC<AssistantMessageProps> = ({
           dangerouslySetInnerHTML={createMarkup()}
         />
 
+        {/* Show tool activity below the message when active and not showing inline pencil */}
+        {isStreaming && toolActivity && !showInlinePencil && (
+          <div className="mt-2 flex items-center space-x-2">
+            <span className="text-sm">
+              StudySpot is {toolActivity === "searching"
+                ? "searching"
+                : toolActivity === "reading documents"
+                  ? "reading documents"
+                  : toolActivity === "generating flashcards"
+                    ? "generating flashcards"
+                    : toolActivity === "generating a quiz"
+                      ? "generating a quiz"
+                      : toolActivity === "finding available materials"
+                        ? "finding available materials"
+                        : toolActivity === "initializing content generation"
+                          ? "initializing content generation"
+                          : toolActivity === "planning content structure"
+                            ? "planning content structure"
+                            : toolActivity === "generating questions"
+                              ? "generating questions"
+                              : toolActivity === "working"
+                                ? "working"
+                                : toolActivity
+                                  ? toolActivity
+                                  : "thinking"}...
+            </span>
+            <svg
+              className="h-5 w-5 animate-pulse"
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z">
+              </path>
+              <path d="m15 5 4 4"></path>
+            </svg>
+          </div>
+        )}
+
         {/* Render linked resources - only show after streaming is complete */}
         {!isStreaming && linkedResources && linkedResources.length > 0 && (
           <div className="mt-3">
             <div className="grid gap-4 grid-cols-1 @md:grid-cols-2 @lg:grid-cols-3">
               {linkedResources.map((resource) => (
-                <LinkedResourceCard key={`${resource.type}-${resource.id}`} resource={resource} />
+                <LinkedResourceCard
+                  key={`${resource.type}-${resource.id}`}
+                  resource={resource}
+                />
               ))}
             </div>
           </div>
@@ -185,3 +237,4 @@ const AssistantMessage: React.FC<AssistantMessageProps> = ({
 };
 
 export default AssistantMessage;
+
