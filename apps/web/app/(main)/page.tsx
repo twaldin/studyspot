@@ -27,7 +27,7 @@ export default function Home() {
   const router = useRouter();
   const { data: suggestedQueries = [], isLoading: isLoadingSuggestedQueries } = useSuggestedQueries(selectedCourse?.id);
   const createChatMutation = useCreateChat();
-  const { setStreamingStatus } = useStreamingChats();
+  const { setStreamingStatus, addOptimisticChat, updateOptimisticChat, failOptimisticChat } = useStreamingChats();
 
   // Auto-focus the textarea when component mounts
   useEffect(() => {
@@ -43,42 +43,42 @@ export default function Home() {
     
     setIsCreatingChat(true);
     
-    // Generate a temporary ID for immediate UI feedback
-    const tempChatId = `temp-creating-${Date.now()}`;
+    // Generate optimistic chat ID
+    const tempId = `creating-${Date.now()}`;
     
     try {
-      logger.info('Creating real chat immediately');
+      logger.info('Starting optimistic chat creation:', { tempId, messageContent: messageContent.substring(0, 50) });
       
-      // Immediately show creating state in sidebar
-      setStreamingStatus(tempChatId, 'Creating chat...', true);
+      // 1. Add optimistic chat to context immediately
+      addOptimisticChat(tempId, messageContent, selectedCourse.id);
       
-      // Create real chat with just the user message
+      // 2. Navigate instantly to creating page (zero delay!)
+      router.push(`/chat/creating?temp=${tempId}`);
+      
+      // 3. Create real chat in background
       const createRequest = {
         initialMessages: [
           { role: 'user', content: messageContent },
-          { role: 'assistant', content: '' } // Add an empty assistant message
+          { role: 'assistant', content: '' } // Empty assistant message for streaming
         ]
       };
       
       const newChat = await createChatMutation.mutateAsync(createRequest);
       logger.info('Created real chat:', { chatId: newChat.id, title: newChat.title });
       
-      // Transfer streaming status from temp to real chat
-      setStreamingStatus(tempChatId, 'Creating chat...', false); // Remove temp
-      setStreamingStatus(newChat.id, newChat.title, true); // Add real with streaming
+      // 4. Update optimistic chat with real chat ID
+      updateOptimisticChat(tempId, newChat.id);
       
-      // Store initial message for the streaming logic
+      // 5. Store initial message for streaming logic
       sessionStorage.setItem(`initial-message-${newChat.id}`, messageContent);
       
-      // Navigate to the real chat immediately
-      logger.info('Navigating to real chat:', { chatId: newChat.id });
-      router.push(`/chat/${newChat.id}`);
+      logger.info('Optimistic chat ready for navigation:', { tempId, realChatId: newChat.id });
       
     } catch (error) {
-      console.error('Failed to create chat:', error);
-      // Clean up temp streaming status on error
-      setStreamingStatus(tempChatId, 'Creating chat...', false);
-      // Stay on dashboard and show error (could add toast here)
+      logger.error('Failed to create chat:', { error, tempId });
+      // Mark optimistic chat as failed
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create chat';
+      failOptimisticChat(tempId, errorMessage);
     } finally {
       setIsCreatingChat(false);
     }

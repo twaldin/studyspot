@@ -27,8 +27,8 @@ export function DynamicBreadcrumb() {
   const { data: selectedCourse } = useSelectedCourse();
 
   // Extract IDs from different URL patterns
-  const chatId = pathname.startsWith("/chat/") && pathname !== "/chat"
-    ? pathname.split("/chat/")[1]
+  const chatId = pathname.startsWith("/chat/") && pathname !== "/chat" && pathname !== "/chat/creating"
+    ? pathname.split("/chat/")[1]?.split("?")[0] // Remove query parameters
     : undefined;
   
   const flashcardSetId = pathname.startsWith("/flashcards/") && pathname !== "/flashcards"

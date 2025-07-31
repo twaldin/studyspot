@@ -26,7 +26,6 @@ export function ChatPageContent({ chatId }: { chatId?: string }) {
   const [error, setError] = useState<string | null>(null);
   const [toolActivity, setToolActivity] = useState<string | null>(null);
   const [isTextStreaming, setIsTextStreaming] = useState(false);
-  const [showInlinePencil, setShowInlinePencil] = useState(true);
 
   // Only fetch chat data if chatId is provided
   const { data: chat, isLoading: isLoadingChat, error: chatError } = useChat(
@@ -86,7 +85,6 @@ export function ChatPageContent({ chatId }: { chatId?: string }) {
       }, "Real chat navigation");
       setToolActivity(null);
       setIsTextStreaming(false);
-      setShowInlinePencil(true);
     }
 
     chatNavigationService.logNavigationTransition(
@@ -148,7 +146,6 @@ export function ChatPageContent({ chatId }: { chatId?: string }) {
           setIsReplying,
           setToolActivity,
           setIsTextStreaming,
-          setShowInlinePencil,
         });
       } catch (error) {
         chatStateService.handleMessageError({
@@ -219,14 +216,11 @@ export function ChatPageContent({ chatId }: { chatId?: string }) {
                   <AssistantMessage
                     content={message.content}
                     linkedResources={message.linkedResources}
-                    isStreaming={(isReplying || toolActivity) &&
-                      i === messages.length - 1}
+                    isStreaming={(isReplying || (i === messages.length - 1 && message.content === '')) && i === messages.length - 1}
+                    isTextStreaming={isTextStreaming && i === messages.length - 1}
                     toolActivity={i === messages.length - 1
                       ? toolActivity
                       : null}
-                    showInlinePencil={i === messages.length - 1
-                      ? showInlinePencil
-                      : true}
                   />
                 </div>
               )

@@ -3,6 +3,16 @@
 import React, { createContext, useContext, useCallback, useState } from 'react';
 import { LinkedResource } from '@/features/chat/chat.types';
 
+interface OptimisticChat {
+  tempId: string;
+  userMessage: string;
+  courseId: string;
+  createdAt: Date;
+  status: 'creating' | 'created' | 'failed';
+  realChatId?: string;
+  error?: string;
+}
+
 interface StreamingChat {
   chatId: string;
   title: string;
@@ -19,6 +29,13 @@ interface StreamingChatContextType {
   getStreamingMessage: (chatId: string) => { message: string; linkedResources?: LinkedResource[] } | undefined;
   isStreaming: (chatId: string) => boolean;
   getChatTitle: (chatId: string) => string | undefined;
+  // Optimistic chat methods
+  addOptimisticChat: (tempId: string, userMessage: string, courseId: string) => void;
+  updateOptimisticChat: (tempId: string, realChatId: string) => void;
+  failOptimisticChat: (tempId: string, error: string) => void;
+  getOptimisticChat: (tempId: string) => OptimisticChat | undefined;
+  isOptimisticChatReady: (tempId: string) => boolean;
+  removeOptimisticChat: (tempId: string) => void;
 }
 
 const StreamingChatContext = createContext<StreamingChatContextType | undefined>(undefined);
@@ -36,6 +53,58 @@ export const usePendingChats = useStreamingChats;
 
 export const StreamingChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [streamingChats, setStreamingChats] = useState<StreamingChat[]>([]);
+  const [optimisticChats, setOptimisticChats] = useState<OptimisticChat[]>([]);
+
+  // Optimistic chat methods
+  const addOptimisticChat = useCallback((tempId: string, userMessage: string, courseId: string) => {
+    console.log('Adding optimistic chat:', { tempId, userMessage: userMessage.substring(0, 50) });
+    setOptimisticChats(prev => [
+      ...prev.filter(chat => chat.tempId !== tempId), // Remove existing if any
+      {
+        tempId,
+        userMessage,
+        courseId,
+        createdAt: new Date(),
+        status: 'creating'
+      }
+    ]);
+  }, []);
+
+  const updateOptimisticChat = useCallback((tempId: string, realChatId: string) => {
+    console.log('Updating optimistic chat with real ID:', { tempId, realChatId });
+    setOptimisticChats(prev => 
+      prev.map(chat => 
+        chat.tempId === tempId 
+          ? { ...chat, status: 'created' as const, realChatId }
+          : chat
+      )
+    );
+  }, []);
+
+  const failOptimisticChat = useCallback((tempId: string, error: string) => {
+    console.log('Failing optimistic chat:', { tempId, error });
+    setOptimisticChats(prev => 
+      prev.map(chat => 
+        chat.tempId === tempId 
+          ? { ...chat, status: 'failed' as const, error }
+          : chat
+      )
+    );
+  }, []);
+
+  const getOptimisticChat = useCallback((tempId: string) => {
+    return optimisticChats.find(chat => chat.tempId === tempId);
+  }, [optimisticChats]);
+
+  const isOptimisticChatReady = useCallback((tempId: string) => {
+    const chat = optimisticChats.find(chat => chat.tempId === tempId);
+    return chat?.status === 'created' && !!chat.realChatId;
+  }, [optimisticChats]);
+
+  const removeOptimisticChat = useCallback((tempId: string) => {
+    console.log('Removing optimistic chat:', { tempId });
+    setOptimisticChats(prev => prev.filter(chat => chat.tempId !== tempId));
+  }, []);
 
   const setStreamingStatus = useCallback((chatId: string, title: string, isStreaming: boolean) => {
     console.log('Setting streaming status:', { chatId, title, isStreaming });
@@ -125,6 +194,13 @@ export const StreamingChatProvider: React.FC<{ children: React.ReactNode }> = ({
     getStreamingMessage,
     isStreaming,
     getChatTitle,
+    // Optimistic chat methods
+    addOptimisticChat,
+    updateOptimisticChat,
+    failOptimisticChat,
+    getOptimisticChat,
+    isOptimisticChatReady,
+    removeOptimisticChat,
   };
 
   // Also provide legacy interface
