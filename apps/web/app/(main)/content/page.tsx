@@ -27,7 +27,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import React from "react";
-import { CardGrid } from "@/components/ui/card-grid";
+import { CardGrid } from "@/components/card-grid";
 import { useSelectedCourse } from "@/hooks/api/courses";
 
 export default function ContentPage() {

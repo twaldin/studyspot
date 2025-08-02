@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation";
 import { useSuggestedQueries, useSelectedCourse } from "@/hooks/api/courses";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCreateChat } from "@/hooks/api/chats";
-import { CardGrid } from "@/components/ui/card-grid";
+import { CardGrid } from "@/components/card-grid";
 import logger from "@/lib/logger";
 import { useStreamingChats } from "@/features/chat/PendingChatContext";
 
