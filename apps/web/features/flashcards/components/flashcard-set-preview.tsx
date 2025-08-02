@@ -2,15 +2,15 @@
 
 import { FlashcardSet } from "@/lib/types/FlashcardTypes";
 import { flashcardService } from "../services/flashcard.service";
-import { Button } from "@/components/ui/button";
+import { Button } from "@workspace/ui/components/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+} from "@workspace/ui/components/card";
+import { Badge } from "@workspace/ui/components/badge";
 import { BookOpen, Calendar, Edit, FileText, Play, User } from "lucide-react";
 import Image from "next/image";
 

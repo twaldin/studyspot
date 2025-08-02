@@ -1,7 +1,7 @@
 "use client"
 
 import { ChatInputBar } from "@/components/chat-input-bar"
-import { Skeleton } from "@/components/ui/skeleton"
+import { Skeleton } from "@workspace/ui/components/skeleton"
 
 export function ChatPageShell() {
   return (

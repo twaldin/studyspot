@@ -8,8 +8,8 @@ import {
   QuizMode,
   QuizQuestion as QuizQuestionType,
 } from "@/lib/types/QuizTypes";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@workspace/ui/components/card";
+import { Button } from "@workspace/ui/components/button";
 import { cn } from "@/lib/utils";
 import { QuizContent } from "./quiz-content";
 

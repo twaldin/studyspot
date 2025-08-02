@@ -1,7 +1,7 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+import { Button } from "@workspace/ui/components/button";
+import { Separator } from "@workspace/ui/components/separator";
 import { Zap, ArrowRight, Upload, MessagesSquare } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { FileUploadDialog } from "@/components/file-upload-dialog";
@@ -10,7 +10,7 @@ import { NewPostDialog } from "@/components/new-post-dialog";
 import { ChatInputBar } from "@/components/chat-input-bar";
 import { useRouter } from "next/navigation";
 import { useSuggestedQueries, useSelectedCourse } from "@/hooks/api/courses";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton } from "@workspace/ui/components/skeleton";
 import { useCreateChat } from "@/hooks/api/chats";
 import { CardGrid } from "@/components/card-grid";
 import logger from "@/lib/logger";

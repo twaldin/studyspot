@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { QueryProvider } from "@/lib/providers/query-provider";
 import { DeveloperModeProvider } from "@/contexts/developer-mode-context";
 
+// FIGURE THIS OUT LATER
 import "@workspace/ui/styles/globals.css";
 import "./globals.css";
 

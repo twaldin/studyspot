@@ -15,8 +15,8 @@ import {
   StudySettings,
   StudyState,
 } from "@/lib/types/QuizTypes";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@workspace/ui/components/button";
+import { Badge } from "@workspace/ui/components/badge";
 import {
   BookOpen,
   Calendar,

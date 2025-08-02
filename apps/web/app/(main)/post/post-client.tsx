@@ -1,11 +1,11 @@
 'use client'
 
 import { ArrowLeft, Heart, MessageSquare, Flag } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Button } from '@workspace/ui/components/button'
+import { Card, CardContent, CardHeader } from '@workspace/ui/components/card'
 import { Textarea } from '@workspace/ui/components/textarea'
-import { Separator } from '@/components/ui/separator'
-import { Badge } from '@/components/ui/badge'
+import { Separator } from '@workspace/ui/components/separator'
+import { Badge } from '@workspace/ui/components/badge'
 
 export function PostClient() {
   return (
