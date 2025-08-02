@@ -1,8 +1,8 @@
 import React from 'react';
 import { useSuggestedQueries } from '@/hooks/api/courses';
 import { useSelectedCourse } from '@/hooks/api/courses';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@workspace/ui/components/button';
+import { Skeleton } from '@workspace/ui/components/skeleton';
 
 interface SuggestedQueriesProps {
   onQuerySelect: (query: string) => void;

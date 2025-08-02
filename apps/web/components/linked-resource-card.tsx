@@ -6,7 +6,7 @@ import {
   QuizResource,
   LinkedResource,
 } from "@/features/chat/chat.types";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@workspace/ui/components/card";
 import { DocumentCard } from "@/components/document-card";
 
 interface LinkedResourceCardProps {

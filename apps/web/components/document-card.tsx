@@ -5,7 +5,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@workspace/ui/components/card";
 import { Document } from "@/lib/types/DocumentTypes"; // Adjust path as needed
 import { useEffect, useRef, useState } from "react";
 

@@ -30,11 +30,11 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator,
-} from "@/components/ui/command"
+} from "@workspace/ui/components/command"
 import { useSidebar } from "@workspace/ui/components/sidebar"
 import { FileUploadDialog } from "@/components/file-upload-dialog"
 import { CreateCourseDialog } from "@/components/create-course-dialog"
-import { NewPostDialog } from "./new-post-dialog"
+import { NewPostDialog } from "@/components/new-post-dialog"
 import { useIsDeveloper } from "@/hooks/api/user"
 import { useDeveloperMode } from "@/contexts/developer-mode-context"
 

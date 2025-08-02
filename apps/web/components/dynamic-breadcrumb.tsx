@@ -13,7 +13,7 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
+} from "@workspace/ui/components/breadcrumb";
 
 interface BreadcrumbData {
   featureName: string;
