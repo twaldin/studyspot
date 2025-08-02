@@ -42,7 +42,7 @@ import {
   SidebarHeader,
   SidebarMenu,
   useSidebar,
-} from "@/components/ui/sidebar";
+} from "@workspace/ui/components/sidebar";
 /* import { Button } from "@/components/ui/button"; */
 import { Button } from "@workspace/ui/components/button";
 import { Separator } from "@/components/ui/separator";

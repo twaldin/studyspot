@@ -9,7 +9,7 @@ import {
   SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/components/ui/sidebar";
+} from "@workspace/ui/components/sidebar";
 import { useStreamingChats } from "@/features/chat/PendingChatContext";
 
 export interface ChatSummary {
@@ -47,9 +47,9 @@ export function ChatList({
   // Get streaming chats that are currently active
   const activeStreamingChats = streamingChats.filter(chat => chat.isStreaming);
   const streamingChatIds = new Set(activeStreamingChats.map(chat => chat.chatId));
-  
+
   // Get temporary chats that don't exist in the actual chat list yet (e.g., during creation)
-  const temporaryChats = activeStreamingChats.filter(streamingChat => 
+  const temporaryChats = activeStreamingChats.filter(streamingChat =>
     !chats.some(chat => chat.id === streamingChat.chatId)
   );
 

@@ -31,7 +31,7 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/components/ui/command"
-import { useSidebar } from "@/components/ui/sidebar"
+import { useSidebar } from "@workspace/ui/components/sidebar"
 import { FileUploadDialog } from "@/components/file-upload-dialog"
 import { CreateCourseDialog } from "@/components/create-course-dialog"
 import { NewPostDialog } from "./new-post-dialog"
@@ -348,4 +348,4 @@ export function CommandPalette() {
       />
     </>
   )
-} 
+}

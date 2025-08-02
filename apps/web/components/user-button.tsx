@@ -13,7 +13,7 @@ import {
 import {
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/components/ui/sidebar";
+} from "@workspace/ui/components/sidebar";
 import { useClerk, useUser } from "@clerk/nextjs";
 import { useRemoveSchool } from "@/hooks/api";
 import { useRouter } from "next/navigation";
@@ -62,13 +62,13 @@ export function UserButton({ variant = "right-sidebar", className }: UserButtonP
       // Step 2: Remove school from backend (this also clears courses)
       await removeSchoolMutation.mutateAsync();
 
-      // Step 3: Force user reload to get fresh JWT 
+      // Step 3: Force user reload to get fresh JWT
       await user?.reload();
-      
+
       // Step 4: Small delay to ensure reload completes before navigation
       await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Step 5: Navigate to school selection 
+
+      // Step 5: Navigate to school selection
       router.push("/onboarding/select-school");
 
     } catch (error) {

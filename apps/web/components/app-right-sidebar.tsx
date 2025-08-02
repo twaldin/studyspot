@@ -9,8 +9,8 @@ import {
   X,
   XCircle,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@workspace/ui/components/button";
+import { Alert, AlertDescription, AlertTitle } from "@workspace/ui/components/alert";
 import toast, { useToaster } from "react-hot-toast";
 import { useUser } from "@clerk/nextjs";
 import {
@@ -20,7 +20,7 @@ import {
 } from "@/hooks/api/courses";
 import { JoinedCourseList } from "@/features/courses/components/joined-course-list";
 import { usePathname } from "next/navigation";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useIsMobile } from "@workspace/ui/hooks/use-mobile";
 import { UserButton } from "@/components/user-button";
 import { DarkModeButton } from "@/components/dark-mode-button";
 

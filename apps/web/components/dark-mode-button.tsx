@@ -3,7 +3,7 @@
 import React from "react";
 import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
+import { SidebarMenuButton, SidebarMenuItem } from "@workspace/ui/components/sidebar";
 import { useTheme } from "next-themes";
 
 interface DarkModeButtonProps {
@@ -41,9 +41,9 @@ export function DarkModeButton({ variant = "right-sidebar", className }: DarkMod
 
   // right-sidebar variant
   return (
-    <Button 
-      variant="secondary" 
-      size="icon" 
+    <Button
+      variant="secondary"
+      size="icon"
       className={`cursor-pointer ${className}`}
       onClick={toggleTheme}
     >

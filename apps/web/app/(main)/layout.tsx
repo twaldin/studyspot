@@ -6,7 +6,7 @@ import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
-} from "@/components/ui/sidebar"
+} from "@workspace/ui/components/sidebar"
 import { CommandPalette } from "@/components/command-palette";
 import { ChatNavigationProvider } from "@/features/chat/ChatNavigationContext";
 import { PendingChatProvider } from "@/features/chat/PendingChatContext";
