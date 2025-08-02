@@ -1,3 +1,5 @@
+/* FOR NOW THIS IS AN IDENTICAL COPY OF THE GLOBAL STYLES USED IN ALL OTHER APPS. I COULDN'T FOR THE LIFE OF ME TO GET STYLES TO INHERIT FROM THE UI PACKAGE. */
+
 @import "tailwindcss";
 @import "tw-animate-css";
 @import 'katex/dist/katex.min.css';
@@ -54,7 +56,7 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  
+
   --font-crimson-text: var(--font-crimson-text);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -95,7 +97,6 @@
 }
 
 :root {
-  
   --primary-button-bg: oklch(0.4341 0.2824 257.6);
   --primary-button-border-top: oklch(0.4181 0.197 262.24);
   --primary-button-border-bottom: oklch(0.3688 0.170498 261.995);
@@ -104,7 +105,7 @@
   --secondary-button-bg: oklch(1 0 0);
   --secondary-button-border-top: oklch(0.9137 0 0);
   --secondary-button-border-bottom: oklch(0.8127 0 0);
-
+  
 
   --radius: 0.625rem;
   --background: oklch(1 0 0);

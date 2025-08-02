@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Crimson_Text } from "next/font/google";
-/* import "./globals.css"; */
 import { ThemeProvider } from "@/components/theme-provider";
 import { ClerkThemeProvider } from "@/components/clerk-theme-provider";
 import { cn } from "@/lib/utils";
