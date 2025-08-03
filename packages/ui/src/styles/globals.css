@@ -1,5 +1,3 @@
-/* FOR NOW THIS IS AN IDENTICAL COPY OF THE GLOBAL STYLES USED IN ALL OTHER APPS. I COULDN'T FOR THE LIFE OF ME TO GET STYLES TO INHERIT FROM THE UI PACKAGE. */
-
 @import "tailwindcss";
 @import "tw-animate-css";
 @import 'katex/dist/katex.min.css';
