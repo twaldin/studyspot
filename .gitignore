@@ -16,6 +16,7 @@
 # next.js
 /.next/
 /out/
+.open-next/
 
 # production
 /build
@@ -35,6 +36,13 @@ yarn-error.log*
 
 # vercel
 .vercel
+
+# cloudflare
+.wrangler
+
+# mastra build output
+.mastra/
+workers/*/.mastra/
 
 # typescript
 *.tsbuildinfo

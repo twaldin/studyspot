@@ -54,13 +54,22 @@ export class ChatStreamingService {
       return String(content || '');
     }
     
-    // Remove complete thinking blocks
-    let filtered = content.replace(/<thinking>[\s\S]*?<\/thinking>/g, '');
+    // Remove complete thinking blocks (case-insensitive, handles multiline)
+    let filtered = content.replace(/<thinking[^>]*>[\s\S]*?<\/thinking>/gi, '');
+    
+    // Also handle markdown-style thinking blocks that might be used
+    filtered = filtered.replace(/\[thinking\][\s\S]*?\[\/thinking\]/gi, '');
     
     // If there's an unclosed <thinking> tag, remove everything from that point
-    const thinkingStart = filtered.lastIndexOf('<thinking>');
+    const thinkingStart = filtered.search(/<thinking[^>]*>/i);
     if (thinkingStart !== -1) {
       filtered = filtered.substring(0, thinkingStart);
+    }
+    
+    // If there's an unclosed [thinking] tag, remove everything from that point
+    const thinkingStartAlt = filtered.search(/\[thinking\]/i);
+    if (thinkingStartAlt !== -1) {
+      filtered = filtered.substring(0, thinkingStartAlt);
     }
     
     return filtered.trim();
@@ -148,6 +157,16 @@ export class ChatStreamingService {
                 
                 // Filter out thinking content for display
                 const displayContent = this.filterThinkingContent(fullResponse);
+                
+                // Debug logging for thinking content
+                if (fullResponse !== displayContent) {
+                  logger.info("[ChatStreaming] Filtered thinking content", {
+                    originalLength: fullResponse.length,
+                    filteredLength: displayContent.length,
+                    containsThinking: fullResponse.includes('<thinking>') || fullResponse.includes('[thinking]')
+                  });
+                }
+                
                 this.updateAssistantMessage(context.setMessages, displayContent);
 
                 // Update streaming context for navigation persistence (with filtered content)
@@ -354,7 +373,7 @@ export class ChatStreamingService {
     const apiUrl = process.env.NEXT_PUBLIC_ASSISTANT_API_URL;
     logger.info("Using assistant API at", apiUrl);
 
-    const response = await fetch(`${apiUrl}/api/chat/stream`, {
+    const response = await fetch(`${apiUrl}/chat/stream`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(requestBody),

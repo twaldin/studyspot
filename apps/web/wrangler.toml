@@ -1,0 +1,31 @@
+name = "studyspot-web"
+main = ".open-next/worker.js"
+compatibility_date = "2025-04-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Static asset binding (required for OpenNext.js)
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
+
+[vars]
+ENVIRONMENT = "production"
+openNextDebug = "true"
+WRANGLER_BUILD_CONDITIONS = ""
+WRANGLER_BUILD_PLATFORM = "node"
+NEXT_PUBLIC_ASSISTANT_API_URL = "https://studyspot-assistant.timothy-869.workers.dev"
+NEXT_PUBLIC_SUPABASE_URL = "https://knyfipffiiocgvpzmfgb.supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtueWZpcGZmaWlvY2d2cHptZmdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgyOTY3MjcsImV4cCI6MjA2Mzg3MjcyN30.a82PuodIYS-Ck_frtFRdz3d38MCt58vfmQi5gIH_J_A"
+SUPABASE_URL = "https://knyfipffiiocgvpzmfgb.supabase.co"
+SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtueWZpcGZmaWlvY2d2cHptZmdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgyOTY3MjcsImV4cCI6MjA2Mzg3MjcyN30.a82PuodIYS-Ck_frtFRdz3d38MCt58vfmQi5gIH_J_A"
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = "pk_test_bmF0aW9uYWwtbW9sbHVzay0yNy5jbGVyay5hY2NvdW50cy5kZXYk"
+NEXT_PUBLIC_CLERK_SIGN_IN_URL = "/sign-in"
+NEXT_PUBLIC_CLERK_SIGN_UP_URL = "/sign-up"
+NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL = "/app"
+NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL = "/app"
+BREVO_LIST_ID = "2"
+NODE_ENV = "production"
+
+# Note: Sensitive values should be stored as secrets, but Clerk needs this as an env var
+# Using test keys for now - production keys should be handled via secrets
+CLERK_SECRET_KEY = "sk_test_hG2t13D9q7K6w2sLdCCMSlTZxptbsfevkzZNXg2hPW"

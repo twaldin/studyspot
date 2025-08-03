@@ -78,6 +78,7 @@ export interface ClaudeChatParams {
 
 export interface GeminiConfig extends AIConfig {
   model?: "gemini-pro" | "gemini-pro-flash" | "gemini-pro-flash-latest";
+  disableThinking?: boolean;
 }
 
 export interface GeminiChatParams {
