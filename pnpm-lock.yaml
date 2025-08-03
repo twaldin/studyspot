@@ -14,6 +14,9 @@ importers:
       '@eslint/js':
         specifier: ^9.31.0
         version: 9.31.0
+      '@next/eslint-plugin-next':
+        specifier: ^15.4.3
+        version: 15.4.3
       concurrently:
         specifier: ^9.1.0
         version: 9.2.0
@@ -322,7 +325,7 @@ importers:
         version: 11.1.2
       root:
         specifier: git+https://github.com/tanstack/react-query.git
-        version: git+https://github.com/tanstack/react-query.git#e9d9080705c4110ea4ed0942716ee668c78f3d96
+        version: git+https://github.com/tanstack/react-query.git#34657e5a12f53b265e53e101033b3416cd455e28
       sharp:
         specifier: ^0.34.3
         version: 0.34.3
@@ -6389,8 +6392,8 @@ packages:
     engines: {node: '>=18.0.0', npm: '>=8.0.0'}
     hasBin: true
 
-  root@git+https://github.com/tanstack/react-query.git#e9d9080705c4110ea4ed0942716ee668c78f3d96:
-    resolution: {commit: e9d9080705c4110ea4ed0942716ee668c78f3d96, repo: https://github.com/tanstack/react-query.git, type: git}
+  root@git+https://github.com/tanstack/react-query.git#34657e5a12f53b265e53e101033b3416cd455e28:
+    resolution: {commit: 34657e5a12f53b265e53e101033b3416cd455e28, repo: https://github.com/tanstack/react-query.git, type: git}
     version: 0.0.0
 
   router@2.2.0:
@@ -13984,7 +13987,7 @@ snapshots:
       '@rollup/rollup-win32-x64-msvc': 4.44.2
       fsevents: 2.3.3
 
-  root@git+https://github.com/tanstack/react-query.git#e9d9080705c4110ea4ed0942716ee668c78f3d96: {}
+  root@git+https://github.com/tanstack/react-query.git#34657e5a12f53b265e53e101033b3416cd455e28: {}
 
   router@2.2.0:
     dependencies:

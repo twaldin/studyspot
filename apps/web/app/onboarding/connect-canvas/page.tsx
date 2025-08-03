@@ -13,16 +13,11 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CanvasSyncManager } from "@/components/canvas-sync-manager";
 
 export default function ConnectCanvasPage() {
   const [accessToken, setAccessToken] = React.useState("");
   const router = useRouter();
-
-  const handleNext = () => {
-    // TODO: Add Canvas integration logic here
-    // For now, just navigate to courses with success parameter
-    router.push("/courses?onboarding=success");
-  };
 
   const handleSkip = () => {
     // Navigate to courses without Canvas integration
@@ -112,16 +107,11 @@ export default function ConnectCanvasPage() {
             >
               Skip for now
             </Button>
-            <Button 
-              variant="primary"
-              onClick={handleNext}
-              disabled={!accessToken.trim()}
-            >
-              Next
-            </Button>
+            <CanvasSyncManager accessToken={accessToken} />
           </CardFooter>
         </Card>
       </div>
     </div>
   );
-} 
+}
+ 
