@@ -74,7 +74,8 @@ export const ChatInputBar = React.forwardRef<HTMLTextAreaElement, ChatInputBarPr
                         if (e.key === 'Enter' && !e.shiftKey) {
                           e.preventDefault();
                           // Only submit if there's a non-empty message (same validation as button)
-                          const messageValue = form.getValues("message")?.trim();
+                          // const messageValue = form.getValues("message")?.trim();
+                          const messageValue = form.watch("message")?.trim();
                           if (messageValue && !isSubmitting) {
                             handleSubmit(handleFormSubmit)();
                           }
