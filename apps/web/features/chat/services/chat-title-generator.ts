@@ -1,5 +1,4 @@
-import { geminiService } from '@/lib/services/ai/gemini.service';
-import { openAIService } from '@/lib/services/ai/openai.service';
+import { generateChatTitle as generateTitleAI } from '@/lib/services/ai/ai-sdk-service';
 import logger from '@/lib/logger';
 
 export interface TitleGenerationParams {
@@ -19,60 +18,19 @@ export async function generateChatTitle(params: TitleGenerationParams): Promise<
       return 'New Chat';
     }
 
-    const prompt = `Generate a very concise title (maximum 4 words) for this chat message. The title should be specific and descriptive, never generic like 'Simple Greeting' or 'New Message'. Focus on the main topic or question. Don't use quotes. Message: "${content}"`;
+    // Use AI SDK service to generate title
+    const title = await generateTitleAI([content]);
     
-    let response;
-    let responseText;
-    let usedProvider = 'gemini';
-    
-    try {
-      // Try Gemini first
-      response = await geminiService.chat([{ role: 'user', content: prompt }]);
-      if (response.success) {
-        responseText = response.data;
-      } else {
-        throw new Error('Gemini returned unsuccessful response');
-      }
-    } catch (geminiError) {
-      logger.warn('[ChatTitleGenerator] Gemini failed, trying OpenAI fallback');
-      usedProvider = 'openai';
-      
-      try {
-        // Fallback to OpenAI
-        response = await openAIService.chatCompletion([{ role: 'user', content: prompt }], {
-          model: 'gpt-4o-mini',
-          temperature: 0.7,
-          maxTokens: 20
-        });
-        
-        if (!response.success) {
-          logger.error('[ChatTitleGenerator] OpenAI service also returned unsuccessful response');
-          return getFallbackTitle(content, fallbackTitle);
-        }
-        
-        responseText = response.data;
-      } catch (openaiError) {
-        logger.error('[ChatTitleGenerator] Both Gemini and OpenAI failed');
-        return getFallbackTitle(content, fallbackTitle);
-      }
-    }
-
-    // Clean up Gemini's response
-    const title = String(responseText)
-      .trim()
-      .replace(/["']/g, '') // Remove quotes
-      .replace(/^Title:?\s*/i, '') // Remove "Title:" prefix if present
-      .substring(0, 50); // Enforce max length as safety
-
-    // Don't accept generic titles from Gemini
+    // Don't accept generic titles
     if (title.toLowerCase().includes('greeting') || 
         title.toLowerCase().includes('simple') ||
-        title.toLowerCase().includes('new message')) {
+        title.toLowerCase().includes('new message') ||
+        title === 'New Chat') {
       return getFallbackTitle(content, fallbackTitle);
     }
 
     if (title) {
-      logger.info({ originalContent: content.substring(0, 50), generatedTitle: title, provider: usedProvider }, '[ChatTitleGenerator] Generated chat title');
+      logger.info({ originalContent: content.substring(0, 50), generatedTitle: title }, '[ChatTitleGenerator] Generated chat title with AI SDK');
       return title;
     }
     
@@ -82,7 +40,7 @@ export async function generateChatTitle(params: TitleGenerationParams): Promise<
     logger.warn({ 
       error: error instanceof Error ? error.message : 'Unknown error', 
       content: params.content.substring(0, 50) 
-    }, '[ChatTitleGenerator] Failed to generate title with Gemini, using fallback');
+    }, '[ChatTitleGenerator] Failed to generate title with AI SDK, using fallback');
     
     return getFallbackTitle(params.content, params.fallbackTitle);
   }

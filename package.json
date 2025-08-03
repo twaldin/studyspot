@@ -4,15 +4,24 @@
   "private": true,
   "workspaces": [
     "apps/*",
-    "packages/*"
+    "packages/*",
+    "workers/*"
   ],
   "scripts": {
-    "dev": "concurrently \"pnpm dev:web\" \"pnpm dev:api\"",
-    "dev:web": "pnpm --filter @studyspot/web exec -- sh -c 'dotenv -e ../../.env next dev --turbopack | pino-pretty'",
-    "dev:api": "pnpm --filter @studyspot/assistant-api dev",
-    "dev:panel": "pnpm --filter @studyspot/dev-panel dev",
-    "dev:all": "concurrently \"pnpm dev:web\" \"pnpm dev:api\" \"pnpm dev:panel\"",
-    "build": "pnpm --filter @studyspot/web build && pnpm --filter @studyspot/assistant-api build && pnpm --filter @studyspot/dev-panel build",
+    "dev": "dotenv -e .env -- concurrently \"pnpm dev:web\" \"pnpm dev:assistant\"",
+    "dev:web": "dotenv -e .env -- pnpm --filter @studyspot/web dev",
+    "dev:assistant": "dotenv -e .env -- sh -c 'cd workers/assistant && pnpm dev'",
+    "dev:cloudflare": "pnpm build && concurrently \"cd apps/web && pnpm dev:wrangler\" \"pnpm dev:assistant\"",
+    "build": "pnpm build:web && pnpm build:assistant",
+    "build:web": "pnpm --filter @studyspot/web build:cloudflare",
+    "build:assistant": "cd workers/assistant && pnpm build",
+    "deploy": "pnpm deploy:web && pnpm deploy:assistant",
+    "deploy:web": "cd apps/web && CLOUDFLARE_API_TOKEN=$CLOUDFLARE_API_TOKEN wrangler deploy",
+    "deploy:assistant": "cd workers/assistant && pnpm deploy",
+    "secrets:list:assistant": "cd workers/assistant && wrangler secret list",
+    "secrets:set:assistant": "cd workers/assistant && wrangler secret put",
+    "secrets:list:web": "cd apps/web && wrangler secret list",
+    "secrets:set:web": "cd apps/web && wrangler secret put",
     "lint": "pnpm --recursive lint",
     "test": "pnpm --recursive test",
     "clean": "pnpm --recursive clean"

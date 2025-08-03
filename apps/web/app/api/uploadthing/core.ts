@@ -66,9 +66,9 @@ export const ourFileRouter = {
         courseId
       }), 'Upload complete, ready for document processing');
 
-      // Document ingestion will be handled by the client after upload completion
-      // This approach allows for better user experience with loading states and error handling
-      // The client will use the clientDocumentIngestionService to process the document
+      // Document ingestion is handled by the Mastra workflow via SSE streaming
+      // This provides real-time progress updates during the entire processing pipeline
+      // The client connects to the assistant worker's /documents/ingest-stream endpoint
 
       return {
         uploadedBy: userId,

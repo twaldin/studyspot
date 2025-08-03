@@ -1,8 +1,10 @@
 import { useCallback } from 'react';
-import confetti from 'canvas-confetti';
 
 export function useConfetti() {
-  const fireCorrectAnswer = useCallback(() => {
+  const fireCorrectAnswer = useCallback(async () => {
+    // Dynamically import confetti to reduce bundle size
+    const confetti = (await import('canvas-confetti')).default;
+    
     // Small burst for correct answers
     confetti({
       particleCount: 50,
@@ -12,7 +14,10 @@ export function useConfetti() {
     });
   }, []);
 
-  const fireQuizComplete = useCallback(() => {
+  const fireQuizComplete = useCallback(async () => {
+    // Dynamically import confetti to reduce bundle size
+    const confetti = (await import('canvas-confetti')).default;
+    
     // Big celebration for quiz completion
     const duration = 3000;
     const animationEnd = Date.now() + duration;
@@ -52,7 +57,10 @@ export function useConfetti() {
     }, 250);
   }, []);
 
-  const fireFlashcardComplete = useCallback(() => {
+  const fireFlashcardComplete = useCallback(async () => {
+    // Dynamically import confetti to reduce bundle size
+    const confetti = (await import('canvas-confetti')).default;
+    
     // Medium celebration for flashcard set completion
     confetti({
       particleCount: 100,

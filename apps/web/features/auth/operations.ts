@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { supabaseService } from "@/lib/services/database/supabase.service";
-import { getUserOnboardingStatus, getSelectedCourseForUser } from "@/lib/clerk";
+import { getUserOnboardingStatus } from "@/lib/clerk";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 
@@ -15,9 +15,6 @@ export interface AuthWithSchoolResult extends AuthResult {
   selectedSchoolDomain?: string;
 }
 
-export interface AuthWithCourseResult extends AuthWithSchoolResult {
-  selectedCourseId: string;
-}
 
 /**
  * Basic auth validation - checks if user is authenticated
@@ -62,20 +59,3 @@ export async function validateAuthWithSchool(): Promise<AuthWithSchoolResult> {
   };
 }
 
-/**
- * Auth validation with course verification
- */
-export async function validateAuthWithCourse(): Promise<AuthWithCourseResult> {
-  const authWithSchool = await validateAuthWithSchool();
-
-  const selectedCourseId = await getSelectedCourseForUser(authWithSchool.userId);
-
-  if (!selectedCourseId) {
-    throw new Error("No course selected");
-  }
-
-  return {
-    ...authWithSchool,
-    selectedCourseId,
-  };
-}

@@ -1,10 +1,19 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { Flashcard as FlashcardType } from "@/features/flashcards/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { FlashcardContent } from "./flashcard-content";
+import dynamic from "next/dynamic";
+
+// Dynamically import motion to reduce initial bundle size
+const DynamicMotionDiv = dynamic(
+  () => import("framer-motion").then((mod) => ({ default: mod.motion.div })),
+  { 
+    ssr: false,
+    loading: () => <div className="animate-pulse bg-muted rounded-lg h-64" />
+  }
+);
 
 interface FlashcardProps {
   card: FlashcardType;
@@ -34,7 +43,7 @@ export function Flashcard({
       style={{ perspective: "5000px" }}
     >
       {/* Card Container */}
-      <motion.div
+      <DynamicMotionDiv
         className="relative preserve-3d cursor-pointer w-full h-full"
         style={{
           transformStyle: "preserve-3d",
@@ -46,7 +55,7 @@ export function Flashcard({
         onClick={onFlip}
       >
         {/* Front Side */}
-        <motion.div
+        <DynamicMotionDiv
           className="absolute inset-0"
           style={{
             backfaceVisibility: "hidden",
@@ -70,10 +79,10 @@ export function Flashcard({
               </div>
             </CardContent>
           </Card>
-        </motion.div>
+        </DynamicMotionDiv>
 
         {/* Back Side */}
-        <motion.div
+        <DynamicMotionDiv
           className="absolute inset-0"
           style={{
             backfaceVisibility: "hidden",
@@ -98,8 +107,8 @@ export function Flashcard({
               </div>
             </CardContent>
           </Card>
-        </motion.div>
-      </motion.div>
+        </DynamicMotionDiv>
+      </DynamicMotionDiv>
 
       {/* Card Number Indicator */}
       <div className="absolute -top-4 -right-4 bg-card dark:bg-background text-gray-900 dark:text-white text-xs font-bold rounded-full w-8 h-8 flex items-center justify-center shadow-lg">

@@ -1,21 +1,14 @@
-import { Gemini, GEMINI_MODEL } from "@/lib/llamaindex-imports";
 import { AIMessage, AIResponse, GeminiConfig } from "@/lib/types/AITypes";
 import logger from "@/lib/logger";
 
 class GeminiService {
-  private client: Gemini | null = null;
-
-  private getClient(): Gemini {
-    if (!this.client) {
-      if (!process.env.GOOGLE_API_KEY) {
-        throw new Error("Google API key not configured");
-      }
-      this.client = new Gemini({
-        apiKey: process.env.GOOGLE_API_KEY,
-        model: GEMINI_MODEL.GEMINI_PRO_FLASH_LATEST,
-      });
+  private async getModel() {
+    if (!process.env.GOOGLE_API_KEY) {
+      throw new Error("Google API key not configured");
     }
-    return this.client;
+    // Dynamically import to reduce bundle size
+    const { google } = await import('@ai-sdk/google');
+    return google('gemini-2.5-flash');
   }
 
   async chat(
@@ -23,38 +16,65 @@ class GeminiService {
     config: GeminiConfig = {},
   ): Promise<AIResponse<string>> {
     try {
-      const client = this.getClient();
+      const model = await this.getModel();
+      
+      // Dynamically import AI SDK to reduce bundle size
+      const { generateText } = await import('ai');
 
-      const response = await client.chat({
+      const result = await generateText({
+        model,
         messages: messages.map((m) => ({
           role: m.role as "user" | "assistant" | "system",
           content: m.content,
         })),
+        temperature: config.temperature || 0.7,
+        maxOutputTokens: config.maxTokens || 2048,
+        // Disable thinking for simple queries to avoid empty responses
+        providerOptions: config.disableThinking === true ? {
+          google: {
+            thinkingConfig: {
+              thinkingBudget: 0,  // 0 disables thinking completely
+              includeThoughts: false
+            }
+          }
+        } : undefined
       });
 
-      let content = "";
-      if (response && typeof response === "object" && "message" in response) {
-        const geminiResponse = response as any;
-        const messageContent = geminiResponse.message?.content;
-        if (typeof messageContent === "string") {
-          content = messageContent;
-        } else if (Array.isArray(messageContent) && messageContent.length > 0) {
-          const textContent = messageContent.find(
-            (item: any) => "type" in item && item.type === "text",
-          );
-          content = textContent?.text || "";
-        }
+      // Check if result.text is empty
+      if (!result.text || result.text.trim() === '') {
+        logger.warn({ 
+          messages, 
+          config,
+          resultText: result.text,
+          usage: result.usage,
+          disableThinking: config.disableThinking,
+          finishReason: result.finishReason,
+          response: result.response
+        }, "Gemini returned empty response");
+        return {
+          success: false,
+          data: "",
+          provider: "gemini",
+          model: "gemini-2.5-flash",
+          error: "Empty response from Gemini"
+        };
       }
 
       return {
         success: true,
-        data: content,
+        data: result.text,
         provider: "gemini",
-        model: config.model || GEMINI_MODEL.GEMINI_PRO_FLASH_LATEST,
+        model: "gemini-2.5-flash",
       };
     } catch (error) {
       logger.error({ error }, "Gemini chat failed");
-      throw error;
+      return {
+        success: false,
+        data: "",
+        provider: "gemini",
+        model: "gemini-2.5-flash",
+        error: error instanceof Error ? error.message : "Unknown error"
+      };
     }
   }
 }
