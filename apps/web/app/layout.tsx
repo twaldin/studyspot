@@ -8,7 +8,7 @@ import { DeveloperModeProvider } from "@/contexts/developer-mode-context";
 
 // FIGURE THIS OUT LATER
 import "@workspace/ui/styles/globals.css";
-import "./globals.css";
+//import "./globals.css";
 
 const crimsonText = Crimson_Text({
   weight: ["400", "600", "700"],
