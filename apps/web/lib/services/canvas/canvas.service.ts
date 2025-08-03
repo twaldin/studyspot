@@ -70,11 +70,22 @@ async function getCourseByCode(courseCode: string, schoolId: string): Promise<IC
 async function createCourseFromCanvas(course: CanvasCourse, schoolId: string): Promise<ICourse> {
   const supabase = createServiceRoleClient();
   logger.info({ courseName: course.name }, "Course not found in DB, creating new entry.");
+
+  let courseCode = course.course_code.trim();
+  const courseName = course.name.trim();
+
+  // If the course code is the same as the name, or if it's excessively long, generate a shorter one.
+  if (courseCode === courseName || courseCode.length > 15) {
+    const namePrefix = courseName.replace(/[^a-zA-Z]/g, '').substring(0, 4).toUpperCase();
+    const idSuffix = course.id.toString().slice(-3);
+    courseCode = `${namePrefix}${idSuffix}`;
+  }
+
   const newCourseResult = await createCourseInDb(
     supabase,
     {
-      title: course.name,
-      code: course.course_code.trim(),
+      title: courseName,
+      code: courseCode,
       schoolId: schoolId,
     }
   );

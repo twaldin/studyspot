@@ -61,9 +61,16 @@ export function CanvasCourseSelectionDialog({
     onSync(selectedCourseObjects);
   };
 
+  const handleOpenChange = (open: boolean) => {
+    if (isProcessing) {
+      return;
+    }
+    onOpenChange(open);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="sm:max-w-[425px]" showCloseButton={!isProcessing}>
         <DialogHeader>
           <DialogTitle>Select Canvas Courses</DialogTitle>
           <DialogDescription>

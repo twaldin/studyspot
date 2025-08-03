@@ -8,6 +8,7 @@ import { CanvasCourseSelectionDialog } from '@/components/canvas-course-selectio
 import { CanvasCourse } from '@/lib/services/canvas/canvas.service';
 import { toast } from 'react-hot-toast';
 import { queryKeys } from '@/hooks/api/base';
+import { useSyncCanvasCourses } from '@/hooks/api/canvas';
 
 interface CanvasSyncManagerProps {
   accessToken: string;
@@ -15,73 +16,29 @@ interface CanvasSyncManagerProps {
 
 export function CanvasSyncManager({ accessToken }: CanvasSyncManagerProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
   const router = useRouter();
   const queryClient = useQueryClient();
+  const syncMutation = useSyncCanvasCourses();
 
-  const handleSync = async (selectedCourses: CanvasCourse[]) => {
-    setIsProcessing(true);
-    try {
-      const response = await fetch('/api/canvas/sync', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          courses: selectedCourses,
-          accessToken,
-        }),
-      });
+  const handleSync = (selectedCourses: CanvasCourse[]) => {
+    syncMutation.mutate({ courses: selectedCourses, accessToken }, {
+      onSuccess: async () => {
+        toast.success('Courses synced successfully! Updating your data...');
+        await queryClient.invalidateQueries({ queryKey: queryKeys.user.all });
+        await queryClient.invalidateQueries({ queryKey: queryKeys.courses.all });
+        
+        // Refetch queries to ensure data is fresh before navigation
+        await queryClient.refetchQueries({ queryKey: queryKeys.user.all, exact: true });
+        await queryClient.refetchQueries({ queryKey: queryKeys.courses.all, exact: true });
 
-      if (!response.ok) {
-        throw new Error('Failed to sync courses');
-      }
-
-      const { syncedCourses } = await response.json();
-
-      if (syncedCourses && syncedCourses.length > 0) {
-        // Optimistically update the cache
-        queryClient.setQueryData(queryKeys.courses.lists(), (oldData: any) => {
-          const existingCourses = oldData || [];
-          const newCourses = syncedCourses.filter((sc: any) => !existingCourses.some((ec: any) => ec.id === sc.id));
-          return [...existingCourses, ...newCourses];
-        });
-
-        queryClient.setQueryData(queryKeys.user.joinedCourses(), (oldData: any) => {
-          const existingJoined = oldData || [];
-          const newJoinedIds = syncedCourses.map((c: any) => c.id).filter((id: any) => !existingJoined.includes(id));
-          return [...existingJoined, ...newJoinedIds];
-        });
-
-        queryClient.setQueryData(queryKeys.user.profile(), (oldData: any) => {
-            if (!oldData) return oldData;
-            const existingJoined = oldData.publicMetadata.joinedCourses || [];
-            const newJoinedIds = syncedCourses.map((c: any) => c.id).filter((id: any) => !existingJoined.includes(id));
-            return {
-                ...oldData,
-                publicMetadata: {
-                    ...oldData.publicMetadata,
-                    joinedCourses: [...existingJoined, ...newJoinedIds],
-                }
-            };
-        });
-
-        queryClient.setQueryData(queryKeys.user.selectedCourse(), syncedCourses[0]);
-      }
-
-      toast.success('Courses synced successfully!');
-      
-      // Invalidate queries to ensure data consistency in the background
-      await queryClient.invalidateQueries({ queryKey: queryKeys.user.all });
-      await queryClient.invalidateQueries({ queryKey: queryKeys.courses.all });
-
-      router.push('/courses');
-    } catch (error) {
-      toast.error('Failed to sync courses. Please try again.');
-    } finally {
-      setIsProcessing(false);
-      setIsDialogOpen(false);
-    }
+        toast.success('Setup complete! Redirecting to your courses...');
+        router.push('/courses');
+        setIsDialogOpen(false);
+      },
+      onError: () => {
+        toast.error('Failed to sync courses. Please try again.');
+      },
+    });
   };
 
   return (
@@ -94,7 +51,7 @@ export function CanvasSyncManager({ accessToken }: CanvasSyncManagerProps) {
           open={isDialogOpen}
           onOpenChange={setIsDialogOpen}
           onSync={handleSync}
-          isProcessing={isProcessing}
+          isProcessing={syncMutation.isPending}
           accessToken={accessToken}
         />
       )}
