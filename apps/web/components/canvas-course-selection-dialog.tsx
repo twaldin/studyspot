@@ -17,11 +17,12 @@ import { CanvasCourse } from "@/lib/services/canvas/canvas.service";
 import { useCanvasCourses } from "@/hooks/api/canvas";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "react-hot-toast";
+import { Label } from "@/components/ui/label";
 
 interface CanvasCourseSelectionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSync: (selectedCourses: CanvasCourse[]) => void;
+  onSync: (selectedCourses: { course: CanvasCourse; contentTypes: string[] }[]) => void;
   isProcessing: boolean;
   accessToken: string;
 }
@@ -34,11 +35,18 @@ export function CanvasCourseSelectionDialog({
   accessToken,
 }: CanvasCourseSelectionDialogProps) {
   const [selectedCourses, setSelectedCourses] = React.useState<number[]>([]);
+  const [selectedContentTypes, setSelectedContentTypes] = React.useState<{ [courseId: number]: string[] }>({});
   const { data: courses, isLoading, error } = useCanvasCourses(accessToken);
 
   React.useEffect(() => {
     if (courses) {
-      setSelectedCourses(courses.map(course => course.id));
+      const initialSelectedCourses = courses.map(course => course.id);
+      setSelectedCourses(initialSelectedCourses);
+      const initialContentTypes = courses.reduce((acc, course) => {
+        acc[course.id] = course.availableContentTypes || [];
+        return acc;
+      }, {} as { [courseId: number]: string[] });
+      setSelectedContentTypes(initialContentTypes);
     }
   }, [courses]);
 
@@ -49,15 +57,50 @@ export function CanvasCourseSelectionDialog({
   }, [error]);
 
   const handleSelectCourse = (courseId: number) => {
-    setSelectedCourses((prev) =>
-      prev.includes(courseId)
-        ? prev.filter((id) => id !== courseId)
-        : [...prev, courseId]
-    );
+    const isSelected = selectedCourses.includes(courseId);
+    const course = courses?.find(c => c.id === courseId);
+    if (isSelected) {
+      setSelectedCourses(prev => prev.filter(id => id !== courseId));
+      setSelectedContentTypes(prev => {
+        const newContentTypes = { ...prev };
+        delete newContentTypes[courseId];
+        return newContentTypes;
+      });
+    } else {
+      setSelectedCourses(prev => [...prev, courseId]);
+      setSelectedContentTypes(prev => ({
+        ...prev,
+        [courseId]: course?.availableContentTypes || [],
+      }));
+    }
+  };
+
+  const handleSelectContentType = (courseId: number, contentType: string) => {
+    setSelectedContentTypes(prev => {
+      const currentContentTypes = prev[courseId] || [];
+      const newContentTypes = currentContentTypes.includes(contentType)
+        ? currentContentTypes.filter(ct => ct !== contentType)
+        : [...currentContentTypes, contentType];
+      
+      if (newContentTypes.length === 0) {
+        setSelectedCourses(prevSelected => prevSelected.filter(id => id !== courseId));
+      } else if (!selectedCourses.includes(courseId)) {
+        setSelectedCourses(prevSelected => [...prevSelected, courseId]);
+      }
+
+      return {
+        ...prev,
+        [courseId]: newContentTypes,
+      };
+    });
   };
 
   const handleSync = () => {
-    const selectedCourseObjects = (courses as any)?.filter((course: CanvasCourse) => selectedCourses.includes(course.id)) || [];
+    const selectedCourseObjects = (courses as any)?.filter((course: CanvasCourse) => selectedCourses.includes(course.id))
+      .map(course => ({
+        course,
+        contentTypes: selectedContentTypes[course.id] || [],
+      })) || [];
     onSync(selectedCourseObjects);
   };
 
@@ -74,7 +117,7 @@ export function CanvasCourseSelectionDialog({
         <DialogHeader>
           <DialogTitle>Select Canvas Courses</DialogTitle>
           <DialogDescription>
-            Choose which courses you want to sync with StudySpot.
+            Choose which courses and content types you want to sync with StudySpot.
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="h-72">
@@ -85,21 +128,32 @@ export function CanvasCourseSelectionDialog({
               <Skeleton className="h-12 w-full" />
             </div>
           ) : (
-            <Accordion type="single" collapsible className="w-full">
+            <Accordion type="multiple" className="w-full">
               {(courses as any)?.map((course: CanvasCourse) => (
                 <AccordionItem value={`course-${course.id}`} key={course.id}>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 w-full pr-4">
                     <Checkbox
+                      className="ml-4"
                       checked={selectedCourses.includes(course.id)}
                       onCheckedChange={() => handleSelectCourse(course.id)}
-                      className="mt-4"
                     />
-                    <AccordionTrigger>
+                    <AccordionTrigger className="flex-1">
                       <span>{course.name}</span>
                     </AccordionTrigger>
                   </div>
                   <AccordionContent>
-                    <p className="text-sm text-muted-foreground">{course.course_code}</p>
+                    <div className="space-y-2 pl-12">
+                      {(course.availableContentTypes || []).map(contentType => (
+                        <div key={contentType} className="flex items-center gap-2">
+                          <Checkbox
+                            id={`ct-${course.id}-${contentType}`}
+                            checked={(selectedContentTypes[course.id] || []).includes(contentType)}
+                            onCheckedChange={() => handleSelectContentType(course.id, contentType)}
+                          />
+                          <Label htmlFor={`ct-${course.id}-${contentType}`}>{contentType}</Label>
+                        </div>
+                      ))}
+                    </div>
                   </AccordionContent>
                 </AccordionItem>
               ))}
