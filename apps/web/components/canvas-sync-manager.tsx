@@ -20,7 +20,7 @@ export function CanvasSyncManager({ accessToken }: CanvasSyncManagerProps) {
   const queryClient = useQueryClient();
   const syncMutation = useSyncCanvasCourses();
 
-  const handleSync = (selectedCourses: CanvasCourse[]) => {
+  const handleSync = (selectedCourses: { course: CanvasCourse; contentTypes: string[] }[]) => {
     syncMutation.mutate({ courses: selectedCourses, accessToken }, {
       onSuccess: async () => {
         toast.success('Courses synced successfully! Updating your data...');

@@ -25,7 +25,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'An array of courses to sync is required' }, { status: 400 });
     }
 
-    const syncedCourses = await syncCanvasCourses(userId, schoolId, courses as CanvasCourse[], accessToken);
+    const syncedCourses = await syncCanvasCourses(userId, schoolId, courses as { course: CanvasCourse; contentTypes: string[] }[], accessToken);
 
     if (syncedCourses.length > 0) {
       const clerk = await clerkClient();

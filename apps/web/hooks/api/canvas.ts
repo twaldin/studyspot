@@ -19,7 +19,7 @@ export function useCanvasCourses(accessToken: string) {
   });
 }
 
-async function syncCanvasCourses(data: { courses: CanvasCourse[], accessToken: string }): Promise<any> {
+async function syncCanvasCourses(data: { courses: { course: CanvasCourse; contentTypes: string[] }[], accessToken: string }): Promise<any> {
   const response = await fetch('/api/canvas/sync', {
     method: 'POST',
     headers: {
