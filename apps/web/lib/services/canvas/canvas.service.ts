@@ -56,6 +56,22 @@ export type CanvasAssignment = z.infer<typeof canvasAssignmentSchema>;
 
 const baseUrl = 'https://canvas.instructure.com/api/v1';
 
+async function getCourseByCanvasId(canvasCourseId: number, schoolId: string): Promise<ICourse | null> {
+  const supabase = createServiceRoleClient();
+  const { data, error } = await supabase
+    .from('courses')
+    .select('*')
+    .eq('canvas_course_id', canvasCourseId)
+    .eq('school_id', schoolId)
+    .single();
+
+  if (error && error.code !== 'PGRST116') {
+    logger.error({ error, canvasCourseId, schoolId }, 'Error fetching course by canvas_course_id');
+    return null;
+  }
+  return data;
+}
+
 async function getCourseByCode(courseCode: string, schoolId: string): Promise<ICourse | null> {
   const supabase = createServiceRoleClient();
   const normalizedCourseCode = courseCode.trim();
@@ -98,6 +114,7 @@ async function createCourseFromCanvas(course: CanvasCourse, schoolId: string): P
       title: courseName,
       code: courseCode,
       schoolId: schoolId,
+      canvas_course_id: course.id,
     }
   );
   return newCourseResult.course;
@@ -436,15 +453,36 @@ export async function syncCanvasCourses(
   accessToken: string,
 ): Promise<ICourse[]> {
   const syncedCourses: ICourse[] = [];
+  const supabase = createServiceRoleClient();
 
   for (const { course, contentTypes } of courses) {
     try {
-      let dbCourse = await getCourseByCode(course.course_code, schoolId);
+      // Step 1: Check for an existing course by Canvas ID (exact match)
+      let dbCourse = await getCourseByCanvasId(course.id, schoolId);
 
+      if (!dbCourse) {
+        // Step 2: Check for an existing course by code (heuristic match for manually created courses)
+        dbCourse = await getCourseByCode(course.course_code, schoolId);
+        if (dbCourse) {
+          // If found, link it by updating the canvas_course_id
+          logger.info({ courseName: course.name, courseId: dbCourse.id }, "Found matching course by code, linking to Canvas ID.");
+          const { error } = await supabase
+            .from('courses')
+            .update({ canvas_course_id: course.id })
+            .eq('id', dbCourse.id);
+          if (error) {
+            logger.error({ error, courseId: dbCourse.id }, "Failed to link course to Canvas ID.");
+            // Continue to the next course if linking fails
+            continue;
+          }
+        }
+      }
+
+      // Step 3: If no course was found by either method, create a new one
       if (!dbCourse) {
         dbCourse = await createCourseFromCanvas(course, schoolId);
       } else {
-        logger.info({ courseName: course.name }, "Course found in DB, skipping creation.");
+        logger.info({ courseName: course.name }, "Course already exists in DB, skipping creation.");
       }
 
       if (!dbCourse) {

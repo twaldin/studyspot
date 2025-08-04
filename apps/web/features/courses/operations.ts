@@ -127,6 +127,7 @@ export async function createCourse(
     schoolId: string;
     uploadedFileUrl?: string;
     tempFileKeys?: string[];
+    canvas_course_id?: number;
   },
 ): Promise<{ course: ICourse; message: string; type: "success" | "partial_success" }> {
   logger.info({
@@ -134,12 +135,14 @@ export async function createCourse(
     code: params.code,
     schoolId: params.schoolId,
     hasFile: !!params.uploadedFileUrl,
+    canvasCourseId: params.canvas_course_id,
   }, "Starting course creation");
 
   const courseToCreate: ICourseInsert = {
     title: params.title,
     code: params.code,
     school_id: params.schoolId,
+    canvas_course_id: params.canvas_course_id,
   };
 
   // Create the course in database
