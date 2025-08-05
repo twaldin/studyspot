@@ -129,34 +129,46 @@ export function CanvasCourseSelectionDialog({
             </div>
           ) : (
             <Accordion type="multiple" className="w-full">
-              {(courses as any)?.map((course: CanvasCourse) => (
-                <AccordionItem value={`course-${course.id}`} key={course.id}>
-                  <div className="flex items-center gap-3 w-full pr-4">
-                    <Checkbox
-                      className="ml-4"
-                      checked={selectedCourses.includes(course.id)}
-                      onCheckedChange={() => handleSelectCourse(course.id)}
-                    />
-                    <AccordionTrigger className="flex-1">
-                      <span>{course.name}</span>
-                    </AccordionTrigger>
-                  </div>
-                  <AccordionContent>
-                    <div className="space-y-2 pl-12">
-                      {(course.availableContentTypes || []).map(contentType => (
-                        <div key={contentType} className="flex items-center gap-2">
-                          <Checkbox
-                            id={`ct-${course.id}-${contentType}`}
-                            checked={(selectedContentTypes[course.id] || []).includes(contentType)}
-                            onCheckedChange={() => handleSelectContentType(course.id, contentType)}
-                          />
-                          <Label htmlFor={`ct-${course.id}-${contentType}`}>{contentType}</Label>
+              {(courses as any)?.map((course: CanvasCourse) => {
+                const hasContent = course.availableContentTypes && course.availableContentTypes.length > 0;
+                return (
+                  <AccordionItem value={`course-${course.id}`} key={course.id} className="border-b">
+                    <div className="flex items-center gap-3 w-full pr-4">
+                      <Checkbox
+                        className="ml-4"
+                        checked={selectedCourses.includes(course.id)}
+                        onCheckedChange={() => handleSelectCourse(course.id)}
+                      />
+                      {hasContent ? (
+                        <AccordionTrigger className="flex-1">
+                          <span>{course.name}</span>
+                        </AccordionTrigger>
+                      ) : (
+                        <div className="flex-1 flex justify-between items-center py-4">
+                          <span>{course.name}</span>
+                          <span className="text-muted-foreground text-sm mr-4">Empty</span>
                         </div>
-                      ))}
+                      )}
                     </div>
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
+                    {hasContent && (
+                      <AccordionContent>
+                        <div className="space-y-2 pl-12">
+                          {(course.availableContentTypes || []).map(contentType => (
+                            <div key={contentType} className="flex items-center gap-2">
+                              <Checkbox
+                                id={`ct-${course.id}-${contentType}`}
+                                checked={(selectedContentTypes[course.id] || []).includes(contentType)}
+                                onCheckedChange={() => handleSelectContentType(course.id, contentType)}
+                              />
+                              <Label htmlFor={`ct-${course.id}-${contentType}`}>{contentType}</Label>
+                            </div>
+                          ))}
+                        </div>
+                      </AccordionContent>
+                    )}
+                  </AccordionItem>
+                );
+              })}
             </Accordion>
           )}
         </ScrollArea>

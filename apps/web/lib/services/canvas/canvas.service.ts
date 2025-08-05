@@ -47,12 +47,28 @@ const canvasAssignmentSchema = z.object({
   html_url: z.string(),
 });
 
+const canvasFrontPageSchema = z.object({
+  url: z.string(),
+  title: z.string(),
+  body: z.string().nullable(),
+});
+
+const canvasAnnouncementSchema = z.object({
+  id: z.number(),
+  title: z.string(),
+  message: z.string().nullable(),
+  html_url: z.string(),
+});
+
 export type CanvasCourse = z.infer<typeof canvasCourseSchema> & {
   availableContentTypes?: string[];
 };
 export type CanvasModule = z.infer<typeof canvasModuleSchema>;
 export type CanvasFile = z.infer<typeof canvasFileSchema>;
 export type CanvasAssignment = z.infer<typeof canvasAssignmentSchema>;
+export type CanvasFrontPage = z.infer<typeof canvasFrontPageSchema>;
+export type CanvasAnnouncement = z.infer<typeof canvasAnnouncementSchema>;
+
 
 const baseUrl = 'https://canvas.instructure.com/api/v1';
 
@@ -128,6 +144,55 @@ async function ingestContentForCourse(
   contentTypes: string[]
 ): Promise<void> {
   logger.info({ courseId: dbCourse.id, contentTypes }, "Starting content ingestion for course.");
+
+  if (contentTypes.includes('Homepage')) {
+    try {
+      const homepage = await getCanvasCourseHomepage(canvasCourseId, accessToken);
+      if (homepage && homepage.body) {
+        const cleanBody = homepage.body.replace(/<[^>]*>?/gm, '').trim();
+        if (cleanBody) {
+          await ingestCanvasPage(userId, dbCourse.id, homepage.title, cleanBody, homepage.url);
+          logger.info({ courseId: dbCourse.id, pageTitle: homepage.title }, "Successfully ingested homepage.");
+        } else {
+          logger.warn({ courseId: dbCourse.id, pageTitle: homepage.title }, "Skipping empty homepage.");
+        }
+      }
+    } catch (ingestionError: any) {
+      logger.error(
+        {
+          error: ingestionError.message,
+        },
+        "Failed to ingest homepage, continuing with next item."
+      );
+    }
+  }
+
+  if (contentTypes.includes('Announcements')) {
+    const announcements = await getCanvasCourseAnnouncements(canvasCourseId, accessToken);
+    for (const announcement of announcements) {
+      try {
+        if (announcement.message) {
+          const cleanMessage = announcement.message.replace(/<[^>]*>?/gm, '').trim();
+          if (cleanMessage) {
+            await ingestCanvasPage(userId, dbCourse.id, announcement.title, cleanMessage, announcement.html_url);
+            logger.info({ courseId: dbCourse.id, announcementTitle: announcement.title }, "Successfully ingested announcement.");
+          } else {
+            logger.warn({ courseId: dbCourse.id, announcementTitle: announcement.title }, "Skipping empty announcement after HTML stripping.");
+          }
+        } else {
+          logger.warn({ courseId: dbCourse.id, announcementTitle: announcement.title }, "Skipping empty announcement.");
+        }
+      } catch (ingestionError: any) {
+        logger.error(
+          {
+            announcementTitle: announcement.title,
+            error: ingestionError.message,
+          },
+          "Failed to ingest announcement, continuing with next item."
+        );
+      }
+    }
+  }
 
   if (contentTypes.includes('Modules')) {
     const modules = await getModulesForCourse(canvasCourseId, accessToken);
@@ -238,8 +303,13 @@ async function ingestContentForCourse(
     for (const assignment of assignments) {
       try {
         if (assignment.description) {
-          await ingestCanvasPage(userId, dbCourse.id, assignment.name, assignment.description, assignment.html_url);
-          logger.info({ courseId: dbCourse.id, assignmentName: assignment.name }, "Successfully ingested assignment.");
+          const cleanDescription = assignment.description.replace(/<[^>]*>?/gm, '').trim();
+          if (cleanDescription) {
+            await ingestCanvasPage(userId, dbCourse.id, assignment.name, cleanDescription, assignment.html_url);
+            logger.info({ courseId: dbCourse.id, assignmentName: assignment.name }, "Successfully ingested assignment.");
+          } else {
+            logger.warn({ courseId: dbCourse.id, assignmentName: assignment.name }, "Skipping empty assignment after HTML stripping.");
+          }
         } else {
           logger.warn({ courseId: dbCourse.id, assignmentName: assignment.name }, "Skipping empty assignment.");
         }
@@ -276,6 +346,10 @@ export async function getCanvasCourses(accessToken: string): Promise<CanvasCours
         const availableContentTypes: string[] = [];
 
         const contentChecks = await Promise.allSettled([
+          // Check for Homepage
+          fetch(`${baseUrl}/courses/${course.id}/front_page`, { headers: { Authorization: `Bearer ${accessToken}` } }),
+          // Check for Announcements
+          fetch(`${baseUrl}/courses/${course.id}/discussion_topics?only_announcements=true&per_page=1`, { headers: { Authorization: `Bearer ${accessToken}` } }),
           // Check for Modules
           fetch(`${baseUrl}/courses/${course.id}/modules?per_page=1`, { headers: { Authorization: `Bearer ${accessToken}` } }),
           // Check for Files
@@ -284,13 +358,19 @@ export async function getCanvasCourses(accessToken: string): Promise<CanvasCours
           fetch(`${baseUrl}/courses/${course.id}/assignments?per_page=1`, { headers: { Authorization: `Bearer ${accessToken}` } }),
         ]);
 
-        const [modulesResult, filesResult, assignmentsResult] = await Promise.all(contentChecks.map(async res => {
+        const [homepageResult, announcementsResult, modulesResult, filesResult, assignmentsResult] = await Promise.all(contentChecks.map(async res => {
           if (res.status === 'fulfilled' && res.value.ok) {
+            // For homepage, a 200 OK is enough. For lists, check if the array is non-empty.
+            if (res.value.url.includes('front_page')) {
+              return res.value.json().then(data => (data && data.body ? [data] : [])).catch(() => []);
+            }
             return res.value.json();
           }
           return [];
         }));
 
+        if (homepageResult.length > 0) availableContentTypes.push('Homepage');
+        if (announcementsResult.length > 0) availableContentTypes.push('Announcements');
         if (modulesResult.length > 0) availableContentTypes.push('Modules');
         if (filesResult.length > 0) availableContentTypes.push('Files');
         if (assignmentsResult.length > 0) availableContentTypes.push('Assignments');
@@ -496,4 +576,68 @@ export async function syncCanvasCourses(
     }
   }
   return syncedCourses;
+}
+
+
+export async function getCanvasCourseHomepage(courseId: number, accessToken: string): Promise<CanvasFrontPage | null> {
+  try {
+    const response = await fetch(`${baseUrl}/courses/${courseId}/front_page`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      // A 404 here is not an error, it just means the course has no front page.
+      if (response.status === 404) {
+        return null;
+      }
+      throw new CanvasAPIError(`Failed to fetch homepage from Canvas: ${response.statusText}`, response.status);
+    }
+
+    const pageData = await response.json();
+    return canvasFrontPageSchema.parse(pageData);
+  } catch (error) {
+    logger.error({ error, courseId }, 'Failed to get course homepage from Canvas');
+    throw error;
+  }
+}
+
+export async function getCanvasCourseAnnouncements(courseId: number, accessToken: string): Promise<CanvasAnnouncement[]> {
+  let announcements: CanvasAnnouncement[] = [];
+  let url = `${baseUrl}/courses/${courseId}/discussion_topics?only_announcements=true`;
+
+  try {
+    while (url) {
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(`Failed to fetch announcements from Canvas: ${response.statusText} - ${errorBody}`);
+      }
+
+      const data = await response.json();
+      announcements = announcements.concat(z.array(canvasAnnouncementSchema).parse(data));
+
+      const linkHeader = response.headers.get('Link');
+      const nextLink = linkHeader?.split(',').find(s => s.includes('rel="next"'));
+      url = nextLink ? (nextLink.match(/<(.*)>/)?.[1] ?? '') : '';
+    }
+    return announcements;
+  } catch (error: any) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error(
+      {
+        message: 'Failed to get announcements from Canvas',
+        errorMessage: errorMessage,
+        error: error,
+      },
+      'Failed to get announcements from Canvas'
+    );
+    throw error;
+  }
 }
