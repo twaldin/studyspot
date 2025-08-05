@@ -9,6 +9,7 @@ import { CanvasCourse } from '@/lib/services/canvas/canvas.service';
 import { toast } from 'react-hot-toast';
 import { queryKeys } from '@/hooks/api/base';
 import { useSyncCanvasCourses } from '@/hooks/api/canvas';
+import { useUser } from '@clerk/nextjs';
 
 interface CanvasSyncManagerProps {
   accessToken: string;
@@ -19,11 +20,16 @@ export function CanvasSyncManager({ accessToken }: CanvasSyncManagerProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const syncMutation = useSyncCanvasCourses();
+  const { user } = useUser();
 
   const handleSync = (selectedCourses: { course: CanvasCourse; contentTypes: string[] }[]) => {
     syncMutation.mutate({ courses: selectedCourses, accessToken }, {
       onSuccess: async () => {
         toast.success('Courses synced successfully! Updating your data...');
+        
+        // Force a reload of the user object to get the latest metadata
+        await user?.reload();
+        
         await queryClient.invalidateQueries({ queryKey: queryKeys.user.all });
         await queryClient.invalidateQueries({ queryKey: queryKeys.courses.all });
         
