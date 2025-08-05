@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { FlaskConical, Loader2, X } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
@@ -11,6 +11,8 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { useStreamingChats } from "@/features/chat/PendingChatContext";
+import { getCourseIcon } from "@/lib/utils/course-icons";
+import { ICourse } from "@/features/courses/course.model";
 
 export interface ChatSummary {
   id: string;
@@ -21,6 +23,7 @@ export interface ChatSummary {
 
 interface ChatListProps {
   chats: ChatSummary[];
+  courses?: ICourse[];
   isLoading: boolean;
   error: any;
   onChatSelect: (chatId: string) => void;
@@ -30,6 +33,7 @@ interface ChatListProps {
 
 export function ChatList({
   chats,
+  courses,
   isLoading,
   error,
   onChatSelect,
@@ -101,34 +105,39 @@ export function ChatList({
       ))}
 
       {/* Render actual chats */}
-      {chats.map((chat) => (
-        <SidebarMenuItem
-          key={chat.id}
-          className="group-data-[collapsible=icon]:hidden"
-        >
-          <SidebarMenuButton
-            asChild
-            className="group-data-[collapsible=icon]:justify-center"
-            isActive={selectedChatId === chat.id}
+      {chats.map((chat) => {
+        // Find the course for this chat to get its icon
+        const course = courses?.find(c => c.id === chat.course_id);
+        const IconComponent = getCourseIcon(course?.icon);
+        
+        return (
+          <SidebarMenuItem
+            key={chat.id}
+            className="group-data-[collapsible=icon]:hidden"
           >
-            <a
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                onChatSelect(chat.id);
-              }}
-              onMouseEnter={() => onChatHover(chat.id)}
+            <SidebarMenuButton
+              asChild
+              className="group-data-[collapsible=icon]:justify-center"
+              isActive={selectedChatId === chat.id}
             >
-              {streamingChatIds.has(chat.id) ? (
-                <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
-              ) : (
-                <FlaskConical className="h-4 w-4 shrink-0" />
-              )}
-              <span className="group-data-[collapsible=icon]:hidden truncate min-w-0">
-                {chat.title}
-              </span>
-            </a>
-          </SidebarMenuButton>
+              <a
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onChatSelect(chat.id);
+                }}
+                onMouseEnter={() => onChatHover(chat.id)}
+              >
+                {streamingChatIds.has(chat.id) ? (
+                  <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+                ) : (
+                  <IconComponent className="h-4 w-4 shrink-0" />
+                )}
+                <span className="group-data-[collapsible=icon]:hidden truncate min-w-0">
+                  {chat.title}
+                </span>
+              </a>
+            </SidebarMenuButton>
           <SidebarMenuAction
             showOnHover
             onClick={(e) => {
@@ -144,8 +153,9 @@ export function ChatList({
           >
             <X className="h-3 w-3" />
           </SidebarMenuAction>
-        </SidebarMenuItem>
-      ))}
+          </SidebarMenuItem>
+        );
+      })}
     </SidebarMenu>
   );
 }

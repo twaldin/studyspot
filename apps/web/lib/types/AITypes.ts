@@ -95,6 +95,7 @@ export const CourseInfoSchema = z.object({
   courseCode: z.string().nullable(),
   courseTitle: z.string().nullable(),
   schoolName: z.string().nullable(),
+  icon: z.string().nullable(),
 });
 
 export type CourseInfo = z.infer<typeof CourseInfoSchema>;

@@ -24,8 +24,8 @@ export async function checkDocumentRelevance(
 ): Promise<boolean> {
   try {
     // Check for Google API key
-    if (!process.env.GOOGLE_API_KEY) {
-      logger.error('No Google API key found for document relevance check');
+    if (!getEnv('GOOGLE_API_KEY') && !getEnv('GEMINI_API_KEY')) {
+      logger.error('No Google/Gemini API key found for document relevance check');
       // Default to relevant if AI check not available
       return true;
     }
@@ -345,12 +345,20 @@ export async function generateChatTitle(messages: string[]): Promise<string> {
 
 ${conversationText}
 
-The title should capture the main topic or question being discussed. Be specific and helpful for later reference.`,
+The title should capture the main topic or question being discussed. Be specific and helpful for later reference.
+
+IMPORTANT: Respond with ONLY the title text, no prefixes like "Title:" or quotes. Just the title itself.`,
       maxOutputTokens: 50,
       temperature: 0.7,
     });
 
-    return result.text.trim().replace(/^["']|["']$/g, ''); // Remove quotes if present
+    // Clean the response: remove quotes, "Title:" prefix, and other common prefixes
+    let cleanTitle = result.text.trim()
+      .replace(/^["']|["']$/g, '') // Remove quotes
+      .replace(/^(Title:\s*|Subject:\s*|Topic:\s*)/i, '') // Remove common prefixes
+      .trim();
+    
+    return cleanTitle;
 
   } catch (error) {
     logger.error({

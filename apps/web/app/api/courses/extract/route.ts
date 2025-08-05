@@ -33,6 +33,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       courseCode: result.data?.courseCode || '',
       courseTitle: result.data?.courseTitle || '',
+      icon: result.data?.icon || null,
       confidence: result.confidence || 0.8
     });
     

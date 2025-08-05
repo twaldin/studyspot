@@ -3,12 +3,15 @@ import logger from "@/lib/logger";
 
 class GeminiService {
   private async getModel() {
-    if (!process.env.GOOGLE_API_KEY) {
-      throw new Error("Google API key not configured");
+    const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error("Google/Gemini API key not configured");
     }
     // Dynamically import to reduce bundle size
     const { google } = await import('@ai-sdk/google');
-    return google('gemini-2.5-flash');
+    return google('gemini-2.5-flash', {
+      apiKey
+    });
   }
 
   async chat(

@@ -47,18 +47,34 @@ export class ChatStreamingService {
    * Filters out thinking content from the assistant response
    * Removes everything from <thinking> tags until the closing </thinking> tag is found
    */
-  private filterThinkingContent(content: string): string {
+  private filterThinkingContent(content: string): { 
+    filtered: string; 
+    hasActiveThinking: boolean; 
+    hasThinkingContent: boolean; 
+  } {
     // Ensure content is a string
     if (typeof content !== 'string') {
       console.warn('[ChatStreaming] filterThinkingContent received non-string content:', typeof content, content);
-      return String(content || '');
+      return { 
+        filtered: String(content || ''), 
+        hasActiveThinking: false, 
+        hasThinkingContent: false 
+      };
     }
+    
+    // Check if there's any thinking content (complete or incomplete)
+    const hasThinkingContent = content.includes('<thinking>') || content.includes('[thinking]');
     
     // Remove complete thinking blocks (case-insensitive, handles multiline)
     let filtered = content.replace(/<thinking[^>]*>[\s\S]*?<\/thinking>/gi, '');
     
     // Also handle markdown-style thinking blocks that might be used
     filtered = filtered.replace(/\[thinking\][\s\S]*?\[\/thinking\]/gi, '');
+    
+    // Check if there's an unclosed thinking tag (active thinking)
+    const hasUncloseThinking = filtered.search(/<thinking[^>]*>/i) !== -1;
+    const hasUncloseThinkingAlt = filtered.search(/\[thinking\]/i) !== -1;
+    const hasActiveThinking = hasUncloseThinking || hasUncloseThinkingAlt;
     
     // If there's an unclosed <thinking> tag, remove everything from that point
     const thinkingStart = filtered.search(/<thinking[^>]*>/i);
@@ -72,7 +88,11 @@ export class ChatStreamingService {
       filtered = filtered.substring(0, thinkingStartAlt);
     }
     
-    return filtered.trim();
+    return { 
+      filtered: filtered.trim(), 
+      hasActiveThinking, 
+      hasThinkingContent 
+    };
   }
 
   /**
@@ -136,9 +156,26 @@ export class ChatStreamingService {
               if (data.chunk) {
                 fullResponse += data.chunk;
                 
-                // Mark as actively text streaming
+                // Filter out thinking content for display and detect thinking state
+                const { filtered: displayContent, hasActiveThinking, hasThinkingContent } = this.filterThinkingContent(fullResponse);
+                
+                // Handle streaming state based on thinking detection
                 if (context.setIsTextStreaming) {
-                  context.setIsTextStreaming(true);
+                  if (hasActiveThinking) {
+                    // Currently receiving thinking chunks - stop text streaming to show thinking animation
+                    context.setIsTextStreaming(false);
+                    // Set tool activity to indicate thinking
+                    if (context.setToolActivity) {
+                      context.setToolActivity('thinking');
+                    }
+                  } else if (displayContent.trim()) {
+                    // Has actual content to display - mark as actively text streaming
+                    context.setIsTextStreaming(true);
+                    // Clear tool activity when actively streaming visible content
+                    if (context.setToolActivity) {
+                      context.setToolActivity(null);
+                    }
+                  }
                 }
                 
                 // Clear any existing pause timeout
@@ -146,24 +183,24 @@ export class ChatStreamingService {
                   clearTimeout(pauseTimeoutId);
                 }
                 
-                // Set up pause detection (300ms)
-                pauseTimeoutId = setTimeout(() => {
-                  if (context.setIsTextStreaming) {
-                    context.setIsTextStreaming(false);
-                  }
-                  // When pause is detected, just continue showing tool activity
-                  // The text streaming state will handle pencil display
-                }, 300);
-                
-                // Filter out thinking content for display
-                const displayContent = this.filterThinkingContent(fullResponse);
+                // Set up pause detection (300ms) - only if not actively thinking
+                if (!hasActiveThinking) {
+                  pauseTimeoutId = setTimeout(() => {
+                    if (context.setIsTextStreaming) {
+                      context.setIsTextStreaming(false);
+                    }
+                    // When pause is detected, just continue showing tool activity
+                    // The text streaming state will handle pencil display
+                  }, 300);
+                }
                 
                 // Debug logging for thinking content
-                if (fullResponse !== displayContent) {
-                  logger.info("[ChatStreaming] Filtered thinking content", {
+                if (hasThinkingContent) {
+                  logger.info("[ChatStreaming] Detected thinking content", {
                     originalLength: fullResponse.length,
                     filteredLength: displayContent.length,
-                    containsThinking: fullResponse.includes('<thinking>') || fullResponse.includes('[thinking]')
+                    hasActiveThinking,
+                    hasThinkingContent
                   });
                 }
                 
@@ -191,7 +228,7 @@ export class ChatStreamingService {
                 linkedResources = await this.convertRefsToResources(linkedResourceRefs);
                 
                 // Use filtered content for final message
-                const finalDisplayContent = this.filterThinkingContent(fullResponse);
+                const { filtered: finalDisplayContent } = this.filterThinkingContent(fullResponse);
                 this.updateAssistantMessage(context.setMessages, finalDisplayContent);
                 this.updateAssistantMessageWithResources(
                   context.setMessages,
@@ -229,6 +266,8 @@ export class ChatStreamingService {
       }
     } finally {
       reader.releaseLock();
+      logger.info({ chatId: context.chatId }, '[ChatStreaming] Streaming completed, cleaning up states');
+      console.log('[ChatStreaming] Finally block - setting isReplying to false for chat:', context.chatId);
       // Set isReplying to false when streaming is complete
       context.setIsReplying(false);
       // Clear streaming states

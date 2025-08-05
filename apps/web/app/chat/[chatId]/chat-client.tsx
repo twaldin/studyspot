@@ -52,6 +52,28 @@ export function ChatPageContent() {
     }
   }, [])
 
+  // Scroll to position user's message at top of viewport for better readability
+  const scrollToUserMessage = useCallback((messageIndex: number) => {
+    if (chatContainerRef.current) {
+      const messageElements = chatContainerRef.current.querySelectorAll('.flex-col.gap-4 > *');
+      const targetElement = messageElements[messageIndex];
+      
+      if (targetElement) {
+        const containerTop = chatContainerRef.current.getBoundingClientRect().top;
+        const elementTop = targetElement.getBoundingClientRect().top;
+        const currentScroll = chatContainerRef.current.scrollTop;
+        const offset = 20; // 20px from top for better visibility
+        
+        const scrollPosition = currentScroll + (elementTop - containerTop) - offset;
+        
+        chatContainerRef.current.scrollTo({
+          top: scrollPosition,
+          behavior: 'smooth'
+        });
+      }
+    }
+  }, [])
+
   // Check if user is near bottom of chat
   const handleScroll = useCallback(() => {
     if (chatContainerRef.current) {
@@ -198,6 +220,7 @@ export function ChatPageContent() {
             );
             
             // Streaming completed successfully, invalidate cache to refetch augmented data
+            setIsReplying(false); // Ensure this is set to false after initial streaming completes
             setStreamingStatus(chatId, chat.title || 'Chat', false);
             await queryClient.invalidateQueries({
               queryKey: queryKeys.chats.detail(chatId),
@@ -246,10 +269,16 @@ export function ChatPageContent() {
     }
 
     if (isReplying || streamingManager.isStreaming(chatId)) {
-      console.log('[ChatClient] Preventing duplicate submission - already streaming')
+      console.log('[ChatClient] Preventing duplicate submission - already streaming', {
+        isReplying,
+        isStreamingManagerActive: streamingManager.isStreaming(chatId),
+        chatId
+      })
       return
     }
 
+    console.log('[ChatClient] handleFormSubmit called with:', { message: values.message, chatId, courseId: selectedCourse.id });
+    
     setIsReplying(true)
     setError(null)
     
@@ -267,6 +296,13 @@ export function ChatPageContent() {
         assistantMessage
       )
 
+      // Scroll to the new user message for better readability
+      // Wait a tick for the DOM to update
+      setTimeout(() => {
+        const newUserMessageIndex = messages.length; // Index of the newly added user message
+        scrollToUserMessage(newUserMessageIndex);
+      }, 100);
+
       // Get conversation history
       const conversationHistory = chatStateService.getConversationHistory(messages)
 
@@ -282,6 +318,7 @@ export function ChatPageContent() {
           conversationHistory,
           isNewChat: false,
           chatId: chatId,
+          userId,
           router,
           selectedCourse,
           setIsReplying,
@@ -292,6 +329,8 @@ export function ChatPageContent() {
       );
 
       // Streaming completed successfully, invalidate cache to refetch augmented data
+      console.log('[ChatClient] Streaming completed successfully for chat:', chatId);
+      setIsReplying(false); // Ensure this is set to false after streaming completes
       setStreamingStatus(chatId, chat?.title || 'Chat', false);
       await queryClient.invalidateQueries({
         queryKey: queryKeys.chats.detail(chatId),
@@ -305,7 +344,7 @@ export function ChatPageContent() {
         error instanceof Error ? error : new Error('Failed to send message')
       )
     }
-  }, [chatId, selectedCourse, messages, router, setStreamingStatus, chat?.title, updateStreamingMessage, queryClient])
+  }, [chatId, selectedCourse, messages, router, setStreamingStatus, chat?.title, updateStreamingMessage, queryClient, scrollToUserMessage, userId])
 
   if (!chatId) {
     return (

@@ -4,8 +4,9 @@
   "type": "module",
   "scripts": {
     "dev": "npx mastra dev",
-    "build": "npx mastra build",
-    "deploy": "npx mastra deploy",
+    "build": "./build.sh",
+    "build:unsafe": "npx mastra build",
+    "deploy": "cd .mastra/output && wrangler deploy --config wrangler.json",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

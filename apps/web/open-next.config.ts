@@ -7,12 +7,6 @@ export default defineCloudflareConfig({
   // Ensure proper routing configuration
   buildOutputDirectory: '.next',
   
-  // Enable debugging for development
-  debug: process.env.NODE_ENV === 'development',
-  
   // Ensure all routes are handled correctly
   appBuildOutputPath: '.next',
-  
-  // Configure edge runtime settings
-  edgeRuntime: 'nodejs',
 });

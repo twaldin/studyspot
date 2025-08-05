@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev --turbopack | pino-pretty",
     "build": "next build",
-    "build:cloudflare": "cp ../../.env .env.local && npx @opennextjs/cloudflare@latest build && rm -f .env.local",
+    "build:cloudflare": "npx @opennextjs/cloudflare@latest build",
     "dev:wrangler": "wrangler dev --port 3000",
     "preview": "wrangler dev --port 3000 --env preview",
     "deploy": "npm run build:cloudflare && wrangler deploy",

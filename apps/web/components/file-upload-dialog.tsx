@@ -143,9 +143,9 @@ export function FileUploadDialog(
       startProcessing(filesForTracking);
 
       try {
-        // Create EventSource for SSE
+        // Create EventSource for SSE - use our API route which will use service binding
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_ASSISTANT_API_URL}/documents/ingest-stream`,
+          `/api/documents/ingest-stream`,
           {
             method: "POST",
             headers: {

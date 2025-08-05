@@ -1,0 +1,42 @@
+name = "studyspot-assistant"
+main = "./src/index-simple.ts"
+compatibility_date = "2025-04-01"
+compatibility_flags = ["nodejs_compat", "nodejs_compat_populate_process_env"]
+
+# Account configuration
+account_id = "869782f5d7c9391d085cd41c42977a47"
+
+# KV Namespace bindings
+[[kv_namespaces]]
+binding = "SUGGESTED_QUERIES"
+id = "93f6dcfd59164effb33f1882f4a72832"
+preview_id = "93f6dcfd59164effb33f1882f4a72832" # Using same ID for local dev
+
+# Environment variables (non-sensitive only)
+[vars]
+ENVIRONMENT = "production"
+
+# Build configuration
+# [build]
+# command = "pnpm build"
+
+# Development configuration
+[dev]
+port = 8787
+local_protocol = "http"
+
+# Observability
+[observability]
+enabled = true
+
+# Deployment triggers (optional)
+[triggers]
+crons = [] # No cron jobs - let Workers handle cold starts naturally
+
+# Secrets should be set via CLI:
+# wrangler secret put ANTHROPIC_API_KEY
+# wrangler secret put OPENAI_API_KEY
+# wrangler secret put SUPABASE_URL
+# wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+# wrangler secret put GEMINI_API_KEY (optional)
+# wrangler secret put CLOUDFLARE_API_TOKEN

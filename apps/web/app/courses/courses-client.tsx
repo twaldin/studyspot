@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Pencil, PlusCircle, Search, X, Trash2 } from "lucide-react";
+import { getCourseIcon } from "@/lib/utils/course-icons";
 import { Button } from "@/components/ui/button";
 import React from "react";
 import { CreateCourseDialog } from "@/components/create-course-dialog";
@@ -237,7 +238,10 @@ export function CoursesPageContent() {
                       
                       <CardHeader className="flex-1">
                         <div className="flex items-start gap-4">
-                          {/*<course.icon className="h-6 w-6 text-muted-foreground mt-1" />*/}
+                          {(() => {
+                            const IconComponent = getCourseIcon(course.icon);
+                            return <IconComponent className="h-6 w-6 text-muted-foreground mt-1" />;
+                          })()}
                           <div className="flex-1">
                             <CardTitle>{course.code}</CardTitle>
                             <CardDescription className="mt-1">
