@@ -237,6 +237,7 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <ChatList
               chats={chats}
+              courses={allCourses}
               isLoading={isLoadingChats}
               error={chatsError}
               onChatSelect={onChatSelect}

@@ -153,6 +153,7 @@ export async function createCourse(
   params: {
     title: string;
     code: string;
+    icon?: string | null;
     schoolId: string;
     uploadedFileUrl?: string;
     tempFileKeys?: string[];
@@ -168,6 +169,7 @@ export async function createCourse(
   const courseToCreate: ICourseInsert = {
     title: params.title,
     code: params.code,
+    icon: params.icon || null,
     school_id: params.schoolId,
   };
 

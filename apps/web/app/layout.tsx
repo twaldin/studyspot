@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Crimson_Text } from "next/font/google";
 import "./globals.css";
-import "./cloudflare-polyfills";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ClerkThemeProvider } from "@/components/clerk-theme-provider";
 import { cn } from "@/lib/utils";
@@ -18,6 +17,11 @@ const crimsonText = Crimson_Text({
 export const metadata: Metadata = {
   title: "StudySpot UI",
   description: "StudySpot UI Testing Environment",
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+    apple: "/favicon.ico",
+  },
 };
 
 // Remove force-dynamic as it can cause routing issues with OpenNext.js

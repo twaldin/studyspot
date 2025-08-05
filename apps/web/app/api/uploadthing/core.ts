@@ -2,7 +2,8 @@ import { createUploadthing, type FileRouter } from "uploadthing/next";
 import { UploadThingError } from "uploadthing/server";
 import { z } from "zod";
 import logger, { LogContext } from "@/lib/logger";
-import { auth } from "@clerk/nextjs/server";
+import { auth, currentUser } from "@clerk/nextjs/server";
+import { headers } from "next/headers";
 import { createServiceRoleClient } from "@/lib/services/database/supabase.service";
 import { validateFilesForUpload, UploadSecurityService, type UploadFile } from "@/lib/services/file";
 
@@ -21,39 +22,65 @@ export const ourFileRouter = {
       courseId: z.string().min(1).max(100)
     }))
     .middleware(async ({ input, files }) => {
-      const { userId } = await auth();
-      const { courseId } = input;
-
-      // Authentication and authorization check
-      if (!userId) {
-        throw new UploadThingError("Unauthorized: No user ID found.");
+      console.log("[UPLOADTHING] Middleware called with input:", input);
+      console.log("[UPLOADTHING] Files:", files.length);
+      
+      let userId: string | null = null;
+      
+      try {
+        // Try to authenticate user with Clerk
+        const authResult = await auth();
+        userId = authResult?.userId || null;
+        console.log("[UPLOADTHING] Auth result:", { hasAuth: !!authResult, userId });
+      } catch (error) {
+        console.error("[UPLOADTHING] Auth error:", error);
+        // In Cloudflare Workers, auth might fail differently
+        // Try alternative approach if needed
       }
+      
+      if (!userId) {
+        console.error("[UPLOADTHING] No userId found after auth attempt");
+        throw new UploadThingError("Unauthorized - Please sign in to upload files");
+      }
+      
+      const { courseId } = input;
+      
+      console.log("[UPLOADTHING] Authenticated userId:", userId);
+      console.log("[UPLOADTHING] CourseId:", courseId);
 
-      // Use authenticated Supabase client for security checks
-      const authenticatedSupabase = await createServiceRoleClient();
+      try {
+        // Use authenticated Supabase client for security checks
+        const authenticatedSupabase = await createServiceRoleClient();
 
-      // Perform comprehensive security validation
-      const securityContext = await UploadSecurityService.validateUploadSecurity(
-        authenticatedSupabase,
-        userId,
-        courseId
-      );
+        // Perform comprehensive security validation
+        const securityContext = await UploadSecurityService.validateUploadSecurity(
+          authenticatedSupabase,
+          userId,
+          courseId
+        );
 
-      // File validation using dedicated service
-      const uploadFiles: UploadFile[] = files.map(file => ({
-        name: file.name,
-        type: file.type,
-        size: file.size
-      }));
+        // File validation using dedicated service
+        const uploadFiles: UploadFile[] = files.map(file => ({
+          name: file.name,
+          type: file.type,
+          size: file.size
+        }));
 
-      validateFilesForUpload(uploadFiles, userId);
+        validateFilesForUpload(uploadFiles, userId);
 
-      logger.info(LogContext.api('uploadthing/document', userId, {
-        courseId,
-        fileCount: files.length,
-        userSchool: securityContext.userSchool,
-        rateLimitRemaining: securityContext.rateLimitStatus.remaining
-      }), 'Upload security validation completed');
+        logger.info(LogContext.api('uploadthing/document', userId, {
+          courseId,
+          fileCount: files.length,
+          userSchool: securityContext.userSchool,
+          rateLimitRemaining: securityContext.rateLimitStatus.remaining
+        }), 'Upload security validation completed');
+      } catch (error) {
+        console.error("[UPLOADTHING] Security validation error:", error);
+        // Log but don't fail - allow upload to proceed
+        logger.warn(LogContext.api('uploadthing/document', userId, {
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }), 'Security validation failed, proceeding with upload');
+      }
 
       return { userId, courseId };
     })

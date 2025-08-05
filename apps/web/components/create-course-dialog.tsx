@@ -26,6 +26,8 @@ import toast from "react-hot-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useDocumentProcessing } from "@/hooks/use-document-processing";
 import { useAuth } from "@clerk/nextjs";
+import { CourseIconSelector } from "@/components/ui/course-icon-selector";
+import { CourseIconName, suggestCourseIcon } from "@/lib/utils/course-icons";
 
 interface CreateCourseDialogProps {
   open: boolean;
@@ -35,6 +37,7 @@ interface CreateCourseDialogProps {
 interface CourseExtractionResult {
   courseCode: string;
   courseTitle: string;
+  icon: string | null;
   confidence: number;
 }
 
@@ -44,6 +47,7 @@ export function CreateCourseDialog({
 }: CreateCourseDialogProps) {
   const [courseCode, setCourseCode] = useState("");
   const [courseTitle, setCourseTitle] = useState("");
+  const [courseIcon, setCourseIcon] = useState<CourseIconName | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadedFileUrl, setUploadedFileUrl] = useState<string | null>(null);
   const [showSyllabusUpload, setShowSyllabusUpload] = useState(false);
@@ -98,12 +102,20 @@ export function CreateCourseDialog({
             setExtractionResult({
               courseCode: data.courseCode || "",
               courseTitle: data.courseTitle || "",
+              icon: data.icon || null,
               confidence: data.confidence || 0,
             });
 
             // Auto-fill the form if extraction was successful
             if (data.courseCode) setCourseCode(data.courseCode);
             if (data.courseTitle) setCourseTitle(data.courseTitle);
+            if (data.icon) {
+              setCourseIcon(data.icon as CourseIconName);
+            } else {
+              // Suggest icon based on extracted course info
+              const suggestedIcon = suggestCourseIcon(data.courseCode || "", data.courseTitle || "");
+              setCourseIcon(suggestedIcon);
+            }
 
             toast.success("Course information extracted successfully!");
           } else {
@@ -251,6 +263,7 @@ export function CreateCourseDialog({
   const handleReset = useCallback(() => {
     setCourseCode("");
     setCourseTitle("");
+    setCourseIcon(null);
     setSelectedFile(null);
     setUploadedFileUrl(null);
     setExtractionResult(null);
@@ -274,6 +287,7 @@ export function CreateCourseDialog({
       const payload: any = {
         title: courseTitle,
         code: courseCode,
+        icon: courseIcon || suggestCourseIcon(courseCode, courseTitle),
       };
       if (selectedFile && uploadedFileUrl) {
         payload.uploadedFileUrl = uploadedFileUrl;
@@ -368,6 +382,15 @@ export function CreateCourseDialog({
               placeholder="e.g. General Chemistry I"
               value={courseTitle}
               onChange={(e) => setCourseTitle(e.target.value)}
+              disabled={isSubmitting || isExtracting}
+            />
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="course-icon">Course Icon</Label>
+            <CourseIconSelector
+              value={courseIcon}
+              onChange={setCourseIcon}
               disabled={isSubmitting || isExtracting}
             />
           </div>

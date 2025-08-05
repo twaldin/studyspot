@@ -18,6 +18,7 @@ import {
   PlusCircle,
   Compass,
   MessagesSquare,
+  RefreshCw,
 } from "lucide-react"
 import { useTheme } from "next-themes"
 import toast from "react-hot-toast"
@@ -37,6 +38,9 @@ import { CreateCourseDialog } from "@/components/create-course-dialog"
 import { NewPostDialog } from "./new-post-dialog"
 import { useIsDeveloper } from "@/hooks/api/user"
 import { useDeveloperMode } from "@/contexts/developer-mode-context"
+import { useSelectedCourse, useSuggestedQueries } from "@/hooks/api/courses"
+import { useQueryClient } from "@tanstack/react-query"
+import { queryKeys } from "@/hooks/api/base"
 
 type CommandInfo = {
   id: string
@@ -58,6 +62,8 @@ export function CommandPalette() {
   const [recentCommandIds, setRecentCommandIds] = React.useState<string[]>([])
   const { data: isDeveloper = false } = useIsDeveloper()
   const { isDeveloperModeEnabled, toggleDeveloperMode } = useDeveloperMode()
+  const { data: selectedCourse } = useSelectedCourse()
+  const queryClient = useQueryClient()
 
   const toggleTheme = React.useCallback(() => {
     setTheme(theme === "dark" ? "light" : "dark")
@@ -101,6 +107,68 @@ export function CommandPalette() {
     },
     [],
   )
+
+  const regenerateSuggestedQueries = React.useCallback(async () => {
+    if (!selectedCourse) {
+      toast.error("No course selected")
+      return
+    }
+
+    const toastId = toast.loading("Regenerating suggested queries...")
+    
+    try {
+      // First, call our API to get the school ID and check permissions
+      const response = await fetch(
+        `/api/suggested-queries?courseId=${selectedCourse.id}&refresh=true`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      )
+
+      if (!response.ok) {
+        throw new Error("Failed to regenerate queries")
+      }
+
+      const data = await response.json()
+      
+      // Check if we got a redirect response (Worker-to-Worker restriction)
+      if (data.redirect && data.assistantUrl && data.params) {
+        // Call the assistant worker directly from the client
+        const assistantResponse = await fetch(
+          `${data.assistantUrl}/suggested-queries?` +
+          `courseId=${encodeURIComponent(data.params.courseId)}&` +
+          `schoolId=${encodeURIComponent(data.params.schoolId)}&` +
+          `refresh=true`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        )
+
+        if (!assistantResponse.ok) {
+          throw new Error("Assistant worker request failed")
+        }
+
+        // We don't need to do anything with the response data
+        // The hook will automatically refetch from cache
+      }
+
+      // Invalidate the queries cache so they get refetched
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.courses.suggestedQueries(selectedCourse.id)
+      })
+
+      toast.success("Suggested queries regenerated successfully!", { id: toastId })
+    } catch (error) {
+      toast.error("Failed to regenerate queries", { id: toastId })
+      console.error("Error regenerating queries:", error)
+    }
+  }, [selectedCourse, queryClient])
 
   const commands: CommandInfo[] = React.useMemo(
     () => [
@@ -203,6 +271,13 @@ export function CommandPalette() {
         group: "Developer Tools",
       },
       {
+        id: "regenerate-suggested-queries",
+        label: "Regenerate Suggested Queries",
+        icon: RefreshCw,
+        action: regenerateSuggestedQueries,
+        group: "Developer Tools",
+      },
+      {
         id: "profile",
         label: "Profile",
         icon: User,
@@ -221,7 +296,7 @@ export function CommandPalette() {
         group: "Settings",
       },
     ],
-    [router, openFileUploadDialog, spawnToast, toggleSidebar, toggleTheme, openCreateCourseDialog, openNewPostDialog, isDeveloperModeEnabled, toggleDeveloperMode],
+    [router, openFileUploadDialog, spawnToast, toggleSidebar, toggleTheme, openCreateCourseDialog, openNewPostDialog, isDeveloperModeEnabled, toggleDeveloperMode, regenerateSuggestedQueries],
   )
 
   React.useEffect(() => {

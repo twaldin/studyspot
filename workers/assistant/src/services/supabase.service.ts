@@ -1,21 +1,30 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Supabase client for database operations
-let supabaseClient: any = null;
+// Store clients per env to avoid issues with different environments
+const supabaseClients = new Map<string, any>();
 
-export function getSupabaseClient() {
-  if (!supabaseClient) {
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error('Missing Supabase environment variables');
-    }
-    
-    supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
+export function getSupabaseClient(env?: any) {
+  // Get environment variables from passed env or fall back to process.env
+  const supabaseUrl = env?.SUPABASE_URL || process.env.SUPABASE_URL;
+  const supabaseServiceKey = env?.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error('Missing Supabase environment variables');
   }
   
-  return supabaseClient;
+  // Create a unique key for this environment
+  const clientKey = `${supabaseUrl}-${supabaseServiceKey}`;
+  
+  // Return existing client if available
+  if (supabaseClients.has(clientKey)) {
+    return supabaseClients.get(clientKey);
+  }
+  
+  // Create new client and cache it
+  const client = createClient(supabaseUrl, supabaseServiceKey);
+  supabaseClients.set(clientKey, client);
+  
+  return client;
 }
 
 export interface DocumentChunk {
@@ -42,9 +51,10 @@ export async function searchDocumentChunks(
   courseId: string,
   embedding: number[],
   limit: number = 10,
-  threshold: number = 0.5
+  threshold: number = 0.5,
+  env?: any
 ): Promise<DocumentChunk[]> {
-  const supabase = getSupabaseClient();
+  const supabase = getSupabaseClient(env);
   
   // Use the same RPC function as the original assistant API
   const { data, error } = await supabase.rpc('match_documents_by_course', {
@@ -62,8 +72,8 @@ export async function searchDocumentChunks(
   return data || [];
 }
 
-export async function getDocument(documentId: string): Promise<Document | null> {
-  const supabase = getSupabaseClient();
+export async function getDocument(documentId: string, env?: any): Promise<Document | null> {
+  const supabase = getSupabaseClient(env);
   
   // Use the correct table name 'docs' as in the original implementation
   const { data, error } = await supabase
@@ -80,8 +90,8 @@ export async function getDocument(documentId: string): Promise<Document | null> 
   return data;
 }
 
-export async function getDocumentChunks(documentId: string): Promise<DocumentChunk[]> {
-  const supabase = getSupabaseClient();
+export async function getDocumentChunks(documentId: string, env?: any): Promise<DocumentChunk[]> {
+  const supabase = getSupabaseClient(env);
   
   // Use the correct column name 'doc_id' as in the original implementation
   const { data, error } = await supabase
@@ -98,8 +108,8 @@ export async function getDocumentChunks(documentId: string): Promise<DocumentChu
   return data || [];
 }
 
-export async function getAllDocuments(courseId: string): Promise<Document[]> {
-  const supabase = getSupabaseClient();
+export async function getAllDocuments(courseId: string, env?: any): Promise<Document[]> {
+  const supabase = getSupabaseClient(env);
   
   // Use the correct table name 'docs' and column name 'created_at' as in original
   const { data, error } = await supabase
@@ -120,25 +130,20 @@ export async function getAllDocuments(courseId: string): Promise<Document[]> {
  * SupabaseService - provides database operations matching the original assistant API
  */
 export class SupabaseService {
-  private static client: any = null;
+  private static env: any = null;
+
+  /**
+   * Set environment variables for the service
+   */
+  static setEnv(env: any) {
+    this.env = env;
+  }
 
   /**
    * Initialize Supabase client
    */
   private static getClient() {
-    if (!this.client) {
-      const supabaseUrl = process.env.SUPABASE_URL;
-      const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-      if (!supabaseUrl || !supabaseKey) {
-        throw new Error('Missing Supabase environment variables');
-      }
-
-      this.client = getSupabaseClient();
-      console.log('[SupabaseService] Client initialized');
-    }
-
-    return this.client;
+    return getSupabaseClient(this.env);
   }
 
   /**
@@ -184,7 +189,7 @@ export class SupabaseService {
     error?: string;
   }> {
     try {
-      const documents = await getAllDocuments(courseId);
+      const documents = await getAllDocuments(courseId, this.env);
       
       return {
         success: true,
@@ -222,7 +227,7 @@ export class SupabaseService {
       const client = this.getClient();
       
       // Get document metadata
-      const document = await getDocument(documentId);
+      const document = await getDocument(documentId, this.env);
       if (!document) {
         return {
           success: false,
@@ -241,7 +246,7 @@ export class SupabaseService {
       }
 
       // Get all chunks for this document
-      const chunks = await getDocumentChunks(documentId);
+      const chunks = await getDocumentChunks(documentId, this.env);
       
       // Combine all chunks into full content, sorted by chunk count
       const fullContent = chunks
@@ -291,7 +296,7 @@ export class SupabaseService {
       const queryEmbedding = await generateEmbedding(query);
       
       // Search for similar chunks
-      const chunks = await searchDocumentChunks(courseId, queryEmbedding, limit, threshold);
+      const chunks = await searchDocumentChunks(courseId, queryEmbedding, limit, threshold, this.env);
       
       return {
         success: true,

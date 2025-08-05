@@ -14,6 +14,10 @@ import { documentIngestionWorkflow, executeDocumentIngestion } from './workflows
 // Import tools
 import { verifyCourseTool } from './tools/verify-course.tool.js';
 
+// Import route handlers (not the route definitions)
+import { getSuggestedQueriesHandler } from '../services/suggested-queries.service.js';
+import { testEnvRoute } from '../routes/test-env.js';
+
 // Request schema (matching original API exactly)
 const StreamRequestSchema = z.object({
   question: z.string().min(1, 'Question is required'),
@@ -395,9 +399,86 @@ export const mastra = new Mastra({
           }
         },
       }),
+      // Suggested queries routes (defined inline for proper bundling)
+      registerApiRoute('/suggested-queries', {
+        method: 'OPTIONS' as any,
+        handler: async (c) => {
+          return new Response(null, {
+            status: 204,
+            headers: {
+              'Access-Control-Allow-Origin': '*',
+              'Access-Control-Allow-Methods': 'GET, OPTIONS',
+              'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+              'Access-Control-Max-Age': '86400',
+            },
+          });
+        },
+      }),
+      registerApiRoute('/suggested-queries', {
+        method: 'GET',
+        handler: async (c) => {
+          try {
+            const courseId = c.req.query('courseId');
+            const schoolId = c.req.query('schoolId');
+            const refresh = c.req.query('refresh') === 'true';
+            
+            if (!courseId || !schoolId) {
+              return c.json({ error: 'courseId and schoolId are required' }, 400);
+            }
+
+            console.log('[Suggested Queries] Request:', { courseId, schoolId, refresh });
+            
+            // Get env from multiple sources
+            const env = c.env || (globalThis as any).__workerEnv || process.env;
+            
+            console.log('[Suggested Queries] Env check in route handler:', {
+              hasEnv: !!env,
+              hasKV: !!env?.SUGGESTED_QUERIES,
+              envKeys: env ? Object.keys(env).slice(0, 5) : []
+            });
+
+            const result = await getSuggestedQueriesHandler({
+              courseId,
+              schoolId,
+              refresh,
+              mastra,
+              env,
+            });
+
+            return c.json(result, {
+              headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+              },
+            });
+          } catch (error) {
+            console.error('[Suggested Queries] Error:', error);
+            return c.json({ 
+              error: error instanceof Error ? error.message : 'Internal server error' 
+            }, 500);
+          }
+        },
+      }),
+      // Test environment route
+      testEnvRoute,
     ],
   },
   deployer: new CloudflareDeployer({
     projectName: 'studyspot-assistant',
+    scope: process.env.CLOUDFLARE_ACCOUNT_ID || '869782f5d7c9391d085cd41c42977a47',
+    auth: {
+      apiToken: process.env.CLOUDFLARE_API_TOKEN!,
+      apiEmail: process.env.CLOUDFLARE_API_EMAIL
+    },
+    kvNamespaces: [
+      {
+        binding: 'SUGGESTED_QUERIES',
+        id: '93f6dcfd59164effb33f1882f4a72832'
+      }
+    ],
+    // Don't include ANY environment variables in wrangler.json
+    // All env vars should be managed through Cloudflare secrets
+    env: {}
   }),
 });

@@ -36,6 +36,32 @@ export function ChatPageContent({ chatId }: { chatId?: string }) {
   const createChatMutation = useCreateChat();
   const deleteChatMutation = useDeleteChat();
 
+  // Refs for scrolling
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to position user's message at top of viewport for better readability
+  const scrollToUserMessage = useCallback((messageIndex: number) => {
+    if (chatContainerRef.current) {
+      const messageElements = chatContainerRef.current.querySelectorAll('.flex-col.gap-4 > *');
+      const targetElement = messageElements[messageIndex];
+      
+      if (targetElement) {
+        const containerTop = chatContainerRef.current.getBoundingClientRect().top;
+        const elementTop = targetElement.getBoundingClientRect().top;
+        const currentScroll = chatContainerRef.current.scrollTop;
+        const offset = 20; // 20px from top for better visibility
+        
+        const scrollPosition = currentScroll + (elementTop - containerTop) - offset;
+        
+        chatContainerRef.current.scrollTo({
+          top: scrollPosition,
+          behavior: 'smooth'
+        });
+      }
+    }
+  }, []);
+
   // Load chat data or show welcome message
   useEffect(() => {
     if (!chatId) {
@@ -123,6 +149,12 @@ export function ChatPageContent({ chatId }: { chatId?: string }) {
           .createInitialMessages(messageContent);
         setMessages((prev) => [...prev, userMessage, assistantMessage]);
 
+        // Scroll to the new user message for better readability
+        setTimeout(() => {
+          const newUserMessageIndex = messages.length; // Index of the newly added user message
+          scrollToUserMessage(newUserMessageIndex);
+        }, 100);
+
         const conversationHistory = chatStateService.getConversationHistory(
           messages,
         );
@@ -141,6 +173,7 @@ export function ChatPageContent({ chatId }: { chatId?: string }) {
           conversationHistory,
           isNewChat: false,
           chatId: targetChatId,
+          userId: user?.id,
           router,
           selectedCourse,
           setIsReplying,
@@ -156,7 +189,7 @@ export function ChatPageContent({ chatId }: { chatId?: string }) {
         }, error as Error);
       }
     },
-    [messages, selectedCourse, router, isReplying],
+    [messages, selectedCourse, router, isReplying, scrollToUserMessage],
   );
 
   const handleDeleteChat = useCallback(async (chatIdToDelete: string) => {
@@ -196,7 +229,9 @@ export function ChatPageContent({ chatId }: { chatId?: string }) {
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+      <div 
+        ref={chatContainerRef}
+        className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
         <div className="flex flex-col gap-4 py-4">
           {messages.map((message, i) =>
             message.role === "user"
@@ -225,6 +260,7 @@ export function ChatPageContent({ chatId }: { chatId?: string }) {
                 </div>
               )
           )}
+          <div ref={messagesEndRef} />
         </div>
       </div>
 

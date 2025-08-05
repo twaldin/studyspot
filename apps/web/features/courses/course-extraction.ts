@@ -128,7 +128,8 @@ export async function extractCourseInfo(
         {
           "courseCode": "COURSE_CODE_HERE_OR_NULL",
           "courseTitle": "COURSE_TITLE_HERE_OR_NULL", 
-          "schoolName": "SCHOOL_NAME_HERE_OR_NULL"
+          "schoolName": "SCHOOL_NAME_HERE_OR_NULL",
+          "icon": "ICON_NAME_HERE_OR_NULL"
         }
 
         Rules:
@@ -136,6 +137,15 @@ export async function extractCourseInfo(
         - Do not include any explanatory text, only the JSON object
         - Do not wrap the JSON in markdown code blocks
         - Ensure the JSON is valid and parseable
+        
+        For the icon field, choose ONLY from these 5 options based on the course subject:
+        - "flask" for chemistry, biology, physics, lab sciences
+        - "radical" for mathematics, calculus, algebra, statistics, geometry
+        - "box" for engineering, computer science, technology, mechanics
+        - "music" for music, arts, design, theater, dance, film
+        - "party" for general/other subjects that don't fit the above categories
+        
+        If you cannot determine the subject area with confidence, return null for icon.
 
         Syllabus text:
         ${text}
@@ -157,6 +167,7 @@ export async function extractCourseInfo(
     const normalizedResponse = {
       courseCode: courseInfo.courseCode || "",
       courseTitle: courseInfo.courseTitle || "",
+      icon: courseInfo.icon || null,
       confidence: 0.8,
     };
 
@@ -194,6 +205,7 @@ export async function extractCourseInfo(
         courseCode: null,
         courseTitle: null,
         schoolName: null,
+        icon: null,
       },
     };
   }

@@ -45,6 +45,17 @@ export default function Home() {
   const [isCreatingChat, setIsCreatingChat] = useState(false);
   const router = useRouter();
   const { data: suggestedQueries = [], isLoading: isLoadingSuggestedQueries } = useSuggestedQueries(selectedCourse?.id);
+  
+  // DEBUG: Log what we're getting from the hook
+  useEffect(() => {
+    console.log('[HomePage] Suggested queries state:', {
+      selectedCourseId: selectedCourse?.id,
+      isLoading: isLoadingSuggestedQueries,
+      suggestedQueries,
+      queriesLength: suggestedQueries.length,
+      defaultUsed: suggestedQueries.length === 0
+    });
+  }, [suggestedQueries, isLoadingSuggestedQueries, selectedCourse?.id]);
   const createChatMutation = useCreateChat();
   const { setStreamingStatus, addOptimisticChat, updateOptimisticChat, failOptimisticChat } = useStreamingChats();
 
