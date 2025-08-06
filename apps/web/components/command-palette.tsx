@@ -30,8 +30,8 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator,
-} from "@/components/ui/command"
-import { useSidebar } from "@/components/ui/sidebar"
+} from "@studyspot/ui/components/command"
+import { useSidebar } from "@studyspot/ui/components/sidebar"
 import { FileUploadDialog } from "@/components/file-upload-dialog"
 import { CreateCourseDialog } from "@/components/create-course-dialog"
 import { NewPostDialog } from "./new-post-dialog"

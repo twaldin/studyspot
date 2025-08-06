@@ -2,15 +2,15 @@
 
 import { FlashcardSet } from "@/features/flashcards/types";
 import { formatTimeAgo } from "../services/flashcard.service";
-import { Button } from "@/components/ui/button";
+import { Button } from "@studyspot/ui/components/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+} from "@studyspot/ui/components/card";
+import { Badge } from "@studyspot/ui/components/badge";
 import { BookOpen, Calendar, Edit, FileText, Play, User } from "lucide-react";
 import Image from "next/image";
 

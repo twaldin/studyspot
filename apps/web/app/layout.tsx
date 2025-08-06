@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { Crimson_Text } from "next/font/google";
-import "./globals.css";
+import "@studyspot/ui/globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ClerkThemeProvider } from "@/components/clerk-theme-provider";
-import { cn } from "@/lib/utils";
+import { cn } from "@studyspot/ui/lib/utils";
 import { QueryProvider } from "@/lib/providers/query-provider";
 import { DeveloperModeProvider } from "@/contexts/developer-mode-context";
 
