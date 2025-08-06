@@ -21,9 +21,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { File, UploadCloud, X } from "lucide-react";
+import { File, UploadCloud, X, ChevronDown, ChevronUp } from "lucide-react";
 import React, {
   lazy,
   Suspense,
@@ -56,6 +55,20 @@ const formatFileSize = (bytes: number): string => {
   const sizes = ["Bytes", "KB", "MB", "GB"];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+};
+
+const truncateFilename = (filename: string, maxLength: number = 30): string => {
+  if (filename.length <= maxLength) return filename;
+  
+  const extension = filename.substring(filename.lastIndexOf('.'));
+  const nameWithoutExtension = filename.substring(0, filename.lastIndexOf('.'));
+  const availableLength = maxLength - extension.length - 3; // 3 for "..."
+  
+  if (availableLength > 0) {
+    return nameWithoutExtension.substring(0, availableLength) + "..." + extension;
+  }
+  
+  return filename.substring(0, maxLength - 3) + "...";
 };
 
 const validateFile = (
@@ -109,6 +122,7 @@ export function FileUploadDialog(
   const acceptedFileTypes = ".pdf,.txt";
   const [files, setFiles] = useState<FileWithValidation[]>([]);
   const [isDragActive, setIsDragActive] = useState(false);
+  const [isFileListExpanded, setIsFileListExpanded] = useState(false);
   const validFiles = useMemo(() => files.filter((f) => f.isValid), [files]);
 
   const {
@@ -284,7 +298,7 @@ export function FileUploadDialog(
 
         console.log("UploadThing onClientUploadComplete:", res); // Debug log
 
-        // Clear the dialog state
+        // Immediately close the dialog and clear state - don't wait for server webhook
         setFiles([]);
         setUploadProgress({});
 
@@ -299,9 +313,11 @@ export function FileUploadDialog(
         // Close the dialog immediately
         onOpenChange(false);
 
-        // Start document processing asynchronously (no upload success toast - processing toasts will handle feedback)
+        // WORKAROUND: Since UploadThing webhooks don't work reliably in Cloudflare Workers,
+        // we'll immediately start document processing on client upload completion
         if (res && Array.isArray(res) && res.length > 0) {
           if (courseId !== "temp") {
+            console.log("Starting document processing immediately (webhook workaround)");
             processUploadedDocuments(res, courseId);
           }
         } else {
@@ -441,41 +457,102 @@ export function FileUploadDialog(
           </div>
 
           {/* File list */}
-          <div className="grid gap-3">
-            <div className="space-y-2">
-              {files.map((file) => (
-                <div
-                  key={file.id}
-                  className={`flex items-center justify-between p-2 border rounded-md ${
-                    !file.isValid ? "border-destructive bg-destructive/10" : ""
-                  }`}
-                >
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <File className="w-4 h-4 flex-shrink-0" />
-                    <span className="text-sm truncate">{file.name}</span>
-                    <span className="text-xs text-muted-foreground flex-shrink-0">
-                      {formatFileSize(file.size)}
+          {files.length > 0 && (
+            <div className="grid gap-3">
+              {files.length > 3 ? (
+                <div className="border rounded-md">
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-between p-2 h-auto font-normal"
+                    onClick={() => setIsFileListExpanded(!isFileListExpanded)}
+                  >
+                    <span className="text-sm text-muted-foreground">
+                      {files.length} file{files.length !== 1 ? 's' : ''} selected
                     </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {!file.isValid && (
-                      <span className="text-xs text-destructive">
-                        {file.errorMessage}
-                      </span>
+                    {isFileListExpanded ? (
+                      <ChevronUp className="w-4 h-4" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4" />
                     )}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="w-6 h-6 flex-shrink-0"
-                      onClick={() => removeFile(file.id)}
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
-                  </div>
+                  </Button>
+                  
+                  {isFileListExpanded && (
+                    <div className="border-t">
+                      {files.map((file) => (
+                        <div
+                          key={file.id}
+                          className={`flex items-center justify-between p-2 border-b last:border-b-0 ${
+                            !file.isValid ? "bg-destructive/10" : ""
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <File className="w-4 h-4 flex-shrink-0" />
+                            <span className="text-sm truncate" title={file.name}>
+                              {truncateFilename(file.name)}
+                            </span>
+                            <span className="text-xs text-muted-foreground flex-shrink-0">
+                              {formatFileSize(file.size)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {!file.isValid && (
+                              <span className="text-xs text-destructive">
+                                {file.errorMessage}
+                              </span>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="w-6 h-6 flex-shrink-0"
+                              onClick={() => removeFile(file.id)}
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              ))}
+              ) : (
+                <div className="space-y-2">
+                  {files.map((file) => (
+                    <div
+                      key={file.id}
+                      className={`flex items-center justify-between p-2 border rounded-md ${
+                        !file.isValid ? "border-destructive bg-destructive/10" : ""
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <File className="w-4 h-4 flex-shrink-0" />
+                        <span className="text-sm truncate" title={file.name}>
+                          {truncateFilename(file.name)}
+                        </span>
+                        <span className="text-xs text-muted-foreground flex-shrink-0">
+                          {formatFileSize(file.size)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {!file.isValid && (
+                          <span className="text-xs text-destructive">
+                            {file.errorMessage}
+                          </span>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="w-6 h-6 flex-shrink-0"
+                          onClick={() => removeFile(file.id)}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          </div>
+          )}
 
           {/* Course selection */}
           <div className="grid gap-2">
@@ -506,21 +583,6 @@ export function FileUploadDialog(
             )}
           </div>
 
-          {/* Checkboxes */}
-          <div className="flex items-center gap-3">
-            <Checkbox id="terms" defaultChecked />
-            <Label htmlFor="terms">Make files publicly viewable</Label>
-          </div>
-          <div className="flex items-start gap-3">
-            <Checkbox id="anonymous" />
-            <div className="grid gap-2">
-              <Label htmlFor="anonymous">Anonymous Upload</Label>
-              <p className="text-muted-foreground text-sm">
-                By clicking this checkbox, users will not be able to see who
-                uploaded the file.
-              </p>
-            </div>
-          </div>
         </div>
         <DialogFooter>
           <DialogClose asChild>

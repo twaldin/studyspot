@@ -1,7 +1,7 @@
 name = "studyspot-web"
 main = ".open-next/worker.js"
 compatibility_date = "2025-04-01"
-compatibility_flags = ["nodejs_compat", "enable_weak_ref"]
+compatibility_flags = ["nodejs_compat", "nodejs_compat_populate_process_env", "enable_weak_ref"]
 
 # Account configuration
 account_id = "869782f5d7c9391d085cd41c42977a47"
@@ -24,6 +24,8 @@ SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 NEXT_PUBLIC_SUPABASE_URL = "https://knyfipffiiocgvpzmfgb.supabase.co"
 NEXT_PUBLIC_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtueWZpcGZmaWlvY2d2cHptZmdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgyOTY3MjcsImV4cCI6MjA2Mzg3MjcyN30.a82PuodIYS-Ck_frtFRdz3d38MCt58vfmQi5gIH_J_A"
 NEXT_PUBLIC_ASSISTANT_API_URL = "https://studyspot-assistant.timothy-869.workers.dev"
+# UploadThing callback URL for webhook
+UPLOADTHING_CALLBACK_URL = "https://studyspot-web.timothy-869.workers.dev/api/uploadthing"
 
 # Note: NEXT_PUBLIC_* variables are also loaded from .env.production during build
 # But we need them here for server-side rendering

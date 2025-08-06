@@ -47,10 +47,24 @@ export const ourFileRouter = {
       
       console.log("[UPLOADTHING] Authenticated userId:", userId);
       console.log("[UPLOADTHING] CourseId:", courseId);
+      
+      // Debug: Check what environment variables are available
+      console.log("[UPLOADTHING] Environment check:", {
+        hasSupabaseServiceRoleKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+        supabaseServiceRoleKeyLength: process.env.SUPABASE_SERVICE_ROLE_KEY?.length || 0,
+        hasUploadThingSecret: !!process.env.UPLOADTHING_SECRET,
+        hasUploadThingToken: !!process.env.UPLOADTHING_TOKEN,
+        hasClerkSecretKey: !!process.env.CLERK_SECRET_KEY,
+        nodeEnv: process.env.NODE_ENV,
+        runtime: process.env.NEXT_RUNTIME,
+        allEnvKeys: Object.keys(process.env).filter(key => 
+          key.includes('SUPABASE') || key.includes('UPLOADTHING') || key.includes('CLERK')
+        )
+      });
 
       try {
-        // Use authenticated Supabase client for security checks
-        const authenticatedSupabase = await createServiceRoleClient();
+        // Use authenticated Supabase client for security checks - should now work with process.env
+        const authenticatedSupabase = createServiceRoleClient();
 
         // Perform comprehensive security validation
         const securityContext = await UploadSecurityService.validateUploadSecurity(
@@ -85,22 +99,47 @@ export const ourFileRouter = {
       return { userId, courseId };
     })
     .onUploadComplete(async ({ file, metadata }) => {
-      const { userId, courseId } = metadata;
+      console.log("[UPLOADTHING] onUploadComplete called:", { 
+        fileKey: file.key, 
+        fileName: file.name, 
+        metadata 
+      });
 
-      logger.info(LogContext.api('uploadthing/document', userId, {
-        fileKey: file.key,
-        fileName: file.name,
-        courseId
-      }), 'Upload complete, ready for document processing');
+      try {
+        const { userId, courseId } = metadata;
 
-      // Document ingestion is handled by the Mastra workflow via SSE streaming
-      // This provides real-time progress updates during the entire processing pipeline
-      // The client connects to the assistant worker's /documents/ingest-stream endpoint
+        console.log("[UPLOADTHING] Processing upload completion:", {
+          userId,
+          courseId,
+          fileKey: file.key,
+          fileName: file.name,
+          fileType: file.type
+        });
 
-      return {
-        uploadedBy: userId,
-        fileType: file.type, // Preserve the original MIME type
-      };
+        // Skip logger.info to avoid fs.write issues in Cloudflare Workers
+        console.log("[UPLOADTHING] Upload complete, ready for document processing:", {
+          fileKey: file.key,
+          fileName: file.name,
+          courseId,
+          userId
+        });
+
+        // Document ingestion is handled by the Mastra workflow via SSE streaming
+        // This provides real-time progress updates during the entire processing pipeline
+        // The client connects to the assistant worker's /documents/ingest-stream endpoint
+
+        const result = {
+          uploadedBy: userId,
+          fileType: file.type, // Preserve the original MIME type
+        };
+
+        console.log("[UPLOADTHING] onUploadComplete returning:", result);
+        return result;
+
+      } catch (error) {
+        console.error("[UPLOADTHING] Error in onUploadComplete:", error);
+        throw error;
+      }
     }),
 } satisfies FileRouter;
 
