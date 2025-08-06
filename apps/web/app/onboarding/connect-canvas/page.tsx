@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
+import { Button } from "@studyspot/ui/components/button";
 import {
   Card,
   CardContent,
@@ -10,9 +10,9 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from "@studyspot/ui/components/card";
+import { Input } from "@studyspot/ui/components/input";
+import { Label } from "@studyspot/ui/components/label";
 import { CanvasSyncManager } from "@/components/canvas-sync-manager";
 
 export default function ConnectCanvasPage() {

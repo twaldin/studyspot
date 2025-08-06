@@ -7,8 +7,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
+} from "@studyspot/ui/components/dialog"
+import { Button } from "@studyspot/ui/components/button"
 import { useRouter } from "next/navigation"
 import { CheckCircle2 } from "lucide-react"
 

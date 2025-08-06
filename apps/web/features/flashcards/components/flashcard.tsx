@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Flashcard as FlashcardType } from "@/features/flashcards/types";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@studyspot/ui/components/card";
 import { cn } from "@/lib/utils";
 import { FlashcardContent } from "./flashcard-content";
 
