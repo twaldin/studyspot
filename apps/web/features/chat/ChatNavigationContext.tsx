@@ -43,18 +43,18 @@ export const ChatNavigationProvider: React.FC<{ children: React.ReactNode }> = (
   }, [router]);
 
   const handleDeleteChat = useCallback((chatId: string) => {
+    // Immediate navigation if user is viewing the chat being deleted
+    const currentPath = window.location.pathname;
+    if (currentPath === `/chat/${chatId}`) {
+      router.push('/');
+    }
+    
+    // Start the mutation (which has optimistic updates in onMutate)
     deleteChatMutation.mutate(chatId, {
-      onSuccess: () => {
-        const currentPath = window.location.pathname;
-        if (currentPath === `/chat/${chatId}`) {
-          router.push('/');
-        }
-        logger.info({ chatId }, '[ChatNavigation] Optimistically deleted chat');
-      },
       onError: (error) => {
-        // Error is already logged in the mutation hook
-        // We could add a toast notification here if needed
-        // For now, the UI will revert automatically
+        // If we navigated away but deletion failed, we could navigate back
+        // For now, just log - the optimistic UI update will be reverted
+        logger.error({ chatId, error }, '[ChatNavigation] Failed to delete chat');
       },
     });
   }, [deleteChatMutation, router]);
