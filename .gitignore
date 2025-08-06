@@ -51,3 +51,4 @@ apps/*/.next/
 apps/*/node_modules/
 apps/*/dist/
 apps/*/.turbo/
+packages/*/node_modules/
