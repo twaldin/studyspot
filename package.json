@@ -17,7 +17,7 @@
     "build:assistant": "cd workers/assistant && pnpm build",
     "deploy": "pnpm deploy:web && pnpm deploy:assistant",
     "deploy:web": "cd apps/web && npx @opennextjs/cloudflare@latest deploy",
-    "deploy:assistant": "cd workers/assistant && pnpm deploy",
+    "deploy:assistant": "cd workers/assistant/.mastra/output && wrangler deploy --config wrangler.json",
     "secrets:list:assistant": "cd workers/assistant && wrangler secret list",
     "secrets:set:assistant": "cd workers/assistant && wrangler secret put",
     "secrets:list:web": "cd apps/web && wrangler secret list",
