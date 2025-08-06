@@ -10,7 +10,6 @@ import { useChat, useUpdateChatCacheWithHistory } from "@/hooks/api/chats";
 import { useSelectedCourse } from "@/hooks/api/courses";
 import { useAuthenticatedUser, queryKeys } from "@/hooks/api/base";
 import { Message } from "@/features/chat/chat.types";
-import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollToBottomButton } from "@/components/scroll-to-bottom";
 import { chatStateService } from "@/features/chat/services/chat-state.service";
 import { chatStreamingService } from "@/features/chat/services/chat-streaming.service";
@@ -114,7 +113,11 @@ export function ChatPageContent() {
 
   // Load from cache AND check for active streams
   useEffect(() => {
+    // Don't load from cache if we're waiting for initial message to stream
     if (!chat || !chat.chats || !chatId) return;
+    
+    // If we have an initial message waiting, the display is already handled
+    if (initialMessage && messages.length === 0) return;
     
     // Check for active streaming FIRST
     const isStreamingActive = streamingManager.isStreaming(chatId);
@@ -272,13 +275,18 @@ export function ChatPageContent() {
   // Handle initial message streaming
   useEffect(() => {
     if (initialMessage && selectedCourse && chat && chatId && !streamingManager.isStreaming(chatId) && !hasStartedStreamingRef.current) {
-      // This logic is specifically for the first message in a new chat.
-      // It looks for a user message followed by an empty assistant message.
-      const shouldStartStreaming = messages.length === 2 &&
-        messages[0].role === 'user' &&
-        messages[0].content === initialMessage &&
-        messages[1].role === 'assistant' &&
-        messages[1].content === ''
+      // This logic handles the first message in a new chat.
+      // It can work either with:
+      // 1. messages.length === 0 (optimistic state during navigation)
+      // 2. messages.length === 2 with user + empty assistant (database loaded state)
+      const shouldStartStreaming = (
+        (messages.length === 0) || // Optimistic state
+        (messages.length === 2 &&
+         messages[0].role === 'user' &&
+         messages[0].content === initialMessage &&
+         messages[1].role === 'assistant' &&
+         messages[1].content === '')
+      );
 
       if (shouldStartStreaming) {
         // Mark that we've started streaming to prevent duplicate calls
@@ -291,7 +299,22 @@ export function ChatPageContent() {
         
         const startStreaming = async () => {
           try {
-            // The empty assistant message already exists, so we just stream into it.
+            // If we're in optimistic state (messages.length === 0), add the initial messages
+            if (messages.length === 0) {
+              const userMessage = {
+                id: Date.now().toString() + '-user',
+                content: initialMessage,
+                role: 'user' as const
+              };
+              const assistantMessage = {
+                id: Date.now().toString() + '-assistant',
+                content: '',
+                role: 'assistant' as const
+              };
+              setMessages([userMessage, assistantMessage]);
+            }
+            
+            // Start streaming (the empty assistant message exists now)
             await streamingManager.startStreaming(
               chatId,
               initialMessage,
@@ -478,36 +501,10 @@ export function ChatPageContent() {
     )
   }
 
-  // Show loading state while chat is loading
-  const showLoadingMessages = isLoadingChat;
-  const showEmptyState = !isLoadingChat && !chat;
-
-  // Debug render conditions
-  console.log('[Render Debug]', {
-    chatId,
-    isLoadingChat,
-    hasChatData: !!chat,
-    messagesLength: messages.length,
-    showLoadingMessages,
-    showEmptyState,
-    willShowMessages: !showLoadingMessages && !showEmptyState
-  });
-
-  if (isLoadingChat) {
-    return (
-      <div className="mx-auto w-full max-w-3xl h-full flex flex-col p-6 pt-0">
-        <div className="flex-1 overflow-y-auto">
-          <div className="flex flex-col gap-4">
-            <Skeleton className="w-48 h-12 rounded-lg self-end" />
-            <Skeleton className="w-64 h-16 rounded-lg self-end" />
-          </div>
-        </div>
-        <div>
-          <Skeleton className="w-full h-10" />
-        </div>
-      </div>
-    )
-  }
+  // Check if we have initial message that we're waiting to stream
+  const hasInitialMessageWaiting = initialMessage && messages.length === 0;
+  // Don't show empty state if we're still loading or have an initial message
+  const showEmptyState = !isLoadingChat && !chat && !hasInitialMessageWaiting;
 
   return (
     <div className="mx-auto w-full max-w-3xl h-full flex flex-col p-6 pt-0">
@@ -523,19 +520,24 @@ export function ChatPageContent() {
         onScroll={handleScroll}
       >
         <div className="flex flex-col gap-4 py-4">
-          {showLoadingMessages ? (
-            // Show message skeletons while loading
-            <>
-              <Skeleton className="w-48 h-12 rounded-lg self-end" />
-              <Skeleton className="w-64 h-16 rounded-lg self-start" />
-              <Skeleton className="w-56 h-10 rounded-lg self-end" />
-              <Skeleton className="w-72 h-20 rounded-lg self-start" />
-            </>
-          ) : showEmptyState ? (
+          {showEmptyState ? (
             // Show empty state for failed loads
             <div className="flex items-center justify-center h-full text-muted-foreground">
               Chat not found
             </div>
+          ) : hasInitialMessageWaiting ? (
+            // Show initial message while waiting for chat to load
+            <>
+              <UserMessage className="w-fit max-w-2xl self-end">
+                {initialMessage}
+              </UserMessage>
+              <AssistantMessage 
+                content=""
+                isStreaming={true}
+                isTextStreaming={false}
+                toolActivity="thinking"
+              />
+            </>
           ) : (
             // Show actual messages
             messages.map((message, i) =>
@@ -568,8 +570,7 @@ export function ChatPageContent() {
         <ChatInputBar 
           onSubmit={handleFormSubmit} 
           isSubmitting={isReplying}
-          placeholder={showLoadingMessages ? "Loading chat..." : "Can you help me with..."}
-          disabled={showLoadingMessages}
+          placeholder="Can you help me with..."
         />
       </div>
     </div>
