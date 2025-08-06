@@ -107,7 +107,7 @@ export const StreamingChatProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const setStreamingStatus = useCallback((chatId: string, title: string, isStreaming: boolean) => {
-    console.log('Setting streaming status:', { chatId, title, isStreaming });
+    console.log('PendingChatContext: Setting streaming status:', { chatId, title, isStreaming });
     setStreamingChats(prev => {
       const existingIndex = prev.findIndex(chat => chat.chatId === chatId);
       

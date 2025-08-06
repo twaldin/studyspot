@@ -18,6 +18,10 @@ import { verifyCourseTool } from './tools/verify-course.tool.js';
 import { getSuggestedQueriesHandler } from '../services/suggested-queries.service.js';
 import { testEnvRoute } from '../routes/test-env.js';
 
+// Import persistent streaming manager
+import { PersistentStreamManager } from '../streaming/persistent-stream-manager.js';
+import { SupabaseService } from '../services/supabase.service.js';
+
 // Request schema (matching original API exactly)
 const StreamRequestSchema = z.object({
   question: z.string().min(1, 'Question is required'),
@@ -66,11 +70,15 @@ export const mastra = new Mastra({
           });
         },
       }),
-      // Main chat streaming endpoint for same-domain deployment
+      // Main chat streaming endpoint - creates or subscribes to persistent streams
       registerApiRoute('/chat/stream', {
         method: 'POST',
         handler: async (c) => {
           try {
+            // Set environment for SupabaseService
+            const env = c.env || (globalThis as any).__workerEnv || process.env;
+            SupabaseService.setEnv(env);
+
             // Parse and validate request body
             const body = await c.req.json();
             const { question, conversationHistory, courseId, userId, timeZone, sessionId, promptOverrides } = 
@@ -78,19 +86,14 @@ export const mastra = new Mastra({
 
             // Log prompt override usage (matching original API)
             if (promptOverrides) {
-              console.log(`[Mastra Stream API] Prompt override request (dev panel)`, {
+              console.log(`[Persistent Stream API] Prompt override request (dev panel)`, {
                 sessionId,
                 hasOverrides: !!promptOverrides,
                 overrideKeys: promptOverrides ? Object.keys(promptOverrides) : []
               });
             }
 
-            // Set up streaming headers
-            c.header('Content-Type', 'text/event-stream');
-            c.header('Cache-Control', 'no-cache');
-            c.header('Connection', 'keep-alive');
-
-            console.log(`[Mastra Stream API] Starting RAG stream`, {
+            console.log(`[Persistent Stream API] Starting RAG stream`, {
               question: question.substring(0, 100),
               courseId,
               sessionId,
@@ -108,66 +111,19 @@ export const mastra = new Mastra({
               promptOverrides
             };
 
-            // Start streaming response using RAGWorkflowStreaming
-            const streamGenerator = RAGWorkflowStreaming.executeStream(workflowInput);
+            // Get persistent stream manager
+            const streamManager = PersistentStreamManager.getInstance();
+            
+            // Create or get existing stream (if chat is already streaming)
+            const streamId = await streamManager.createOrGetStream(sessionId || `chat_${Date.now()}`, workflowInput);
+            
+            // Subscribe to the stream
+            const { stream: readableStream, streamExists } = streamManager.subscribeToStream(streamId, true);
 
-            // Convert to SSE format matching original API
-            const encoder = new TextEncoder();
-            const sseStream = new ReadableStream({
-              async start(controller) {
-                let hasStarted = false;
-
-                try {
-                  for await (const response of streamGenerator) {
-                    if (!hasStarted) {
-                      hasStarted = true;
-                      // Send initial connection confirmation (matching original API)
-                      controller.enqueue(encoder.encode(`data: ${JSON.stringify({ connected: true })}\n\n`));
-                    }
-
-                    if (response.error) {
-                      // Error response (matching original API format)
-                      controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: response.error })}\n\n`));
-                      break;
-                    } else if (response.chunk) {
-                      // Text chunk response (matching original API format)
-                      controller.enqueue(encoder.encode(`data: ${JSON.stringify({ chunk: response.chunk })}\n\n`));
-                    } else if (response.toolActivity) {
-                      // Tool activity event (enhanced thinking indicator)
-                      console.log(`[Stream API] Received tool activity event from workflow:`, response.toolActivity);
-                      controller.enqueue(encoder.encode(`data: ${JSON.stringify({ toolActivity: response.toolActivity })}\n\n`));
-                    } else if (response.done) {
-                      console.log(`[Stream API] Processing done response with linkedDocumentIds:`, response.linkedDocumentIds);
-                      
-                      // Send simple type/id pairs to client - client will fetch details
-                      const linkedResources = response.linkedDocumentIds || [];
-                      
-                      console.log(`[Stream API] Sending ${linkedResources.length} linked resources to client:`, linkedResources);
-                      
-                      // Send final response
-                      controller.enqueue(encoder.encode(`data: ${JSON.stringify({ 
-                        done: true, 
-                        linkedResources
-                      })}\n\n`));
-                      break;
-                    }
-                  }
-
-                  controller.close();
-                  console.log(`[Mastra Stream API] Stream completed`, { courseId, sessionId });
-
-                } catch (error) {
-                  console.error(`[Mastra Stream API] Stream error:`, error);
-                  controller.enqueue(encoder.encode(`data: ${JSON.stringify({ 
-                    error: error instanceof Error ? error.message : 'Internal server error' 
-                  })}\n\n`));
-                  controller.close();
-                }
-              },
-            });
+            console.log(`[Persistent Stream API] ${streamExists ? 'Subscribed to existing' : 'Created new'} stream: ${streamId}`);
 
             // Return SSE response with CORS headers
-            return new Response(sseStream, {
+            return new Response(readableStream, {
               headers: {
                 'Content-Type': 'text/event-stream',
                 'Cache-Control': 'no-cache',
@@ -179,8 +135,119 @@ export const mastra = new Mastra({
             });
 
           } catch (error) {
-            console.error(`[Mastra Stream API] Error in stream handler:`, error);
+            console.error(`[Persistent Stream API] Error in stream handler:`, error);
             
+            return c.json({ 
+              error: error instanceof Error ? error.message : 'Internal server error' 
+            }, 500);
+          }
+        },
+      }),
+      // Stream subscription endpoint - for reconnecting to existing streams
+      registerApiRoute('/chat/stream/subscribe', {
+        method: 'OPTIONS' as any,
+        handler: async (c) => {
+          return new Response(null, {
+            status: 204,
+            headers: {
+              'Access-Control-Allow-Origin': '*',
+              'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+              'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+              'Access-Control-Max-Age': '86400',
+            },
+          });
+        },
+      }),
+      registerApiRoute('/chat/stream/subscribe', {
+        method: 'POST',
+        handler: async (c) => {
+          try {
+            const body = await c.req.json();
+            const { streamId, includeCatchUp = true } = body;
+
+            if (!streamId) {
+              return c.json({ error: 'Stream ID is required' }, 400);
+            }
+
+            console.log(`[Stream Subscribe API] Subscribing to stream: ${streamId}`);
+
+            // Get persistent stream manager and subscribe
+            const streamManager = PersistentStreamManager.getInstance();
+            const { stream: readableStream, streamExists } = streamManager.subscribeToStream(streamId, includeCatchUp);
+
+            if (!streamExists) {
+              console.log(`[Stream Subscribe API] Stream not found: ${streamId}`);
+            }
+
+            // Return SSE response
+            return new Response(readableStream, {
+              headers: {
+                'Content-Type': 'text/event-stream',
+                'Cache-Control': 'no-cache',
+                'Connection': 'keep-alive',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+              },
+            });
+
+          } catch (error) {
+            console.error(`[Stream Subscribe API] Error:`, error);
+            return c.json({ 
+              error: error instanceof Error ? error.message : 'Internal server error' 
+            }, 500);
+          }
+        },
+      }),
+      // Stream status endpoint - for debugging and monitoring
+      registerApiRoute('/chat/stream/status', {
+        method: 'OPTIONS' as any,
+        handler: async (c) => {
+          return new Response(null, {
+            status: 204,
+            headers: {
+              'Access-Control-Allow-Origin': '*',
+              'Access-Control-Allow-Methods': 'GET, OPTIONS',
+              'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+              'Access-Control-Max-Age': '86400',
+            },
+          });
+        },
+      }),
+      registerApiRoute('/chat/stream/status', {
+        method: 'GET',
+        handler: async (c) => {
+          try {
+            const streamId = c.req.query('streamId');
+            const streamManager = PersistentStreamManager.getInstance();
+            
+            if (streamId) {
+              // Get specific stream status
+              const status = streamManager.getStreamStatus(streamId);
+              if (!status) {
+                return c.json({ error: 'Stream not found' }, 404);
+              }
+              return c.json({ stream: status }, {
+                headers: {
+                  'Access-Control-Allow-Origin': '*',
+                  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+                  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+                },
+              });
+            } else {
+              // Get all streams status
+              const allStreams = streamManager.getStreamStatus();
+              return c.json({ streams: allStreams }, {
+                headers: {
+                  'Access-Control-Allow-Origin': '*',
+                  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+                  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+                },
+              });
+            }
+
+          } catch (error) {
+            console.error(`[Stream Status API] Error:`, error);
             return c.json({ 
               error: error instanceof Error ? error.message : 'Internal server error' 
             }, 500);

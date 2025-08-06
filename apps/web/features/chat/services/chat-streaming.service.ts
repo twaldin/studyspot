@@ -1,6 +1,5 @@
 import logger from "@/lib/logger";
 import { Message, LinkedResource, LinkedResourceRef } from "@/features/chat/chat.types";
-import type { CreateChatRequest } from "@/hooks/api/chats";
 
 export interface StreamingContext {
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
@@ -21,16 +20,17 @@ export interface StreamingContext {
   ) => void;
   setToolActivity?: React.Dispatch<React.SetStateAction<string | null>>;
   setIsTextStreaming?: React.Dispatch<React.SetStateAction<boolean>>;
+  setStreamingStatus?: (chatId: string, title: string, isStreaming: boolean) => void;
+  updateChatCache?: (data: { chatId: string; messages: Array<{ role: string; content: string; linkedDocumentIds?: string[] }> }) => void;
 }
 
-export interface StreamingResponse {
-  chunk?: string;
-  done?: boolean;
-  linkedResources?: LinkedResourceRef[]; // Simple type/id pairs
-  error?: string;
-  toolActivity?: string;
-}
 
+/**
+ * ChatStreamingService - Utility functions for streaming (no longer handles actual streaming)
+ * 
+ * NOTE: This service now only contains utility functions. 
+ * Actual streaming is handled by PersistentStreamClient.
+ */
 export class ChatStreamingService {
   private static instance: ChatStreamingService;
 
@@ -47,7 +47,7 @@ export class ChatStreamingService {
    * Filters out thinking content from the assistant response
    * Removes everything from <thinking> tags until the closing </thinking> tag is found
    */
-  private filterThinkingContent(content: string): { 
+  public filterThinkingContent(content: string): { 
     filtered: string; 
     hasActiveThinking: boolean; 
     hasThinkingContent: boolean; 
@@ -93,222 +93,6 @@ export class ChatStreamingService {
       hasActiveThinking, 
       hasThinkingContent 
     };
-  }
-
-  /**
-   * Processes a streaming assistant API response, incrementally updating the assistant message content
-   */
-  async processStreamingResponse(
-    response: Response,
-    context: StreamingContext,
-  ): Promise<void> {
-    const reader = response.body?.getReader();
-    const decoder = new TextDecoder();
-    let fullResponse = "";
-
-    if (!reader) {
-      throw new Error("Response body is not readable");
-    }
-
-    logger.info("Starting to process streaming response");
-
-    try {
-      let chunkCount = 0;
-      let linkedResources: LinkedResource[] = [];
-      let lastChunkTime = Date.now();
-      let pauseTimeoutId: NodeJS.Timeout | null = null;
-
-      // Clear any existing pause timeout and reset states
-      if (pauseTimeoutId) {
-        clearTimeout(pauseTimeoutId);
-      }
-      if (context.setIsTextStreaming) {
-        context.setIsTextStreaming(false);
-      }
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) {
-          console.info({
-            chunkCount,
-            fullResponseLength: fullResponse.length,
-          }, "Streaming completed successfully");
-          
-          // Clear streaming states when done
-          if (context.setIsTextStreaming) {
-            context.setIsTextStreaming(false);
-          }
-          if (pauseTimeoutId) {
-            clearTimeout(pauseTimeoutId);
-          }
-          break;
-        }
-
-        chunkCount++;
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split("\n");
-
-        for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            try {
-              const data: StreamingResponse = JSON.parse(line.slice(6));
-
-              if (data.chunk) {
-                fullResponse += data.chunk;
-                
-                // Filter out thinking content for display and detect thinking state
-                const { filtered: displayContent, hasActiveThinking, hasThinkingContent } = this.filterThinkingContent(fullResponse);
-                
-                // Handle streaming state based on thinking detection
-                if (context.setIsTextStreaming) {
-                  if (hasActiveThinking) {
-                    // Currently receiving thinking chunks - stop text streaming to show thinking animation
-                    context.setIsTextStreaming(false);
-                    // Set tool activity to indicate thinking
-                    if (context.setToolActivity) {
-                      context.setToolActivity('thinking');
-                    }
-                  } else if (displayContent.trim()) {
-                    // Has actual content to display - mark as actively text streaming
-                    context.setIsTextStreaming(true);
-                    // Clear tool activity when actively streaming visible content
-                    if (context.setToolActivity) {
-                      context.setToolActivity(null);
-                    }
-                  }
-                }
-                
-                // Clear any existing pause timeout
-                if (pauseTimeoutId) {
-                  clearTimeout(pauseTimeoutId);
-                }
-                
-                // Set up pause detection (300ms) - only if not actively thinking
-                if (!hasActiveThinking) {
-                  pauseTimeoutId = setTimeout(() => {
-                    if (context.setIsTextStreaming) {
-                      context.setIsTextStreaming(false);
-                    }
-                    // When pause is detected, just continue showing tool activity
-                    // The text streaming state will handle pencil display
-                  }, 300);
-                }
-                
-                // Debug logging for thinking content
-                if (hasThinkingContent) {
-                  logger.info("[ChatStreaming] Detected thinking content", {
-                    originalLength: fullResponse.length,
-                    filteredLength: displayContent.length,
-                    hasActiveThinking,
-                    hasThinkingContent
-                  });
-                }
-                
-                this.updateAssistantMessage(context.setMessages, displayContent);
-
-                // Update streaming context for navigation persistence (with filtered content)
-                if (context.chatId && context.updateStreamingMessage) {
-                  context.updateStreamingMessage(context.chatId, displayContent);
-                }
-                
-                lastChunkTime = Date.now();
-              } else if (data.toolActivity !== undefined && context.setToolActivity) {
-                // Update tool activity for enhanced thinking indicator (including null to clear)
-                context.setToolActivity(data.toolActivity);
-                // Tool activity and text streaming states work together
-                // No need for manual pencil display control
-              } else if (data.done) {
-                console.info({
-                  finalResponseLength: fullResponse.length,
-                  linkedResourceRefs: data.linkedResources?.length || 0
-                }, "Received done signal from server");
-                
-                // Convert simple refs to full resources
-                const linkedResourceRefs = data.linkedResources || [];
-                linkedResources = await this.convertRefsToResources(linkedResourceRefs);
-                
-                // Use filtered content for final message
-                const { filtered: finalDisplayContent } = this.filterThinkingContent(fullResponse);
-                this.updateAssistantMessage(context.setMessages, finalDisplayContent);
-                this.updateAssistantMessageWithResources(
-                  context.setMessages,
-                  linkedResources,
-                );
-
-                // Update streaming context with final linked resources (with filtered content)
-                if (context.chatId && context.updateStreamingMessage) {
-                  context.updateStreamingMessage(
-                    context.chatId,
-                    finalDisplayContent,
-                    linkedResources,
-                  );
-                }
-
-                // Clear tool activity and text streaming when done
-                if (context.setToolActivity) {
-                  context.setToolActivity(null);
-                }
-                if (context.setIsTextStreaming) {
-                  context.setIsTextStreaming(false);
-                }
-                break;
-              } else if (data.error) {
-                throw new Error(data.error);
-              }
-            } catch (parseError) {
-              console.warn(
-                { parseError, line },
-                "Failed to parse streaming chunk",
-              );
-            }
-          }
-        }
-      }
-    } finally {
-      reader.releaseLock();
-      logger.info({ chatId: context.chatId }, '[ChatStreaming] Streaming completed, cleaning up states');
-      console.log('[ChatStreaming] Finally block - setting isReplying to false for chat:', context.chatId);
-      // Set isReplying to false when streaming is complete
-      context.setIsReplying(false);
-      // Clear streaming states
-      if (context.setIsTextStreaming) {
-        context.setIsTextStreaming(false);
-      }
-    }
-  }
-
-  /**
-   * Updates the assistant message with new content during streaming
-   */
-  private updateAssistantMessage(
-    setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
-    content: string,
-  ): void {
-    setMessages((prevMessages) => {
-      const newMessages = [...prevMessages];
-      const lastMessage = newMessages[newMessages.length - 1];
-      if (lastMessage && lastMessage.role === "assistant") {
-        lastMessage.content = content;
-      }
-      return newMessages;
-    });
-  }
-
-  /**
-   * Updates the assistant message with linked resources
-   */
-  private updateAssistantMessageWithResources(
-    setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
-    linkedResources: LinkedResource[],
-  ): void {
-    setMessages((prevMessages) => {
-      const newMessages = [...prevMessages];
-      const lastMessage = newMessages[newMessages.length - 1];
-      if (lastMessage && lastMessage.role === "assistant") {
-        lastMessage.linkedResources = linkedResources;
-      }
-      return newMessages;
-    });
   }
 
   /**
@@ -385,57 +169,6 @@ export class ChatStreamingService {
     }
   }
 
-  /**
-   * Sends a message to the assistant API microservice
-   */
-  async sendMessage(
-    messageContent: string,
-    conversationHistory: Array<
-      { role: string; content: string; linkedDocumentIds?: string[] }
-    >,
-    courseId: string,
-    chatId?: string, // Make chatId optional
-    userId?: string,
-  ): Promise<Response> {
-    const requestBody: any = {
-      question: messageContent,
-      conversationHistory,
-      courseId,
-      userId,
-      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    };
-
-    if (chatId) {
-      requestBody.sessionId = chatId;
-    }
-
-    const apiUrl = process.env.NEXT_PUBLIC_ASSISTANT_API_URL;
-    logger.info("Using assistant API at", apiUrl);
-
-    const response = await fetch(`${apiUrl}/chat/stream`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(requestBody),
-    });
-
-    if (!response.ok) {
-      let errorMessage = `Assistant API error! status: ${response.status}`;
-      
-      // Try to get more detailed error info
-      try {
-        const errorText = await response.text();
-        if (errorText) {
-          errorMessage += ` - ${errorText}`;
-        }
-      } catch (e) {
-        // Ignore if we can't read the error text
-      }
-      
-      throw new Error(errorMessage);
-    }
-
-    return response;
-  }
 }
 
 // Export singleton instance
