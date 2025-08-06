@@ -9,8 +9,8 @@ import {
   X,
   XCircle,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@studyspot/ui/components/button";
+import { Alert, AlertDescription, AlertTitle } from "@studyspot/ui/components/alert";
 import toast, { useToaster } from "react-hot-toast";
 import { useUser } from "@clerk/nextjs";
 import {

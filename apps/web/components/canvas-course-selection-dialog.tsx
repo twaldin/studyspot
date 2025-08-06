@@ -8,16 +8,16 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+} from "@studyspot/ui/components/dialog";
+import { Button } from "@studyspot/ui/components/button";
+import { Checkbox } from "@studyspot/ui/components/checkbox";
+import { ScrollArea } from "@studyspot/ui/components/scroll-area";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@studyspot/ui/components/accordion";
 import { CanvasCourse } from "@/lib/services/canvas/canvas.service";
 import { useCanvasCourses } from "@/hooks/api/canvas";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton } from "@studyspot/ui/components/skeleton";
 import { toast } from "react-hot-toast";
-import { Label } from "@/components/ui/label";
+import { Label } from "@studyspot/ui/components/label";
 
 interface CanvasCourseSelectionDialogProps {
   open: boolean;

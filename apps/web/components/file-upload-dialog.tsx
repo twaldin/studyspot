@@ -12,17 +12,17 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+} from "@studyspot/ui/components/dialog";
+import { Button } from "@studyspot/ui/components/button";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
+} from "@studyspot/ui/components/select";
+import { Checkbox } from "@studyspot/ui/components/checkbox";
+import { Label } from "@studyspot/ui/components/label";
 import { UploadCloud, File, X } from "lucide-react";
 import React, { useState, useCallback, useMemo, Suspense, lazy, useEffect } from 'react';
 import { ICourse } from "@/features/courses/course.model";

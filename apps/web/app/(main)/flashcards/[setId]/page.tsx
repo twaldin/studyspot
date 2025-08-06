@@ -23,8 +23,8 @@ import {
   StudySettings,
   StudyState,
 } from "@/features/flashcards/types";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@studyspot/ui/components/button";
+import { Badge } from "@studyspot/ui/components/badge";
 import {
   ArrowLeft,
   ArrowRight,
