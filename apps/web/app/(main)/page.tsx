@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@studyspot/ui/components/button";
 import { Separator } from "@/components/ui/separator";
 import { Zap, ArrowRight, Upload, MessagesSquare } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
