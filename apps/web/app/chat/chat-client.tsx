@@ -9,7 +9,6 @@ import AssistantMessage from "@/components/assistant-message";
 import { useChat, useCreateChat, useDeleteChat } from "@/hooks/api/chats";
 import { useSelectedCourse } from "@/hooks/api/courses";
 import { Message } from "@/features/chat/chat.types";
-import { Skeleton } from "@/components/ui/skeleton";
 import { chatStateService } from "@/features/chat/services/chat-state.service";
 import { chatNavigationService } from "@/features/chat/services/chat-navigation.service";
 import { streamingManager } from "@/features/chat/services/streaming-manager.service";
