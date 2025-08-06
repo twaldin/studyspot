@@ -1,0 +1,10 @@
+{
+  "flags": [
+    "nodejs_compat",
+    "streams_enable_constructors"
+  ],
+  "build_command": "npm run build",
+  "build_output_directory": ".next",
+  "compatibility_date": "2025-04-01",
+  "node_compat": true
+}

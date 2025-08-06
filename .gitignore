@@ -76,4 +76,3 @@ workers/*/.mastra/
 *TEST_*.md
 test-*.sh
 add-*.sh
-*.compat.json
