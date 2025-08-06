@@ -1,7 +1,8 @@
 'use client';
 
-import { chatStreamingService, StreamingContext } from './chat-streaming.service';
+import { StreamingContext } from './chat-streaming.service';
 import { LinkedResource } from '@/features/chat/chat.types';
+import { persistentStreamClient, PersistentStreamOptions } from './persistent-stream-client.service';
 import logger from '@/lib/logger';
 
 interface ActiveStream {
@@ -88,88 +89,78 @@ class StreamingManagerService {
   }
 
   /**
-   * Execute the actual streaming
+   * Execute the actual streaming using persistent stream client
    */
   private async executeStreaming(
-    chatId: string, // Add chatId here
+    chatId: string,
     messageContent: string,
     conversationHistory: Array<{ role: string; content: string; linkedResources?: LinkedResource[] }>,
     courseId: string,
     context: StreamingContext,
     signal: AbortSignal
   ): Promise<void> {
-    logger.info({ chatId, messageContent, courseId }, 'Sending message to assistant API');
+    logger.info({ chatId, messageContent, courseId }, 'Starting persistent stream session');
     
-    const response = await chatStreamingService.sendMessage(
-      messageContent,
-      conversationHistory,
-      courseId,
-      chatId, // Pass chatId to sendMessage
-      context.userId
-    );
-
-    logger.info({ chatId, responseOk: response.ok, status: response.status }, 'Received response from assistant API');
-
     // Check if cancelled
     if (signal.aborted) {
       throw new Error('Streaming cancelled');
     }
 
-    await chatStreamingService.processStreamingResponse(response, context);
+    // Use persistent stream client with enhanced options
+    const streamOptions: PersistentStreamOptions = {
+      chatId,
+      messageContent,
+      conversationHistory,
+      courseId,
+      context,
+      onCatchUpComplete: (totalEvents) => {
+        logger.info({ chatId, totalEvents }, 'Stream catch-up completed');
+      },
+      onCatchUpProgress: (progress, total) => {
+        logger.info({ chatId, progress, total }, 'Stream catch-up progress');
+      },
+      onNoActiveStream: () => {
+        logger.warn({ chatId }, 'No active stream found - this is a new stream');
+      }
+    };
+
+    await persistentStreamClient.connectToStream(streamOptions);
     
-    logger.info({ chatId }, 'Streaming response processed successfully');
+    logger.info({ chatId }, 'Persistent streaming completed successfully');
     
-    // After streaming completes successfully, save messages to database
-    if (context.userId && chatId && !signal.aborted) {
-      logger.info({ chatId, userId: context.userId }, 'Saving messages to database');
-      await this.saveMessagesToDatabase(chatId, context);
-    }
+    // Note: Database updates now happen automatically in the assistant worker
+    // No need to call saveMessagesToDatabase here
   }
 
   /**
-   * Save messages to database after streaming completes
+   * Subscribe to an existing stream (for navigation scenarios)
    */
-  private async saveMessagesToDatabase(chatId: string, context: StreamingContext): Promise<void> {
-    try {
-      // Get current messages from the UI state
-      let currentMessages: any[] = [];
-      
-      // Use a promise to get the current state
-      await new Promise<void>((resolve) => {
-        context.setMessages((messages) => {
-          // Capture the messages for saving
-          currentMessages = messages.map(msg => ({
-            role: msg.role,
-            content: msg.content,
-            linkedDocumentIds: msg.linkedResourceRefs?.map((ref: any) => ref.id) || msg.linkedDocumentIds || []
-          }));
-          // Need to actually resolve AFTER we've captured the messages
-          setTimeout(resolve, 0);
-          return messages;
-        });
-      });
+  async subscribeToExistingStream(
+    streamId: string,
+    chatId: string,
+    context: StreamingContext
+  ): Promise<void> {
+    logger.info({ chatId, streamId }, 'Subscribing to existing persistent stream');
 
-      logger.info({ chatId, messageCount: currentMessages.length }, 'Saving messages to database after streaming');
-
-      // Call the API to update the chat
-      const response = await fetch(`/api/chats/${chatId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ messages: currentMessages }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to save messages: ${response.statusText}`);
+    const streamOptions: PersistentStreamOptions = {
+      chatId,
+      messageContent: '', // Not needed for subscription
+      conversationHistory: [], // Not needed for subscription
+      courseId: '', // Not needed for subscription
+      context,
+      onCatchUpComplete: (totalEvents) => {
+        logger.info({ chatId, streamId, totalEvents }, 'Stream subscription catch-up completed');
+      },
+      onCatchUpProgress: (progress, total) => {
+        logger.info({ chatId, streamId, progress, total }, 'Stream subscription catch-up progress');
+      },
+      onNoActiveStream: () => {
+        logger.warn({ chatId, streamId }, 'No active stream found for subscription');
       }
+    };
 
-      logger.info({ chatId }, 'Messages saved successfully to database');
-    } catch (error) {
-      logger.error({ chatId, error }, 'Failed to save messages to database');
-      // Don't throw here - we don't want to fail the whole streaming process
-      // The messages are still in the UI state
-    }
+    await persistentStreamClient.subscribeToExistingStream(streamId, streamOptions);
+    logger.info({ chatId, streamId }, 'Stream subscription completed successfully');
   }
 
   /**
@@ -221,6 +212,32 @@ class StreamingManagerService {
       stream.controller?.abort();
     }
     this.activeStreams.clear();
+  }
+
+  /**
+   * Notify that a stream has completed (called by PersistentStreamClient)
+   */
+  notifyStreamCompleted(chatId: string): void {
+    const wasActive = this.activeStreams.has(chatId);
+    if (wasActive) {
+      logger.info({ chatId }, 'StreamingManager: Removing completed stream from active tracking');
+      this.activeStreams.delete(chatId);
+      console.log('[StreamingManager] Stream completed, active streams:', Array.from(this.activeStreams.keys()));
+    } else {
+      console.log('[StreamingManager] notifyStreamCompleted called but stream was not active:', chatId);
+    }
+  }
+
+  /**
+   * Get persistent stream status for debugging
+   */
+  async getStreamStatus(streamId?: string): Promise<any> {
+    try {
+      return await persistentStreamClient.getStreamStatus(streamId);
+    } catch (error) {
+      logger.error({ streamId, error }, 'Failed to get stream status');
+      return null;
+    }
   }
 }
 

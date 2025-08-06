@@ -6,14 +6,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ChatInputBar } from "@/components/chat-input-bar";
 import { UserMessage } from "@/components/user-message";
 import AssistantMessage from "@/components/assistant-message";
-import { useChat } from "@/hooks/api/chats";
+import { useChat, useUpdateChatCacheWithHistory } from "@/hooks/api/chats";
 import { useSelectedCourse } from "@/hooks/api/courses";
 import { useAuthenticatedUser, queryKeys } from "@/hooks/api/base";
 import { Message } from "@/features/chat/chat.types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollToBottomButton } from "@/components/scroll-to-bottom";
 import { chatStateService } from "@/features/chat/services/chat-state.service";
-import { chatStreamingService, type StreamingResponse } from "@/features/chat/services/chat-streaming.service";
+import { chatStreamingService } from "@/features/chat/services/chat-streaming.service";
 import { streamingManager } from "@/features/chat/services/streaming-manager.service";
 import { useStreamingChats } from "@/features/chat/PendingChatContext";
 import logger from "@/lib/logger";
@@ -30,6 +30,7 @@ export function ChatPageContent() {
   const { data: selectedCourse } = useSelectedCourse()
   const { userId } = useAuthenticatedUser()
   const { setStreamingStatus, updateStreamingMessage, getStreamingMessage, removeOptimisticChat } = useStreamingChats()
+  const updateChatCache = useUpdateChatCacheWithHistory()
   
   const [messages, setMessages] = useState<Message[]>([])
   const [isReplying, setIsReplying] = useState(false)
@@ -83,17 +84,12 @@ export function ChatPageContent() {
     }
   }, [])
 
-  // Handle chat ID changes and initialize state
+  // Handle initial message from sessionStorage only
   useEffect(() => {
     if (!chatId) return;
 
-    // Clear messages when chat changes
-    setMessages([])
-    // Reset streaming flag for new chat
+    // Only handle initial message and streaming flag reset - DON'T clear messages
     hasStartedStreamingRef.current = false
-    // Clear tool activity and streaming state
-    setToolActivity(null)
-    setIsTextStreaming(false)
     
     // Check for initial message in sessionStorage
     const storedInitialMessage = sessionStorage.getItem(`initial-message-${chatId}`)
@@ -104,59 +100,39 @@ export function ChatPageContent() {
   }, [chatId])
 
 
-  // Load chat data when available
+  // Simple: Use React Query cached chat data to populate messages
   useEffect(() => {
-    if (chat && chat.chats && messages.length === 0) {
-      const convertedMessages = chatStateService.loadChatFromDatabase(chat)
-      
-      // Convert linkedResourceRefs to linkedResources for each message
-      const processMessagesWithResources = async () => {
-        const processedMessages = await Promise.all(
-          convertedMessages.map(async (msg) => {
-            if (msg.linkedResourceRefs && msg.linkedResourceRefs.length > 0) {
-              // Use the same conversion logic as streaming service
-              const linkedResources = await chatStreamingService.convertRefsToResources(msg.linkedResourceRefs);
-              return { ...msg, linkedResources };
-            }
-            return msg;
-          })
-        );
-        
-        // Check if there's active streaming for this chat
-        const isActivelyStreaming = streamingManager.isStreaming(chatId);
-        
-        if (isActivelyStreaming) {
-          // Update the streaming context with current UI state
-          streamingManager.updateStreamContext(chatId, {
-            setMessages,
-            setIsReplying,
-            updateStreamingMessage
-          });
-          
-          // Check for partial streaming message
-          const streamingData = getStreamingMessage(chatId);
-          if (streamingData && streamingData.message) {
-            const assistantMessage: Message = {
-              id: Date.now().toString() + '-streaming-assistant',
-              content: streamingData.message,
-              role: 'assistant'
-            };
-            setMessages([...processedMessages, assistantMessage]);
-          } else {
-            setMessages(processedMessages);
+    if (!chat || !chat.chats || messages.length > 0) return;
+    
+    console.log('[Simple Chat Loading] Loading from React Query cache:', {
+      chatId,
+      messagesFromDB: chat.chats?.length || 0
+    });
+
+    // Convert database messages to UI format
+    const uiMessages = chatStateService.loadChatFromDatabase(chat);
+    setMessages(uiMessages);
+    
+    // Process linked resources in background if needed
+    const processResources = async () => {
+      const messagesWithResources = await Promise.all(
+        uiMessages.map(async (msg) => {
+          if (msg.linkedResourceRefs && msg.linkedResourceRefs.length > 0) {
+            const linkedResources = await chatStreamingService.convertRefsToResources(msg.linkedResourceRefs);
+            return { ...msg, linkedResources };
           }
-          
-          setIsReplying(true);
-        } else {
-          setMessages(processedMessages);
-        }
-        
-        setError(null);
-      };
+          return msg;
+        })
+      );
       
-      processMessagesWithResources();
-    }
-  }, [chat, messages.length, chatId, getStreamingMessage, setMessages, setIsReplying, updateStreamingMessage])
+      const hasNewResources = messagesWithResources.some(msg => msg.linkedResources && msg.linkedResources.length > 0);
+      if (hasNewResources) {
+        setMessages(messagesWithResources);
+      }
+    };
+    
+    processResources();
+  }, [chat, messages.length])
 
   // Clean up optimistic chats when real chat loads
   useEffect(() => {
@@ -215,7 +191,9 @@ export function ChatPageContent() {
                 setIsReplying,
                 updateStreamingMessage,
                 setToolActivity,
-                setIsTextStreaming
+                setIsTextStreaming,
+                setStreamingStatus,
+                updateChatCache: updateChatCache.mutate // Add cache mutation to context
               }
             );
             
@@ -229,6 +207,12 @@ export function ChatPageContent() {
           } catch (error) {
             console.error('Failed to start streaming:', error)
             setStreamingStatus(chatId, chat.title || 'Chat', false);
+            
+            // CRITICAL: Ensure all streaming states are cleared on error
+            setIsReplying(false);
+            setToolActivity(null);
+            setIsTextStreaming(false);
+            
             // Remove the empty assistant message on error
             chatStateService.handleMessageError(
               { messages, setMessages, setIsReplying, setError },
@@ -261,6 +245,20 @@ export function ChatPageContent() {
 
 
   const showThinkingIndicator = chatStateService.shouldShowThinkingIndicator(messages, isReplying)
+  
+  // Debug thinking indicator logic
+  console.log('[Thinking Debug]', {
+    chatId,
+    showThinkingIndicator,
+    isReplying,
+    messagesLength: messages.length,
+    lastMessage: messages.length > 0 ? { 
+      role: messages[messages.length - 1]?.role, 
+      content: messages[messages.length - 1]?.content?.substring(0, 50) || 'empty',
+      contentLength: messages[messages.length - 1]?.content?.length || 0,
+      isEmpty: messages[messages.length - 1]?.content === ''
+    } : 'no messages'
+  });
 
   const handleFormSubmit = useCallback(async (values: { message: string }) => {
     if (!selectedCourse || !chatId) {
@@ -324,7 +322,9 @@ export function ChatPageContent() {
           setIsReplying,
           updateStreamingMessage,
           setToolActivity,
-          setIsTextStreaming
+          setIsTextStreaming,
+          setStreamingStatus,
+          updateChatCache: updateChatCache.mutate // Add cache mutation to context
         }
       );
 
@@ -339,6 +339,12 @@ export function ChatPageContent() {
     } catch (error) {
       console.error('Failed to send message:', error)
       setStreamingStatus(chatId, chat?.title || 'Chat', false);
+      
+      // CRITICAL: Ensure all streaming states are cleared on error
+      setIsReplying(false);
+      setToolActivity(null);
+      setIsTextStreaming(false);
+      
       chatStateService.handleMessageError(
         { messages, setMessages, setIsReplying, setError },
         error instanceof Error ? error : new Error('Failed to send message')
@@ -357,6 +363,17 @@ export function ChatPageContent() {
   // Show loading state while chat is loading
   const showLoadingMessages = isLoadingChat;
   const showEmptyState = !isLoadingChat && !chat;
+
+  // Debug render conditions
+  console.log('[Render Debug]', {
+    chatId,
+    isLoadingChat,
+    hasChatData: !!chat,
+    messagesLength: messages.length,
+    showLoadingMessages,
+    showEmptyState,
+    willShowMessages: !showLoadingMessages && !showEmptyState
+  });
 
   if (isLoadingChat) {
     return (
@@ -413,7 +430,7 @@ export function ChatPageContent() {
                   key={message.id || i} 
                   content={message.content}
                   linkedResources={message.linkedResources}
-                  isStreaming={(isReplying || (i === messages.length - 1 && message.content === '')) && i === messages.length - 1}
+                  isStreaming={isReplying && i === messages.length - 1}
                   isTextStreaming={isTextStreaming && i === messages.length - 1}
                   toolActivity={i === messages.length - 1 ? toolActivity : null}
                 />

@@ -12,7 +12,7 @@ import { Message } from "@/features/chat/chat.types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { chatStateService } from "@/features/chat/services/chat-state.service";
 import { chatNavigationService } from "@/features/chat/services/chat-navigation.service";
-import { chatStreamingService } from "@/features/chat/services/chat-streaming.service";
+import { streamingManager } from "@/features/chat/services/streaming-manager.service";
 import logger from "@/lib/logger";
 
 export function ChatPageContent({ chatId }: { chatId?: string }) {
@@ -159,27 +159,27 @@ export function ChatPageContent({ chatId }: { chatId?: string }) {
           messages,
         );
 
-        const response = await chatStreamingService.sendMessage(
+        // Use streaming manager for persistent streams
+        await streamingManager.startStreaming(
+          targetChatId,
           messageContent,
           conversationHistory,
           selectedCourse.id,
-          targetChatId, // Add missing chatId parameter
-          user?.id, // Add userId parameter
+          {
+            setMessages,
+            messageContent,
+            conversationHistory,
+            isNewChat: false,
+            chatId: targetChatId,
+            userId: user?.id,
+            router,
+            selectedCourse,
+            setIsReplying,
+            setToolActivity,
+            setIsTextStreaming,
+            setStreamingStatus: () => {}, // Not needed for this chat client context
+          }
         );
-
-        await chatStreamingService.processStreamingResponse(response, {
-          setMessages,
-          messageContent,
-          conversationHistory,
-          isNewChat: false,
-          chatId: targetChatId,
-          userId: user?.id,
-          router,
-          selectedCourse,
-          setIsReplying,
-          setToolActivity,
-          setIsTextStreaming,
-        });
       } catch (error) {
         chatStateService.handleMessageError({
           messages,
