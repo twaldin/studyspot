@@ -70,5 +70,3 @@ add-*.sh
 *CHECKLIST.md
 *TROUBLESHOOTING.md
 *TEST_*.md
-*.compat.json
-wrangler.compat.json
