@@ -1,7 +1,19 @@
 import { NextResponse } from 'next/server';
-import { validateAuth, validateAuthWithSchool } from "@/features/auth/operations";
+import { validateAuth } from "@/features/auth/operations";
 import { clerkClient } from '@clerk/nextjs/server';
 import logger from '@/lib/logger';
+import { getUserOnboardingStatus } from '@/lib/clerk';
+
+export async function GET(request: Request) {
+  try {
+    const auth = await validateAuth();
+    const onboardingStatus = await getUserOnboardingStatus(auth.userId);
+    return NextResponse.json(onboardingStatus);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'An unknown error occurred';
+    return NextResponse.json({ message }, { status: 500 });
+  }
+}
 
 export async function POST(request: Request) {
   try {
