@@ -2,8 +2,8 @@
 
 import { StudySettings, StudyProgress } from "@/features/flashcards/types";
 import { getProgressPercentage, getProgressText } from "../services/flashcard.service";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@studyspot/ui/components/button";
+import { Badge } from "@studyspot/ui/components/badge";
 import { 
   ArrowRight, 
   SkipForward, 
