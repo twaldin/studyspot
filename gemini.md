@@ -6,7 +6,7 @@ StudySpot is an AI-powered study assistant monorepo enabling college students to
 
 ## Monorepo Architecture
 
-This is a **pnpm workspace monorepo** with four applications in the `apps/` directory:
+This is a **pnpm workspace monorepo** with four applications in the `apps/` directory and shared packages in the `packages/` directory:
 
 ### Applications
 
@@ -33,6 +33,14 @@ This is a **pnpm workspace monorepo** with four applications in the `apps/` dire
 - **Tech Stack**: Next.js 15, TailwindCSS
 - **Features**: Static landing page
 - **Port**: Default Next.js port
+
+### Shared Packages
+
+#### 1. **@studyspot/ui** (`packages/ui/`)
+- **Purpose**: Shared UI component library with shadcn/ui components and custom styling
+- **Tech Stack**: React, TypeScript, TailwindCSS v4, Radix UI primitives
+- **Features**: Centralized design system, custom button variants, 3D animations, shared hooks and utilities
+- **Architecture**: Supports monorepo import patterns with `@studyspot/ui/components/*` aliases
 
 ### Configuration Management
 
@@ -134,9 +142,8 @@ apps/web/
 │   ├── courses/           # Course management
 │   ├── document/          # Document processing and upload
 │   └── auth/              # Authentication utilities
-├── components/            # Shared UI components
-│   ├── ui/                # Radix-based design system components
-│   └── *.tsx              # App-specific components
+├── components/            # App-specific UI components
+│   └── *.tsx              # Non-shared components specific to web app
 ├── hooks/api/             # TanStack Query hooks for data fetching
 └── lib/                   # Core utilities and services
     ├── services/          # Business logic services
@@ -270,8 +277,10 @@ apps/assistant-api/
 - **Utils**: `*.ts` - Pure utility functions
 
 ### Import Conventions
-- **Path Aliases**: `@/*` maps to application root in web app
+- **Path Aliases**: `@/*` maps to application root in web app, `@studyspot/ui/*` for shared UI components
 - **Absolute Imports**: Prefer absolute imports over relative for clarity
+- **Shared UI Components**: Import from `@studyspot/ui/components/*` for design system components
+- **Shared Utilities**: Import from `@studyspot/ui/lib/*` and `@studyspot/ui/hooks/*` for common utilities
 - **Service Imports**: Always import singleton instances, not classes
 - **Type-Only Imports**: Use `import type` for TypeScript interfaces
 
