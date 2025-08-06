@@ -8,6 +8,7 @@ import { ingestCanvasPage } from './canvas-ingestion.service';
 import { createServiceRoleClient } from '../database/supabase.service';
 import { CanvasAPIError } from './canvas.error';
 import { UTApi } from "uploadthing/server";
+import { courseCodeGeneratorService } from '../ai/course-code-generator.service';
 import { documentIngestionService } from '../document-ingestion/document-ingestion.service';
 
 const utapi = new UTApi();
@@ -114,15 +115,8 @@ async function createCourseFromCanvas(course: CanvasCourse, schoolId: string): P
   const supabase = createServiceRoleClient();
   logger.info({ courseName: course.name }, "Course not found in DB, creating new entry.");
 
-  let courseCode = course.course_code.trim();
   const courseName = course.name.trim();
-
-  // If the course code is the same as the name, or if it's excessively long, generate a shorter one.
-  if (courseCode === courseName || courseCode.length > 15) {
-    const namePrefix = courseName.replace(/[^a-zA-Z]/g, '').substring(0, 4).toUpperCase();
-    const idSuffix = course.id.toString().slice(-3);
-    courseCode = `${namePrefix}${idSuffix}`;
-  }
+  const courseCode = await courseCodeGeneratorService.generateCourseCode(courseName);
 
   const newCourseResult = await createCourseInDb(
     supabase,
