@@ -16,6 +16,7 @@ SECRETS=(
   "SUPABASE_ANON_KEY"
   "SUPABASE_SERVICE_ROLE_KEY"
   "CLERK_SECRET_KEY"
+  "LLAMA_CLOUD_API_KEY"
 )
 
 echo "Please have your API keys ready. You'll be prompted to enter each one."
@@ -34,3 +35,4 @@ echo "  wrangler secret list"
 echo ""
 echo "Note: Secrets are encrypted and cannot be retrieved once set."
 echo "If you need to update a secret, run the same command again."
+

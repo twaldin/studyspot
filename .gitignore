@@ -59,3 +59,21 @@ apps/*/.next/
 apps/*/node_modules/
 apps/*/dist/
 apps/*/.turbo/
+
+# Workers-specific ignores
+workers/*/node_modules/
+workers/*/.dev.vars
+workers/*/.wrangler/
+workers/*/dist/
+workers/*/.cache/
+workers/*/.mastra/
+
+# Temporary and backup files
+*.log
+*.backup.*
+*CHECKLIST.md
+*TROUBLESHOOTING.md
+*TEST_*.md
+test-*.sh
+add-*.sh
+*.compat.json

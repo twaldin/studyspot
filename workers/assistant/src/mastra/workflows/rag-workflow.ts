@@ -18,6 +18,7 @@ const RAGWorkflowInputSchema = z.object({
   userId: z.string().optional(),
   timeZone: z.string().optional(),
   sessionId: z.string().uuid().optional(), // Added sessionId for chat updates
+  messageContent: z.string().optional(), // The user's message content for database persistence
   promptOverrides: z.any().optional() // PromptOverrides type
 });
 
@@ -351,7 +352,24 @@ export class RAGWorkflowStreaming {
             
             // Handle tool result (tool execution complete)
             else if (event.type === 'tool-result') {
-              console.log('[RAGWorkflow] Tool completed');
+              const toolName = eventAny.toolName || eventAny.name || 'unknown';
+              console.log(`[RAGWorkflow] Tool completed: ${toolName}`);
+              
+              // Extract resources from set_sources tool results
+              if (toolName === 'set_sources' && eventAny.result?.sources_set) {
+                const sources = eventAny.result.sources_set;
+                console.log(`[RAGWorkflow] Found ${sources.length} sources from set_sources tool`);
+                
+                sources.forEach((source: any) => {
+                  if (source.type && source.id) {
+                    resourceIds.push({
+                      type: source.type as 'document' | 'flashcard_set' | 'quiz',
+                      id: source.id
+                    });
+                  }
+                });
+              }
+              
               currentToolActivity = undefined;
               yield { toolActivity: undefined };
               console.log('[RAGWorkflow] Yielded tool completion (cleared activity)');

@@ -125,8 +125,9 @@ export function useCreateChat() {
         return [chatSummary, ...old];
       });
       
-      // Set individual chat data
-      queryClient.setQueryData(queryKeys.chats.detail(newChat.id), newChat);
+      // Don't cache the detailed chat here - it will be fetched when navigating to the chat
+      // This prevents caching incomplete data (messages without linkedResources)
+      // The streaming completion will properly update the cache with complete data
       
       logger.info({ chatId: newChat.id }, 'Created new chat');
     },
@@ -381,7 +382,7 @@ export function useUpdateChatCacheWithHistory() {
     mutationKey: mutationKeys.chats.updateCacheWithHistory,
     mutationFn: async ({ chatId, messages }: {
       chatId: string;
-      messages: Array<{ role: string; content: string; linkedDocumentIds?: string[] }>;
+      messages: Array<{ role: string; content: string; linkedResources?: any[]; linked_resources?: Array<{ type: string; id: string }> }>;
     }) => {
       // This doesn't make an API call, just updates the cache
       return { chatId, messages };
@@ -391,13 +392,23 @@ export function useUpdateChatCacheWithHistory() {
       queryClient.setQueryData(queryKeys.chats.detail(chatId), (oldData: any) => {
         if (!oldData) return oldData;
         
-        // Update the chat data with complete message history
+        // Convert the messages to match the API response format (augmented messages with linkedResources)
+        const apiFormattedMessages = messages.map(msg => ({
+          role: msg.role,
+          content: msg.content,
+          // Keep full linkedResources objects for immediate use without re-fetching
+          linkedResources: msg.linkedResources || [],
+          // Keep refs for database compatibility
+          linked_resources: msg.linked_resources || []
+        }));
+        
+        // Update the chat data with complete message history in API format
         const updatedData = {
           ...oldData,
-          chats: messages
+          chats: apiFormattedMessages
         };
         
-        logger.info('Updated chat cache with full conversation history', { chatId, messagesCount: messages.length });
+        logger.info('Updated chat cache with full conversation history including linkedResources', { chatId, messagesCount: messages.length });
         return updatedData;
       });
     },

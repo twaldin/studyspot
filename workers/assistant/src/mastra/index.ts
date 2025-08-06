@@ -33,6 +33,7 @@ const StreamRequestSchema = z.object({
   userId: z.string().optional(),
   timeZone: z.string().optional(),
   sessionId: z.string().optional(),
+  messageContent: z.string().optional(), // The user's message content for database persistence
   // Developer-only prompt overrides
   promptOverrides: z.any().optional()
 });
@@ -81,7 +82,7 @@ export const mastra = new Mastra({
 
             // Parse and validate request body
             const body = await c.req.json();
-            const { question, conversationHistory, courseId, userId, timeZone, sessionId, promptOverrides } = 
+            const { question, conversationHistory, courseId, userId, timeZone, sessionId, messageContent, promptOverrides } = 
               StreamRequestSchema.parse(body);
 
             // Log prompt override usage (matching original API)
@@ -108,6 +109,7 @@ export const mastra = new Mastra({
               userId,
               timeZone,
               sessionId,
+              messageContent: messageContent || question, // Use messageContent if provided, otherwise fallback to question
               promptOverrides
             };
 

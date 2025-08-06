@@ -10,6 +10,7 @@ interface ActiveStream {
   controller?: AbortController;
   context: StreamingContext;
   promise: Promise<void>;
+  toolActivity?: string | null; // Store current tool activity for this stream
 }
 
 /**
@@ -225,6 +226,25 @@ class StreamingManagerService {
       console.log('[StreamingManager] Stream completed, active streams:', Array.from(this.activeStreams.keys()));
     } else {
       console.log('[StreamingManager] notifyStreamCompleted called but stream was not active:', chatId);
+    }
+  }
+
+  /**
+   * Get stored tool activity for a chat stream
+   */
+  getToolActivity(chatId: string): string | null | undefined {
+    const stream = this.activeStreams.get(chatId);
+    return stream?.toolActivity;
+  }
+
+  /**
+   * Set tool activity for a chat stream (used during streaming)
+   */
+  setToolActivity(chatId: string, activity: string | null): void {
+    const stream = this.activeStreams.get(chatId);
+    if (stream) {
+      stream.toolActivity = activity;
+      logger.debug({ chatId, activity }, 'Updated tool activity for stream');
     }
   }
 
