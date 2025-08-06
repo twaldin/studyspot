@@ -142,6 +142,7 @@ export function useDeleteChat() {
   const queryClient = useQueryClient();
   const { data: school } = useUserSchool();
   const schoolId = school?.id;
+  const { joinedCourses } = useAuthenticatedUser();
 
   return useMutation({
     mutationKey: mutationKeys.chats.delete,
@@ -150,36 +151,48 @@ export function useDeleteChat() {
       return chatId;
     },
     onMutate: async (deletedChatId: string) => {
+      // Use the same query key structure as the chat list
+      const chatListQueryKey = [...queryKeys.chats.list(schoolId), 'joined-courses', joinedCourses];
+      
       await queryClient.cancelQueries({
-        queryKey: queryKeys.chats.list(schoolId),
+        queryKey: chatListQueryKey,
       });
 
-      const previousChats = queryClient.getQueryData(
-        queryKeys.chats.list(schoolId)
-      );
+      const previousChats = queryClient.getQueryData(chatListQueryKey);
 
+      // Optimistically remove the chat from the list
       queryClient.setQueryData(
-        queryKeys.chats.list(schoolId),
+        chatListQueryKey,
         (old: ChatSummary[] | undefined) =>
           old?.filter((chat) => chat.id !== deletedChatId) || []
       );
 
-      return { previousChats };
+      return { previousChats, chatListQueryKey };
     },
     onError: (err, deletedChatId, context) => {
-      if (context?.previousChats) {
+      // Rollback optimistic update on error
+      if (context?.previousChats && context.chatListQueryKey) {
         queryClient.setQueryData(
-          queryKeys.chats.list(schoolId),
+          context.chatListQueryKey,
           context.previousChats
         );
       }
       logger.error({ error: err, chatId: deletedChatId }, "Failed to delete chat");
     },
-    onSettled: (deletedChatId) => {
+    onSettled: (deletedChatId, error, variables, context) => {
+      // Invalidate both the specific query key and general chat queries
+      if (context?.chatListQueryKey) {
+        queryClient.invalidateQueries({
+          queryKey: context.chatListQueryKey,
+        });
+      }
+      
+      // Also invalidate general chat list queries to be safe
       queryClient.invalidateQueries({
         queryKey: queryKeys.chats.list(schoolId),
       });
 
+      // Remove the individual chat from cache
       if (deletedChatId) {
         queryClient.removeQueries({
           queryKey: queryKeys.chats.detail(deletedChatId),

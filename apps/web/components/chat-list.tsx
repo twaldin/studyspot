@@ -146,10 +146,7 @@ export function ChatList({
               onDeleteChat(chat.id);
             }}
             aria-label="Delete chat"
-            className={cn(
-              "cursor-pointer opacity-0 group-hover/menu-item:opacity-100",
-              selectedChatId === chat.id && "!opacity-0",
-            )}
+            className="cursor-pointer opacity-0 group-hover/menu-item:opacity-100"
           >
             <X className="h-3 w-3" />
           </SidebarMenuAction>
