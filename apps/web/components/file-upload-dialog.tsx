@@ -403,6 +403,13 @@ export function FileUploadDialog(
     setFiles((prevFiles) => prevFiles.filter((f) => f.id !== fileId));
   }, []);
 
+  // Automatically set selected course when it's loaded
+  useEffect(() => {
+    if (selectedCourse?.id && !selectedCourseId) {
+      setSelectedCourseId(selectedCourse.id);
+    }
+  }, [selectedCourse, selectedCourseId]);
+
   // Clean up processing state when dialog is closed
   useEffect(() => {
     if (!open) {

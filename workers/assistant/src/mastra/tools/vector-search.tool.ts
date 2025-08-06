@@ -1,60 +1,69 @@
-import { createTool } from '@mastra/core/tools';
+import { createTool } from '@mastra/core';
 import { z } from 'zod';
-import { generateEmbedding } from '../../services/embedding.service.js';
-import { searchDocumentChunks } from '../../services/supabase.service.js';
+import { getSupabaseClient } from '../../services/supabase.service.js';
 
 export const vectorSearchTool = createTool({
   id: 'vector_search',
-  description: 'Advanced vector-based search across all course documents with customizable parameters',
+  description: 'Search through course documents using vector similarity',
   inputSchema: z.object({
-    query: z.string().describe('The search query or question'),
-    courseId: z.string().describe('The course ID to search within'),
-    limit: z.number().optional().default(15).describe('Maximum number of results to return'),
-    threshold: z.number().optional().default(0.65).describe('Similarity threshold (0-1), lower values return more results')
+    query: z.string(),
+    courseId: z.string().optional(),
+    limit: z.number().optional().default(5),
   }),
   outputSchema: z.object({
     results: z.array(z.object({
-      id: z.string(),
       content: z.string(),
-      document_id: z.string(),
-      course_id: z.string(),
-      similarity: z.number().optional()
+      similarity: z.number(),
+      documentId: z.string(),
+      fileName: z.string().optional(),
     })),
-    query: z.string(),
-    total_results: z.number(),
-    search_params: z.object({
-      limit: z.number(),
-      threshold: z.number()
-    })
   }),
   execute: async ({ context }) => {
-    const { query, courseId, limit, threshold } = context;
-    
+    const { query, courseId, limit = 5 } = context;
+
     try {
-      // Generate embedding for the search query
-      const queryEmbedding = await generateEmbedding(query);
-      
-      // Search for similar chunks with specified parameters
-      const chunks = await searchDocumentChunks(courseId, queryEmbedding, limit, threshold);
-      
-      return {
-        results: chunks.map(chunk => ({
-          id: chunk.id,
-          content: chunk.content,
-          document_id: chunk.doc_id,
-          course_id: chunk.course_id,
-          similarity: chunk.similarity
-        })),
-        query,
-        total_results: chunks.length,
-        search_params: {
-          limit,
-          threshold
-        }
-      };
+      const supabase = getSupabaseClient();
+
+      // Build the query
+      let queryBuilder = supabase
+        .from('chunks')
+        .select(`
+          content,
+          similarity,
+          doc_id,
+          docs!inner(file_name)
+        `)
+        .textSearch('content', query)
+        .limit(limit);
+
+      // Add course filter if provided
+      if (courseId) {
+        queryBuilder = queryBuilder.eq('docs.course_id', courseId);
+      }
+
+      const { data, error } = await queryBuilder;
+
+      if (error) {
+        console.error('[Vector Search] Error:', error);
+        throw new Error(`Vector search failed: ${error.message}`);
+      }
+
+      if (!data || data.length === 0) {
+        return { results: [] };
+      }
+
+      const results = data.map((item: any) => ({
+        content: item.content,
+        similarity: item.similarity || 0,
+        documentId: item.doc_id,
+        fileName: item.docs?.file_name,
+      }));
+
+      return { results };
+
     } catch (error) {
-      console.error('Vector search error:', error);
-      throw new Error(`Vector search failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('[Vector Search] Error:', error);
+      return { results: [] };
     }
-  }
+  },
 });

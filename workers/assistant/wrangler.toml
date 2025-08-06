@@ -1,5 +1,5 @@
 name = "studyspot-assistant"
-main = "./src/index-simple.ts"
+main = "./src/mastra/index.ts"
 compatibility_date = "2025-04-01"
 compatibility_flags = ["nodejs_compat", "nodejs_compat_populate_process_env"]
 

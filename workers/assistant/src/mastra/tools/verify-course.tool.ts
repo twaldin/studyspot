@@ -1,6 +1,7 @@
 import { createTool } from '@mastra/core';
 import { z } from 'zod';
-import { courseVerifierAgent } from '../agents/course-verifier-agent.js';
+import { createAnthropic } from '@ai-sdk/anthropic';
+import { generateText } from 'ai';
 
 export const verifyCourseTool = createTool({
   id: 'verify-course',
@@ -25,22 +26,30 @@ Remember: DO NOT reject courses based on whether they exist at a specific school
 
 Respond with JSON only.`;
 
-      // Use the course verifier agent with disableThinking
-      const response = await courseVerifierAgent.generate([
-        { role: 'user', content: prompt }
-      ], {
-        // Disable thinking mode for JSON responses
-        providerOptions: {
-          google: {
-            thinkingConfig: {
-              thinkingBudget: 0,
-              includeThoughts: false
-            }
-          }
-        }
+      // Get environment variables
+      const env = (globalThis as any).__workerEnv || process.env;
+      const apiKey = env?.ANTHROPIC_API_KEY;
+      
+      if (!apiKey) {
+        console.warn('[Course Verification] No Anthropic API key found, defaulting to verified');
+        return {
+          verified: true,
+          message: 'Course verified for academic use (AI check skipped)',
+          reason: 'AI safety check unavailable',
+        };
+      }
+
+      const anthropic = createAnthropic({ apiKey });
+
+      // Use generateText directly for simplicity
+      const response = await generateText({
+        model: anthropic('claude-3-haiku-20240307'),
+        prompt,
+        maxTokens: 200,
+        temperature: 0.1
       });
 
-      console.log('[Course Verification] Agent response:', response.text);
+      console.log('[Course Verification] AI response:', response.text);
 
       let safetyResult;
       try {

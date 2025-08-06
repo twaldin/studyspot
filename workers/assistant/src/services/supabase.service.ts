@@ -523,6 +523,8 @@ export class SupabaseService {
 
   /**
    * Update the last assistant message in a chat with the final content and linked resources
+   * This method now also ensures the complete conversation is saved, including any user messages
+   * that may have been added to cache but not yet persisted to the database
    */
   static async updateAssistantMessageInChat(
     chatId: string,
@@ -603,6 +605,65 @@ export class SupabaseService {
 
     } catch (error) {
       console.error(`[SupabaseService] Unexpected error updating assistant message:`, error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      };
+    }
+  }
+
+  /**
+   * Update chat with complete conversation including user message and assistant response
+   * This method ensures that follow-up messages are properly persisted to the database
+   */
+  static async updateChatWithCompleteConversation(
+    chatId: string,
+    userMessage: string,
+    assistantResponse: string,
+    linkedResources: Array<{ type: 'document' | 'flashcard_set' | 'quiz'; id: string }>,
+    conversationHistory: Array<{ role: string; content: string; linkedResources?: any[] }>
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const client = this.getClient();
+      
+      console.log(`[SupabaseService] Updating chat ${chatId} with complete conversation`);
+
+      // Build the complete messages array
+      const messages = [...conversationHistory];
+      
+      // Add the new user message
+      messages.push({
+        role: 'user',
+        content: userMessage,
+        linkedResources: []
+      });
+      
+      // Add the assistant response
+      messages.push({
+        role: 'assistant',
+        content: assistantResponse,
+        linked_resources: linkedResources
+      });
+
+      // Save the complete conversation to the database
+      const { error: updateError } = await client
+        .from('chats')
+        .update({ 
+          chats: messages,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', chatId);
+
+      if (updateError) {
+        console.error(`[SupabaseService] Failed to update chat ${chatId} with complete conversation:`, updateError);
+        return { success: false, error: updateError.message };
+      }
+
+      console.log(`[SupabaseService] Successfully updated chat ${chatId} with complete conversation (${messages.length} messages)`);
+      return { success: true };
+
+    } catch (error) {
+      console.error(`[SupabaseService] Unexpected error updating complete conversation:`, error);
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown error' 

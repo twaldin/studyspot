@@ -60,3 +60,15 @@ yarn-error.log*
 # OpenNext.js
 .open-next/
 .dev.vars
+
+# Temporary files
+*.log
+*.backup.ts
+*.backup.js
+test-*.sh
+add-*.sh
+*CHECKLIST.md
+*TROUBLESHOOTING.md
+*TEST_*.md
+*.compat.json
+wrangler.compat.json

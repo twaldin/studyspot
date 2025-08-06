@@ -41,6 +41,7 @@ export function ChatPageContent() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const chatContainerRef = useRef<HTMLDivElement>(null)
   const hasStartedStreamingRef = useRef<boolean>(false)
+  const previousChatIdRef = useRef<string | undefined>()
 
 
   // Scroll to bottom function
@@ -84,12 +85,23 @@ export function ChatPageContent() {
     }
   }, [])
 
-  // Handle initial message from sessionStorage only
+  // Handle chat navigation and initial messages
   useEffect(() => {
     if (!chatId) return;
 
-    // Only handle initial message and streaming flag reset - DON'T clear messages
+    // Reset streaming flag for new chats
     hasStartedStreamingRef.current = false
+    
+    // Clear messages ONLY when switching to a different chat
+    // This preserves state when returning to the same chat
+    if (previousChatIdRef.current && previousChatIdRef.current !== chatId) {
+      console.log('[Navigation] Switching to different chat, clearing messages');
+      setMessages([]);
+      setIsReplying(false);
+      setToolActivity(null);
+      setIsTextStreaming(false);
+    }
+    previousChatIdRef.current = chatId;
     
     // Check for initial message in sessionStorage
     const storedInitialMessage = sessionStorage.getItem(`initial-message-${chatId}`)
@@ -100,10 +112,58 @@ export function ChatPageContent() {
   }, [chatId])
 
 
-  // Simple: Use React Query cached chat data to populate messages
+  // Load from cache AND check for active streams
   useEffect(() => {
-    if (!chat || !chat.chats || messages.length > 0) return;
+    if (!chat || !chat.chats || !chatId) return;
     
+    // Check for active streaming FIRST
+    const isStreamingActive = streamingManager.isStreaming(chatId);
+    const streamingData = getStreamingMessage(chatId);
+    const hasStreamingContent = streamingData && streamingData.message && streamingData.message.trim().length > 0;
+    
+    console.log('[Chat Loading] State check:', {
+      chatId,
+      messagesInState: messages.length,
+      messagesFromDB: chat.chats?.length || 0,
+      isStreamingActive,
+      hasStreamingContent,
+      streamingDataPreview: streamingData?.message?.substring(0, 50) || 'none'
+    });
+
+    // If we have messages in state already, check if we need to resume streaming
+    if (messages.length > 0) {
+      if (isStreamingActive && hasStreamingContent) {
+        console.log('[Navigation] Resuming active stream for chat:', chatId);
+        
+        // Update streaming context to reconnect UI
+        streamingManager.updateStreamContext(chatId, {
+          setMessages,
+          setIsReplying,
+          updateStreamingMessage,
+          setToolActivity,
+          setIsTextStreaming,
+          setStreamingStatus,
+          updateChatCache: updateChatCache.mutate
+        });
+        
+        // Set streaming UI state
+        setIsReplying(true);
+        
+        // Add streaming message if not already present
+        const lastMessage = messages[messages.length - 1];
+        if (!lastMessage || lastMessage.role !== 'assistant' || lastMessage.content !== streamingData.message) {
+          const assistantMessage: Message = {
+            id: Date.now().toString() + '-streaming-assistant',
+            content: streamingData.message,
+            role: 'assistant'
+          };
+          setMessages([...messages, assistantMessage]);
+        }
+      }
+      return; // Don't reload from cache if we already have messages
+    }
+    
+    // Load from cache if no messages in state
     console.log('[Simple Chat Loading] Loading from React Query cache:', {
       chatId,
       messagesFromDB: chat.chats?.length || 0
@@ -111,28 +171,86 @@ export function ChatPageContent() {
 
     // Convert database messages to UI format
     const uiMessages = chatStateService.loadChatFromDatabase(chat);
-    setMessages(uiMessages);
     
-    // Process linked resources in background if needed
+    // Check if streaming is active for this fresh load
+    if (isStreamingActive && hasStreamingContent) {
+      console.log('[Navigation] Found active stream during fresh load:', chatId, 'Content length:', streamingData.message.length);
+      
+      // Set streaming UI state
+      setIsReplying(true);
+      
+      // Update streaming context
+      streamingManager.updateStreamContext(chatId, {
+        setMessages,
+        setIsReplying,
+        updateStreamingMessage,
+        setToolActivity,
+        setIsTextStreaming,
+        setStreamingStatus,
+        updateChatCache: updateChatCache.mutate
+      });
+      
+      // Also check if there's tool activity stored in the streaming manager
+      const currentToolActivity = streamingManager.getToolActivity(chatId);
+      if (currentToolActivity) {
+        setToolActivity(currentToolActivity);
+      }
+      
+      // Remove any empty assistant message from cache and add the streaming one
+      const messagesWithoutEmptyAssistant = uiMessages.filter(
+        (msg, idx) => !(msg.role === 'assistant' && msg.content === '' && idx === uiMessages.length - 1)
+      );
+      
+      // Add the streaming message
+      const assistantMessage: Message = {
+        id: Date.now().toString() + '-streaming-assistant',
+        content: streamingData.message,
+        role: 'assistant'
+      };
+      setMessages([...messagesWithoutEmptyAssistant, assistantMessage]);
+    } else {
+      // No active streaming, just load from cache
+      setMessages(uiMessages);
+    }
+    
+    // Process linked resources in background if needed (only for messages that don't already have full resources)
     const processResources = async () => {
+      const baseMessages = isStreamingActive ? uiMessages : uiMessages;
       const messagesWithResources = await Promise.all(
-        uiMessages.map(async (msg) => {
+        baseMessages.map(async (msg) => {
+          // If message already has full linkedResources (from cache), use them
+          if (msg.linkedResources && msg.linkedResources.length > 0) {
+            return msg;
+          }
+          
+          // Otherwise, convert refs to full resources (for fresh DB loads)
           if (msg.linkedResourceRefs && msg.linkedResourceRefs.length > 0) {
             const linkedResources = await chatStreamingService.convertRefsToResources(msg.linkedResourceRefs);
             return { ...msg, linkedResources };
           }
+          
           return msg;
         })
       );
       
-      const hasNewResources = messagesWithResources.some(msg => msg.linkedResources && msg.linkedResources.length > 0);
-      if (hasNewResources) {
-        setMessages(messagesWithResources);
+      const hasAnyResources = messagesWithResources.some(msg => msg.linkedResources && msg.linkedResources.length > 0);
+      if (hasAnyResources) {
+        if (isStreamingActive && hasStreamingContent) {
+          // Re-add streaming message after resources update
+          const assistantMessage: Message = {
+            id: Date.now().toString() + '-streaming-assistant',
+            content: streamingData!.message,
+            role: 'assistant'
+          };
+          setMessages([...messagesWithResources, assistantMessage]);
+        } else {
+          setMessages(messagesWithResources);
+        }
       }
     };
     
     processResources();
-  }, [chat, messages.length])
+  }, [chat, chatId]) // Removed messages.length dependency to allow stream resumption
 
   // Clean up optimistic chats when real chat loads
   useEffect(() => {

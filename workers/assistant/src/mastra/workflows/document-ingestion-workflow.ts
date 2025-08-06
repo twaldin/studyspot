@@ -6,7 +6,7 @@ import { embedMany } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { LlamaParse } from "llama-parse";
 import { getSupabaseClient } from "../../services/supabase.service.js";
-import { sanitizeText } from "../../../../shared/utils/sanitize-text.js";
+import { sanitizeText } from "../../utils/sanitize-text.js";
 import { relevanceCheckerAgent } from "../agents/relevance-checker-agent.js";
 
 // Step 1: Download and validate file
@@ -125,7 +125,7 @@ const extractContentStep = createStep({
     // Get env from global context if available
     const env = (globalThis as any).__workerEnv || process.env;
     const llamaApiKey = env?.LLAMA_CLOUD_API_KEY;
-    
+
     if (!llamaApiKey) {
       throw new Error("LlamaParse API key not found in environment");
     }
@@ -602,4 +602,3 @@ export const documentIngestionWorkflow = createWorkflow({
     return await executeDocumentIngestion({ ...input, mastra });
   },
 });
-
