@@ -59,7 +59,7 @@ export function CardGrid(
           key={doc.id} // Use document ID as key
           url={doc.file_url || "#"} // Use document URL from API
           file={doc} // Pass the document object (you'll need to update DocumentCard)
-          fileType={doc.file_type === "application/pdf" ? "pdf" : "Unknown"}
+          fileType={doc.file_type === "application/pdf" ? "pdf" : doc.file_type === "text/plain" ? "txt" : "Unknown"}
         />
       ))}
     </div>
