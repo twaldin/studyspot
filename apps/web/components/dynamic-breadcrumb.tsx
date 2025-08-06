@@ -52,7 +52,7 @@ export function DynamicBreadcrumb() {
     if (pathname.startsWith("/chat/") && chat) {
       return {
         featureName: "Chat",
-        featureHref: "/chat",
+        featureHref: "/",
         itemTitle: chat.title,
       };
     }
