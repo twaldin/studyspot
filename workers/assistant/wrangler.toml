@@ -10,7 +10,7 @@ account_id = "869782f5d7c9391d085cd41c42977a47"
 [[kv_namespaces]]
 binding = "SUGGESTED_QUERIES"
 id = "93f6dcfd59164effb33f1882f4a72832"
-preview_id = "93f6dcfd59164effb33f1882f4a72832" # Using same ID for local dev
+preview_id = "2c85e5b2dc824310a094cce6a42c0b54" # Separate preview namespace for development
 
 # Environment variables (non-sensitive only)
 [vars]

@@ -616,6 +616,7 @@ export const mastra = new Mastra({
       {
         binding: "SUGGESTED_QUERIES",
         id: "93f6dcfd59164effb33f1882f4a72832",
+        preview_id: "2c85e5b2dc824310a094cce6a42c0b54",
       },
     ],
     // Don't include ANY environment variables in wrangler.json
