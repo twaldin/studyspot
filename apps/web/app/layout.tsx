@@ -3,7 +3,7 @@ import { Crimson_Text } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ClerkThemeProvider } from "@/components/clerk-theme-provider";
-import { cn } from "@/lib/utils";
+import { cn } from "@studyspot/ui/lib/utils";
 import { QueryProvider } from "@/lib/providers/query-provider";
 import { DeveloperModeProvider } from "@/contexts/developer-mode-context";
 import { ConditionalLayout } from "./conditional-layout";

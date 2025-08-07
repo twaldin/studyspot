@@ -1,8 +1,8 @@
 "use client";
 
 import { Flashcard as FlashcardType } from "@/features/flashcards/types";
-import { Card, CardContent } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import { Card, CardContent } from "@studyspot/ui/components/card";
+import { cn } from "@studyspot/ui/lib/utils";
 import { FlashcardContent } from "./flashcard-content";
 import dynamic from "next/dynamic";
 

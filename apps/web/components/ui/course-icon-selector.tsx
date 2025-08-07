@@ -13,7 +13,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@studyspot/ui/components/select";
 
 interface CourseIconSelectorProps {
   value: CourseIconName | null | undefined;

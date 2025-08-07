@@ -38,8 +38,8 @@ import {
   StudySettings,
   StudyState,
 } from "@/features/quiz/types";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@studyspot/ui/components/button";
+import { Badge } from "@studyspot/ui/components/badge";
 import {
   BookOpen,
   Calendar,
@@ -54,7 +54,7 @@ import {
   Target,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
-import { cn } from "@/lib/utils";
+import { cn } from "@studyspot/ui/lib/utils";
 import { useConfetti } from "@/hooks/use-confetti";
 import {
   QuizCompletionDialog,

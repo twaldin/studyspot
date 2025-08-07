@@ -3,7 +3,7 @@
 import React from "react";
 import { Loader2, X } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
+import { cn } from "@studyspot/ui/lib/utils";
 import {
   SidebarMenu,
   SidebarMenuAction,

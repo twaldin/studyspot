@@ -8,11 +8,11 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { SingleFileInput } from "@/components/ui/single-file-input";
+} from "@studyspot/ui/components/dialog";
+import { Button } from "@studyspot/ui/components/button";
+import { Input } from "@studyspot/ui/components/input";
+import { Label } from "@studyspot/ui/components/label";
+import { SingleFileInput } from "@studyspot/ui/components/single-file-input";
 import { ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import React, { useCallback, useState } from "react";
 import { useUploadThing } from "../uploadthing";

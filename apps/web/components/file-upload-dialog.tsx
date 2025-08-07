@@ -12,16 +12,16 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+} from "@studyspot/ui/components/dialog";
+import { Button } from "@studyspot/ui/components/button";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
+} from "@studyspot/ui/components/select";
+import { Label } from "@studyspot/ui/components/label";
 import { File, UploadCloud, X, ChevronDown, ChevronUp } from "lucide-react";
 import React, {
   lazy,

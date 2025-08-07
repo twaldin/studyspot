@@ -623,4 +623,3 @@ export const mastra = new Mastra({
     env: {},
   }),
 });
-
