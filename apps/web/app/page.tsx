@@ -1,7 +1,7 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+import { Button } from "@studyspot/ui/components/button";
+import { Separator } from "@studyspot/ui/components/separator";
 import { Zap, ArrowRight, Upload, MessagesSquare } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
@@ -29,7 +29,7 @@ const NewPostDialog = dynamicImport(
 import { ChatInputBar } from "@/components/chat-input-bar";
 import { useRouter } from "next/navigation";
 import { useSuggestedQueries, useSelectedCourse } from "@/hooks/api/courses";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton } from "@studyspot/ui/components/skeleton";
 import { useCreateChat } from "@/hooks/api/chats";
 import { CardGrid } from "@/components/ui/card-grid";
 import logger from "@/lib/logger";

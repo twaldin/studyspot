@@ -16,9 +16,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+} from "@studyspot/ui/components/alert-dialog";
+import { Button } from "@studyspot/ui/components/button";
+import { Card, CardContent } from "@studyspot/ui/components/card";
 import { DocumentCard } from "@/components/document-card";
 import { Trash2 } from "lucide-react";
 import { useDeveloperMode } from "@/contexts/developer-mode-context";

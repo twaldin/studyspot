@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "dotenv -e .env -- concurrently \"pnpm dev:web\" \"pnpm dev:assistant\"",
     "dev:web": "dotenv -e .env -- pnpm --filter @studyspot/web dev",
-    "dev:assistant": "dotenv -e .env -- sh -c 'cd workers/assistant/.mastra/output && wrangler dev --local --persist-to .wrangler/state'",
+    "dev:assistant": "sh -c 'cd workers/assistant/.mastra/output && wrangler dev --local --persist-to .wrangler/state'",
     "dev:cloudflare": "pnpm build && concurrently \"cd apps/web && pnpm dev:wrangler\" \"pnpm dev:assistant\"",
     "build": "pnpm build:web && pnpm build:assistant",
     "build:web": "cd apps/web && dotenv -e .env.production -- pnpm build:cloudflare",

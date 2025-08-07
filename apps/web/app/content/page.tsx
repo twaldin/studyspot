@@ -9,9 +9,9 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+} from "@studyspot/ui/components/card";
+import { Input } from "@studyspot/ui/components/input";
+import { Badge } from "@studyspot/ui/components/badge";
 import { Search, ArrowDownNarrowWide, Funnel } from "lucide-react";
 import {
   Select,
@@ -19,8 +19,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
+} from "@studyspot/ui/components/select";
+import { Button } from "@studyspot/ui/components/button";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -28,7 +28,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@studyspot/ui/components/dropdown-menu";
 import React from "react";
 import { CardGrid } from "@/components/ui/card-grid";
 import { useSelectedCourse } from "@/hooks/api/courses";

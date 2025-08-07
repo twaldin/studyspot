@@ -43,8 +43,8 @@ import {
   SidebarMenu,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+import { Button } from "@studyspot/ui/components/button";
+import { Separator } from "@studyspot/ui/components/separator";
 import React from "react";
 import { useRouter } from "next/navigation";
 import { UserButton } from "@/components/user-button";

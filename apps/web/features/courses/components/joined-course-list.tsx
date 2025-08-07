@@ -1,9 +1,9 @@
 "use client";
 
 import React from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@studyspot/ui/components/button";
 import { PlusCircle } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@studyspot/ui/lib/utils";
 import Link from "next/link";
 import { ICourse } from "@/features/courses/course.model";
 import { useSetSelectedCourse } from "@/hooks/api/courses";
