@@ -1,6 +1,6 @@
 "use client"
 
-import { Button } from "@studyspot/ui/components/button"
+import { Button } from "@/components/ui/button"
 import React, { type ButtonHTMLAttributes } from "react"
 import { ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"

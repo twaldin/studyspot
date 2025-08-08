@@ -43,8 +43,7 @@ StudySpot is an intelligent study platform that revolutionizes how college stude
 ### **Frontend**
 - **Framework**: Next.js 15.3.4 with App Router
 - **Language**: TypeScript 5.x
-- **Styling**: TailwindCSS 4.0 + Radix UI components + shadcn/ui design system
-- **UI Architecture**: Shared component library (`@studyspot/ui`) with monorepo support
+- **Styling**: TailwindCSS 4.0 + Radix UI components
 - **State Management**: TanStack Query (React Query) v5
 - **Authentication**: Clerk v6.25.0
 
@@ -59,40 +58,21 @@ StudySpot is an intelligent study platform that revolutionizes how college stude
 - **File Uploads**: UploadThing v7.7.3
 
 ### **Development Tools**
-- **Package Manager**: pnpm (workspace-aware for monorepo)
-- **Component System**: shadcn/ui with centralized design system
+- **Package Manager**: pnpm
 - **Linting**: ESLint 9 with Next.js config
 - **Logging**: Pino with development-friendly formatting
 
 ## 🏗 Architecture Overview
 
-StudySpot follows a **monorepo architecture** with feature-first design and shared components:
+StudySpot follows a **feature-first architecture** with clear separation of concerns:
 
-### **Monorepo Structure**
 ```
-studyspot-ui/
-├── apps/                  # Individual applications
-│   ├── web/              # Main Next.js frontend
-│   ├── assistant-api/    # AI/RAG backend service
-│   ├── prompt-eval-panel/# Development testing panel
-│   └── landing-page/     # Marketing site
-├── packages/             # Shared packages
-│   └── ui/              # Shared UI component library
-│       ├── src/components/  # shadcn/ui + custom components
-│       ├── src/lib/         # Utility functions
-│       ├── src/hooks/       # Reusable React hooks  
-│       └── src/styles/      # Global styles & themes
-└── config/              # Shared configuration
-```
-
-### **Web App Structure**
-```
-apps/web/
+src/
 ├── app/                    # Next.js App Router pages and API routes
 │   ├── api/               # Backend API endpoints
 │   ├── (main)/            # Protected application routes
 │   └── onboarding/        # User onboarding flow
-├── components/            # App-specific UI components
+├── components/            # Reusable UI components
 ├── features/             # Feature-based modules
 │   ├── assistant/        # AI chat and RAG functionality
 │   ├── auth/            # Authentication logic
@@ -100,7 +80,7 @@ apps/web/
 │   ├── courses/         # Course operations
 │   └── document/        # Document processing pipeline
 ├── hooks/               # Custom React hooks and API clients
-└── lib/                 # App-specific utilities and services
+└── lib/                 # Shared utilities and services
 ```
 
 ### **Key Services**
@@ -110,13 +90,6 @@ apps/web/
 - **CourseService**: Manages course creation, verification, and enrollment
 - **ChatService**: Handles conversation persistence and management
 - **AuthService**: Manages authentication and authorization logic
-
-### **Shared UI System**
-
-- **@studyspot/ui**: Centralized component library with shadcn/ui components
-- **Custom Design System**: Tailored button variants, 3D animations, and themed components
-- **Global Styling**: Consolidated TailwindCSS configuration with custom CSS variables
-- **Monorepo Integration**: Seamless component sharing across all applications
 
 ## 📡 API Reference
 

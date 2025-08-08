@@ -13,7 +13,7 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@studyspot/ui/components/breadcrumb";
+} from "@/components/ui/breadcrumb";
 
 interface BreadcrumbData {
   featureName: string;

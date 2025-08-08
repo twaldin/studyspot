@@ -1,9 +1,9 @@
 {
-  "name": "@studyspot/landing-page",
+  "name": "landing-page",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --port 3003 --turbopack | pino-pretty",
+    "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
@@ -22,7 +22,6 @@
     "tailwindcss": "^4",
     "eslint": "^9",
     "eslint-config-next": "15.4.3",
-    "@eslint/eslintrc": "^3",
-    "pino-pretty": "^13.0.0"
+    "@eslint/eslintrc": "^3"
   }
 }

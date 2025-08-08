@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Button } from "@studyspot/ui/components/button";
+import { Button } from "@/components/ui/button";
 import {
   Box,
   FlaskConical,

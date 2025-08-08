@@ -10,17 +10,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@studyspot/ui/components/alert-dialog";
+} from "@/components/ui/alert-dialog";
 import {
   Card,
   CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@studyspot/ui/components/card";
-import { Input } from "@studyspot/ui/components/input";
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Pencil, PlusCircle, Search, X, Trash2 } from "lucide-react";
-import { Button } from "@studyspot/ui/components/button";
+import { Button } from "@/components/ui/button";
 import React from "react";
 import { CreateCourseDialog } from "@/components/create-course-dialog";
 import { useRouter, useSearchParams } from "next/navigation";

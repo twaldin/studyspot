@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
-import { Button } from '@studyspot/ui/components/button';
+import { Button } from '@/components/ui/button';
 import { CanvasCourseSelectionDialog } from '@/components/canvas-course-selection-dialog';
 import { CanvasCourse } from '@/lib/services/canvas/canvas.service';
 import { toast } from 'react-hot-toast';
