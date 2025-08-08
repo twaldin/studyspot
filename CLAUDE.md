@@ -32,6 +32,21 @@ This is a **pnpm workspace monorepo** with a distributed Cloudflare Workers arch
 - **Features**: Static landing page
 - **Deployment**: Cloudflare Pages
 
+### Shared Packages
+
+#### **@studyspot/ui** (`packages/ui/`)
+- **Purpose**: Shared UI component library and design system for all applications
+- **Tech Stack**: React 19, Radix UI primitives, TailwindCSS 4, TypeScript
+- **Components**: 20+ pre-built components (Button, Card, Dialog, Form, etc.)
+- **Features**: 
+  - Consistent design system across web app and landing page
+  - Radix UI accessibility primitives
+  - TailwindCSS 4 styling with CSS variables
+  - Component variants using class-variance-authority
+  - Export-based modular architecture
+- **Usage**: Consumed by both web app and landing page via `@studyspot/ui` workspace reference
+- **Exports**: Components, hooks, utilities, and global styles via package.json exports
+
 ### Configuration Management
 
 #### Root Configuration (`config/`)

@@ -72,7 +72,7 @@ StudySpot is an intelligent study platform that revolutionizes how college stude
 
 ## 🏗 Architecture Overview
 
-StudySpot is built as a **distributed Cloudflare Workers monorepo** with two main applications:
+StudySpot is built as a **distributed Cloudflare Workers monorepo** with applications and shared packages:
 
 ### **📱 Web Application** (`apps/web/`)
 Next.js 15 frontend deployed as Cloudflare Worker with feature-driven architecture:
@@ -103,6 +103,14 @@ workers/assistant/
 ├── src/services/        # Database integration and embedding generation
 └── src/streaming/       # Revolutionary persistent stream manager
 ```
+
+### **📦 Shared Packages** (`packages/`)
+
+#### **@studyspot/ui**
+Shared component library providing consistent design system across all applications:
+- **Components**: 20+ Radix UI primitives (Button, Card, Dialog, Form, etc.)
+- **Styling**: TailwindCSS 4 with CSS variables and component variants
+- **Usage**: Imported by both web app and landing page for UI consistency
 
 ### **🌍 Global Edge Distribution**
 - **Cloudflare Workers**: Sub-50ms response times across 180+ locations
