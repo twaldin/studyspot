@@ -1,6 +1,6 @@
 import * as React from "react"
 
-import { cn } from "@/lib/utils"
+import { cn } from "@studyspot/ui/lib/utils"
 
 const UserMessage = React.forwardRef<
   HTMLDivElement,

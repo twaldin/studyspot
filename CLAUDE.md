@@ -8,33 +8,27 @@ StudySpot is an AI-powered study assistant monorepo enabling college students to
 
 ## Monorepo Architecture
 
-This is a **pnpm workspace monorepo** with four applications in the `apps/` directory:
+This is a **pnpm workspace monorepo** with a distributed Cloudflare Workers architecture:
 
 ### Applications
 
 #### 1. **@studyspot/web** (`apps/web/`)
-- **Purpose**: Main Next.js 15 frontend application with Clerk authentication, TailwindCSS, and real-time chat
+- **Purpose**: Main Next.js 15 frontend application deployed as Cloudflare Worker
 - **Tech Stack**: Next.js 15 App Router, TypeScript, TailwindCSS, Clerk Auth, TanStack Query
 - **Features**: Course management, document upload, AI chat interface, user onboarding
-- **Port**: Default Next.js port (3000)
+- **Deployment**: Cloudflare Pages with Worker runtime
 
-#### 2. **@studyspot/assistant-api** (`apps/assistant-api/`)
-- **Purpose**: Modern Mastra-based AI assistant API service using agent workflows
-- **Tech Stack**: Mastra framework, Anthropic Claude 3.5, OpenAI embeddings, Supabase vector search
-- **Features**: RAG workflows, document retrieval tools, streaming responses, prompt configuration
-- **Port**: 3001 (configured via `NEXT_PUBLIC_ASSISTANT_API_URL`)
+#### 2. **Assistant Worker** (`workers/assistant/`)
+- **Purpose**: Mastra-based AI assistant deployed as Cloudflare Worker
+- **Tech Stack**: Mastra framework with Cloudflare deployer, Anthropic Claude 3.5, OpenAI embeddings, Supabase vector search
+- **Features**: RAG workflows, document retrieval tools, streaming responses, prompt configuration, built-in Mastra playground
+- **Deployment**: Cloudflare Workers with global edge distribution
 
-#### 3. **@studyspot/dev-panel** (`apps/prompt-eval-panel/`)
-- **Purpose**: Developer panel for RAG workflow testing and prompt engineering
-- **Tech Stack**: Next.js 15, TanStack Query, Recharts for analytics
-- **Features**: Single test runner, A/B prompt comparison, response quality evaluation, document usage analytics
-- **Port**: 3002
-
-#### 4. **landing-page** (`apps/landing-page/`)
+#### 3. **landing-page** (`apps/landing-page/`)
 - **Purpose**: Marketing/landing page for StudySpot
 - **Tech Stack**: Next.js 15, TailwindCSS
 - **Features**: Static landing page
-- **Port**: Default Next.js port
+- **Deployment**: Cloudflare Pages
 
 ### Configuration Management
 
@@ -50,19 +44,19 @@ This is a **pnpm workspace monorepo** with four applications in the `apps/` dire
 
 ### Root Level Commands
 ```bash
-# Start web app + assistant API (core development)
-pnpm dev
+# Local development
+pnpm dev              # Web app for local development (port 3000)
 
-# Start individual services
-pnpm dev:web          # Web app only (port 3000)
-pnpm dev:api          # Assistant API only (port 3001)  
-pnpm dev:panel        # Dev panel only (port 3002)
+# Cloudflare Workers development
+pnpm dev:assistant    # Assistant worker local development with Mastra playground
 
-# Start all services together
-pnpm dev:all          # Web + API + Dev Panel
-
-# Build and maintenance
+# Build and deployment
 pnpm build            # Build all applications
+pnpm deploy           # Deploy to Cloudflare (web app + assistant worker)
+pnpm deploy:web       # Deploy web app to Cloudflare Pages
+pnpm deploy:assistant # Deploy assistant worker to Cloudflare Workers
+
+# Maintenance
 pnpm lint             # Run linting across all packages
 pnpm test             # Run tests across all packages
 pnpm clean            # Clean all build artifacts
@@ -73,26 +67,23 @@ pnpm clean            # Clean all build artifacts
 # Web App (apps/web)
 cd apps/web
 pnpm dev              # Next.js dev with Turbopack and pino-pretty
-pnpm build            # Production build with environment variables
+pnpm build            # Production build for Cloudflare Pages
+pnpm deploy           # Deploy to Cloudflare Pages
 pnpm lint             # Next.js ESLint
 
-# Assistant API (apps/assistant-api) 
-cd apps/assistant-api
-pnpm dev              # Run with tsx for TypeScript support
-pnpm dev:mastra       # Run with Mastra CLI for enhanced development
-pnpm build            # TypeScript compilation to dist/
-pnpm start            # Production server
-
-# Dev Panel (apps/prompt-eval-panel)
-cd apps/prompt-eval-panel  
-pnpm dev              # Next.js dev on port 3002 with pino-pretty
-pnpm build            # Production build
-pnpm lint             # Next.js ESLint
+# Assistant Worker (workers/assistant)
+cd workers/assistant
+pnpm dev              # Local development with Mastra and Wrangler
+pnpm build            # Build for Cloudflare Workers
+pnpm deploy           # Deploy to Cloudflare Workers
+pnpm preview          # Preview deployment locally
+pnpm playground       # Launch Mastra playground for testing
 
 # Landing Page (apps/landing-page)
 cd apps/landing-page
 pnpm dev              # Next.js dev with Turbopack
-pnpm build            # Production build
+pnpm build            # Production build for Cloudflare Pages
+pnpm deploy           # Deploy to Cloudflare Pages
 pnpm lint             # Next.js ESLint
 ```
 
@@ -103,9 +94,8 @@ pnpm lint             # Next.js ESLint
 - **Per-app configs**: Each app extends and customizes the base configuration
 
 #### Key Differences by Application:
-- **Web App (`apps/web/`)**: `strict: false` for rapid development, `@/*` path mapping to app root
-- **Assistant API (`apps/assistant-api/`)**: `strict: true`, ES2022 target, ESM modules, compilation to `dist/`
-- **Dev Panel (`apps/prompt-eval-panel/`)**: `strict: false`, Next.js optimized
+- **Web App (`apps/web/`)**: `strict: false` for rapid development, `@/*` path mapping to app root, Cloudflare Workers compatibility
+- **Assistant Worker (`workers/assistant/`)**: `strict: true`, ES2022 target, ESM modules, Cloudflare Workers runtime
 - **Landing Page (`apps/landing-page/`)**: `strict: true`, minimal configuration
 
 ## Architecture
@@ -179,18 +169,18 @@ apps/web/
 - **Custom Hooks**: API integration layer using TanStack Query
 - **Security-First**: Comprehensive file validation, content sanitization, access controls
 
-### Assistant API (`apps/assistant-api/`)
+### Assistant Worker (`workers/assistant/`)
 
-#### Modern Agent-Based Architecture  
-- **Mastra Framework**: Agent orchestration with workflows and tool calling
+#### Cloudflare Workers Agent Architecture  
+- **Mastra Framework**: Agent orchestration with Cloudflare deployer
 - **Anthropic Claude 3.5 Sonnet**: Primary LLM for conversational AI
 - **OpenAI Embeddings**: text-embedding-3-small for vector search (1536 dimensions)
 - **Supabase pgvector**: Vector database for semantic document retrieval
-- **Server-Sent Events**: Streaming responses compatible with web app
+- **Server-Sent Events**: Streaming responses with global edge distribution
 
 #### Core Components
 ```
-apps/assistant-api/
+workers/assistant/
 ├── src/mastra/
 │   ├── agents/
 │   │   ├── studyspot-agent.ts         # Main conversational agent
@@ -206,9 +196,8 @@ apps/assistant-api/
 │   ├── config-loader.service.ts        # Prompt configuration management
 │   ├── supabase.service.ts             # Database integration
 │   └── embedding.service.ts            # Vector embedding generation
-├── api/chat/
-│   └── stream.ts                       # SSE streaming endpoint
-└── server.js                           # Node.js server setup
+├── wrangler.toml                       # Cloudflare Workers configuration
+└── mastra.config.ts                    # Mastra Cloudflare deployer config
 ```
 
 #### RAG Workflow Architecture
@@ -218,29 +207,15 @@ apps/assistant-api/
 4. **Response Generation**: Claude 3.5 with course context and conversation history
 5. **Source Attribution**: AI-controlled document linking for citations
 
-### Development Panel (`apps/prompt-eval-panel/`)
-
-#### Testing & Evaluation Platform
-- **Next.js 15** with TypeScript for rapid UI development
-- **TanStack Query** for data fetching and caching
-- **Recharts** for analytics visualization and quality metrics
-- **Assistant API Proxy** for testing different prompt configurations
-
-#### Key Features
-- **Single Test Runner**: Execute individual queries with real-time results
-- **A/B Comparison Framework**: Compare different prompt configurations side-by-side
-- **Response Quality Evaluation**: AI-powered response scoring using Claude 3.5 Haiku
-- **Document Usage Analytics**: Track which documents are referenced by the AI
-- **Prompt Override System**: Runtime prompt customization for experimentation
 
 ## Core Services & Integration
 
 ### AI and RAG System
-- **RAG Workflow** (`apps/assistant-api/src/mastra/workflows/rag-workflow.ts`): Complete AI orchestration with Mastra
+- **RAG Workflow** (`workers/assistant/src/mastra/workflows/rag-workflow.ts`): Complete AI orchestration with Mastra on Cloudflare Workers
 - **StudySpot Agent**: Primary conversational agent using Claude 3.5 Sonnet with scratchpad reasoning
 - **Document Tools**: `get_full_document`, `semantic_search`, `list_all_documents`, `set_sources`
 - **Config Management**: Centralized prompt configuration loading from root `config/` folder
-- **Streaming Service**: Server-Sent Events for real-time response streaming
+- **Streaming Service**: Server-Sent Events for real-time response streaming with global edge distribution
 
 ### Document Processing Pipeline
 - **Document Ingestion** (`apps/web/lib/services/document-ingestion/`): File upload, extraction, text processing
@@ -358,13 +333,16 @@ GEMINI_API_KEY=                         # Google Gemini API key (optional)
 UPLOADTHING_SECRET=                     # UploadThing secret key
 UPLOADTHING_APP_ID=                     # UploadThing application ID
 
-# Inter-Service Communication
-NEXT_PUBLIC_ASSISTANT_API_URL=http://localhost:3001  # Assistant API service endpoint
+# Cloudflare Workers
+NEXT_PUBLIC_ASSISTANT_WORKER_URL=            # Assistant worker endpoint (Cloudflare Workers)
+CLOUDFLARE_API_TOKEN=                        # Cloudflare API token for deployments
+CLOUDFLARE_ACCOUNT_ID=                       # Cloudflare account ID
 ```
 
 ### Development Dependencies
 - **Node.js**: v20.9.0+ required for ES modules and modern features
 - **pnpm**: Workspace-aware package manager for monorepo management
+- **Wrangler**: Cloudflare Workers CLI for local development and deployment
 - **Turbopack**: Next.js development bundler for faster builds and HMR
 - **ESLint**: Next.js configuration with project-specific customizations
 
@@ -372,15 +350,15 @@ NEXT_PUBLIC_ASSISTANT_API_URL=http://localhost:3001  # Assistant API service end
 
 ### Testing Infrastructure
 - **No automated testing** currently configured for web app
-- **Development Panel**: Manual testing and quality evaluation via `apps/prompt-eval-panel`
-- **RAG Testing**: A/B comparison framework for prompt engineering
-- **Response Quality**: AI-powered evaluation using Claude 3.5 Haiku
+- **Mastra Playground**: Built-in testing and evaluation via assistant worker's Mastra playground
+- **RAG Testing**: Manual testing of workflows and prompt configurations
+- **Response Quality**: Real-time testing during development
 
 ### Quality Evaluation Process
-1. **Single Test Runner**: Execute individual queries with real-time response analysis
-2. **Prompt Comparison**: Side-by-side testing of different configurations
-3. **Document Usage Analytics**: Track which documents are being referenced
-4. **Response Time Monitoring**: Performance metrics for optimization
+1. **Mastra Playground**: Execute workflows and test configurations in real-time
+2. **Manual Testing**: Direct interaction with assistant worker endpoints
+3. **Document Usage Monitoring**: Track which documents are being referenced
+4. **Performance Monitoring**: Response time metrics via Cloudflare Workers analytics
 
 ## Database Schema & Integration
 

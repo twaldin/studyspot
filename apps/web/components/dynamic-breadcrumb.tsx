@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useChat } from "@/hooks/api/chats";
 import { useFlashcardSet } from "@/hooks/api/flashcards";
+import { useQuiz } from "@/hooks/api/quizzes";
 import { useSelectedCourse } from "@/hooks/api/courses";
 import {
   Breadcrumb,
@@ -13,7 +14,7 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
+} from "@studyspot/ui/components/breadcrumb";
 
 interface BreadcrumbData {
   featureName: string;
@@ -26,17 +27,22 @@ export function DynamicBreadcrumb() {
   const { data: selectedCourse } = useSelectedCourse();
 
   // Extract IDs from different URL patterns
-  const chatId = pathname.startsWith("/chat/") && pathname !== "/chat"
-    ? pathname.split("/chat/")[1]
+  const chatId = pathname.startsWith("/chat/") && pathname !== "/chat" && pathname !== "/chat/creating"
+    ? pathname.split("/chat/")[1]?.split("?")[0] // Remove query parameters
     : undefined;
   
   const flashcardSetId = pathname.startsWith("/flashcards/") && pathname !== "/flashcards"
     ? pathname.split("/flashcards/")[1]
     : undefined;
 
+  const quizId = pathname.startsWith("/quiz/") && pathname !== "/quiz"
+    ? pathname.split("/quiz/")[1]
+    : undefined;
+
   // Fetch data based on detected IDs
   const { data: chat } = useChat(chatId);
   const { data: flashcardSet } = useFlashcardSet(flashcardSetId);
+  const { data: quiz } = useQuiz(quizId);
 
   const isBasePage = pathname === "/courses";
 
@@ -46,7 +52,7 @@ export function DynamicBreadcrumb() {
     if (pathname.startsWith("/chat/") && chat) {
       return {
         featureName: "Chat",
-        featureHref: "/chat",
+        featureHref: "/",
         itemTitle: chat.title,
       };
     }
@@ -57,6 +63,15 @@ export function DynamicBreadcrumb() {
         featureName: "Flashcards",
         featureHref: "/content",
         itemTitle: flashcardSet.title,
+      };
+    }
+
+    // Quiz pages: /quiz/[quizId]
+    if (pathname.startsWith("/quiz/") && quiz) {
+      return {
+        featureName: "Practice Quizzes",
+        featureHref: "/content",
+        itemTitle: quiz.title,
       };
     }
 

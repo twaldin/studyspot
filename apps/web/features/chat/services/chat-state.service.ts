@@ -58,12 +58,14 @@ export class ChatStateService {
       id: index.toString(),
       content: msg.role === 'assistant' ? this.filterThinkingContent(msg.content) : msg.content,
       role: msg.role,
-      linkedResources: [], // Will be populated by client-side conversion  
-      linkedResourceRefs: msg.linked_resources || [], // Store raw refs for conversion
+      // If cache has full linkedResources, use them; otherwise will be populated by chat client
+      linkedResources: msg.linkedResources || [],
+      // Store raw refs for conversion (fallback for older cache entries or fresh DB loads)
+      linkedResourceRefs: msg.linked_resources || msg.linkedDocumentIds?.map((id: string) => ({ type: 'document', id })) || [],
     }));
 
-    // We are not calling the augmentation here because the data from useChat is already augmented.
-    // This service is only for client-side state management.
+    // Note: linkedResourceRefs will be converted to full resources by the chat client
+    // Don't do async processing here as it conflicts with React's state management
 
     logger.info({ 
       chatId: chat.id, 
@@ -72,6 +74,7 @@ export class ChatStateService {
 
     return convertedMessages;
   }
+
 
   /**
    * Creates initial messages for a new chat interaction

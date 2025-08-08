@@ -6,16 +6,13 @@ import { geminiService } from '@/lib/services/ai/gemini.service';
 import { API_CONSTANTS, DEFAULT_MESSAGES } from '@/lib/constants';
 import logger, { LogContext } from '@/lib/logger';
 
-// Server-side cache for suggested queries
-const suggestedQueriesCache = new Map<string, { queries: string[], timestamp: number }>();
-const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
-
 /**
- * Gets suggested queries for a course with intelligent fallbacks
+ * Gets suggested queries for a course from the assistant worker
  */
 export async function getSuggestedQueries(
   userId: string,
-  courseId?: string
+  courseId?: string,
+  env?: any
 ): Promise<{ suggestedQueries: string[], fromCache: boolean }> {
   try {
     // Get user's onboarding status for school context
@@ -49,41 +46,183 @@ export async function getSuggestedQueries(
       };
     }
 
-    // Check cache first
-    const cacheKey = `${resolvedCourseId}-${onboardingStatus.selectedSchool}`;
-    const cachedResult = getCachedQueries(cacheKey);
-    if (cachedResult) {
-      logger.debug(LogContext.api('suggested-queries', userId, { cacheKey }), 'Returning cached queries');
+    // Try direct KV access first (Cloudflare Workers)
+    console.log('[getSuggestedQueries] Checking for KV access:', {
+      hasEnv: !!env,
+      hasKV: !!env?.SUGGESTED_QUERIES,
+      courseId: resolvedCourseId,
+      schoolId: onboardingStatus.selectedSchool
+    });
+    
+    if (env?.SUGGESTED_QUERIES) {
+      try {
+        const key = `queries:${resolvedCourseId}:${onboardingStatus.selectedSchool}`;
+        const metaKey = `queries-meta:${resolvedCourseId}:${onboardingStatus.selectedSchool}`;
+        
+        console.log('[getSuggestedQueries] Reading from KV with key:', key);
+        
+        // Get queries and metadata from KV
+        const [cached, metadata] = await Promise.all([
+          env.SUGGESTED_QUERIES.get(key, "json"),
+          env.SUGGESTED_QUERIES.get(metaKey, "json")
+        ]);
+        
+        console.log('[getSuggestedQueries] KV response:', {
+          hasCached: !!cached,
+          hasMetadata: !!metadata,
+          cached,
+          metadata
+        });
+        
+        if (cached && Array.isArray(cached) && cached.length > 0) {
+          // Check if cache is stale
+          const isStale = metadata ? (Date.now() - (metadata as any).generatedAt > 86400000) : false; // 24 hours
+          
+          if (!isStale) {
+            logger.info(LogContext.api('suggested-queries', userId, { 
+              courseId: resolvedCourseId,
+              fromCache: true,
+              via: 'direct-kv',
+              queriesReceived: cached
+            }), 'Retrieved suggested queries directly from KV');
+
+            const result = {
+              suggestedQueries: cached,
+              fromCache: true
+            };
+            
+            console.log('[getSuggestedQueries] Returning fresh KV queries to caller:', result);
+            
+            return result;
+          } else {
+            console.log('[getSuggestedQueries] KV cache is stale, will trigger refresh via service binding');
+            // Don't return stale data, let it fall through to service binding for refresh
+          }
+        } else {
+          console.log('[getSuggestedQueries] No valid queries in KV, will generate via service binding');
+        }
+      } catch (error) {
+        logger.warn(LogContext.api('suggested-queries', userId, { 
+          error: error instanceof Error ? error.message : 'Unknown error' 
+        }), 'KV access failed, falling back to service binding');
+      }
+    } else {
+      console.log('[getSuggestedQueries] No KV namespace available, trying service binding');
+    }
+    
+    // Try service binding as second option (Cloudflare Workers)
+    if (env?.ASSISTANT_SERVICE) {
+      try {
+        const url = new URL('https://internal/suggested-queries');
+        url.searchParams.set('courseId', resolvedCourseId);
+        url.searchParams.set('schoolId', onboardingStatus.selectedSchool);
+        
+        const response = await env.ASSISTANT_SERVICE.fetch(url.toString(), {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Assistant service returned ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        // DEBUG: Log exactly what we received
+        console.log('[getSuggestedQueries] Raw response from assistant worker:', {
+          data,
+          hasQueries: !!data.suggestedQueries,
+          queriesLength: data.suggestedQueries?.length,
+          actualQueries: data.suggestedQueries,
+          dataType: typeof data,
+          dataKeys: Object.keys(data)
+        });
+        
+        logger.info(LogContext.api('suggested-queries', userId, { 
+          courseId: resolvedCourseId,
+          fromCache: data.fromCache,
+          isStale: data.isStale,
+          via: 'service-binding',
+          queriesReceived: data.suggestedQueries
+        }), 'Retrieved suggested queries from assistant worker via service binding');
+
+        const result = {
+          suggestedQueries: data.suggestedQueries || [...DEFAULT_MESSAGES.SUGGESTED_QUERIES],
+          fromCache: data.fromCache || false
+        };
+        
+        console.log('[getSuggestedQueries] Returning to caller:', result);
+        
+        return result;
+      } catch (error) {
+        logger.warn(LogContext.api('suggested-queries', userId, { 
+          error: error instanceof Error ? error.message : 'Unknown error' 
+        }), 'Service binding failed, falling back to HTTP');
+      }
+    } else {
+      console.log('[getSuggestedQueries] No service binding available, falling back to HTTP');
+    }
+
+    // Fallback to HTTP (for local development)
+    const assistantWorkerUrl = process.env.NEXT_PUBLIC_ASSISTANT_API_URL;
+    if (!assistantWorkerUrl) {
+      logger.error(LogContext.api('suggested-queries', userId), 'Assistant API URL not configured');
       return {
-        suggestedQueries: cachedResult,
-        fromCache: true
+        suggestedQueries: [...DEFAULT_MESSAGES.SUGGESTED_QUERIES],
+        fromCache: false
       };
     }
 
-    // Generate new queries
-    const generatedQueries = await generateQueriesForCourse(
-      resolvedCourseId, 
-      onboardingStatus.selectedSchool,
-      userId
+    const response = await fetch(
+      `${assistantWorkerUrl}/suggested-queries?` +
+      `courseId=${encodeURIComponent(resolvedCourseId)}&` +
+      `schoolId=${encodeURIComponent(onboardingStatus.selectedSchool)}`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
     );
 
-    // Cache the result
-    setCachedQueries(cacheKey, generatedQueries);
+    if (!response.ok) {
+      throw new Error(`Assistant worker returned ${response.status}`);
+    }
 
+    const data = await response.json();
+    
+    // DEBUG: Log exactly what we received via HTTP
+    console.log('[getSuggestedQueries] Raw response from assistant worker (HTTP):', {
+      data,
+      hasQueries: !!data.suggestedQueries,
+      queriesLength: data.suggestedQueries?.length,
+      actualQueries: data.suggestedQueries,
+      dataType: typeof data,
+      dataKeys: Object.keys(data)
+    });
+    
     logger.info(LogContext.api('suggested-queries', userId, { 
       courseId: resolvedCourseId,
-      queryCount: generatedQueries.length 
-    }), 'Generated new suggested queries');
+      fromCache: data.fromCache,
+      isStale: data.isStale,
+      queriesReceived: data.suggestedQueries
+    }), 'Retrieved suggested queries from assistant worker');
 
-    return {
-      suggestedQueries: generatedQueries,
-      fromCache: false
+    const result = {
+      suggestedQueries: data.suggestedQueries || [...DEFAULT_MESSAGES.SUGGESTED_QUERIES],
+      fromCache: data.fromCache || false
     };
+    
+    console.log('[getSuggestedQueries] Returning to caller (HTTP):', result);
+    
+    return result;
 
   } catch (error) {
     logger.error(LogContext.api('suggested-queries', userId, { 
       error: error instanceof Error ? error.message : 'Unknown error' 
-    }), 'Error generating suggested queries, falling back to defaults');
+    }), 'Error getting suggested queries from assistant worker, falling back to defaults');
 
     return {
       suggestedQueries: [...DEFAULT_MESSAGES.SUGGESTED_QUERIES],
@@ -92,208 +231,14 @@ export async function getSuggestedQueries(
   }
 }
 
-/**
- * Gets cached queries if they exist and haven't expired
- */
-function getCachedQueries(cacheKey: string): string[] | null {
-  const cachedEntry = suggestedQueriesCache.get(cacheKey);
-  
-  if (cachedEntry && (Date.now() - cachedEntry.timestamp) < CACHE_DURATION) {
-    return cachedEntry.queries;
-  }
-
-  // Clean up expired entry
-  if (cachedEntry) {
-    suggestedQueriesCache.delete(cacheKey);
-  }
-
-  return null;
-}
-
-/**
- * Caches queries with current timestamp
- */
-function setCachedQueries(cacheKey: string, queries: string[]): void {
-  suggestedQueriesCache.set(cacheKey, {
-    queries: [...queries], // Convert readonly array to mutable
-    timestamp: Date.now()
-  });
-}
-
-/**
- * Generates course-specific queries using AI
- */
-async function generateQueriesForCourse(
-  courseId: string, 
-  schoolId: string,
-  userId: string
-): Promise<string[]> {
-  try {
-    // Fetch course details
-    const course = await getCourseDetails(courseId, schoolId);
-    if (!course) {
-      logger.warn(LogContext.api('suggested-queries', userId, { courseId }), 'Course not found');
-      return [...DEFAULT_MESSAGES.SUGGESTED_QUERIES];
-    }
-
-    // Get content samples for context
-    const contentSamples = await getCourseContentSample(courseId);
-
-    // Generate AI queries
-    const aiResult = await geminiService.chat([
-      {
-        role: 'user',
-        content: `Generate 2 specific, practical questions that a college student might ask about the course "${course.code} - ${course.title}". The questions should be:
-1. Specific to the actual subject matter and content (not generic)
-2. Academically relevant (about exams, assignments, labs, concepts, etc.)
-3. Between 5-12 words each
-4. Written in a natural, student-like tone
-
-Base your questions on the actual course content below. Look for specific topics, concepts, assignments, labs, or exam materials mentioned:
-
---- Course Content ---
-${contentSamples.join('\n\n')}
---- End Course Content ---
-
-Return only the 2 questions, each on a separate line, without numbering or quotes.`
-      }
-    ]);
-
-    // Validate AI result
-    if (aiResult.success && aiResult.data) {
-      const queries = aiResult.data
-        .trim()
-        .split('\n')
-        .map(line => line.trim())
-        .filter(line => line.length > 0)
-        .map(line => line.replace(/^[\d\.\-\*]\s*/, '')) // Remove any numbering/bullets
-        .map(line => line.replace(/^["']|["']$/g, '')) // Remove quotes
-        .slice(0, 2);
-      
-      if (queries.length === 2) {
-        return queries;
-      }
-    }
-
-    logger.warn(LogContext.api('suggested-queries', userId, { 
-      courseId,
-      aiSuccess: aiResult.success,
-      queryCount: aiResult.data?.length 
-    }), 'AI query generation failed or returned invalid results');
-
-    return [...DEFAULT_MESSAGES.SUGGESTED_QUERIES];
-
-  } catch (error) {
-    logger.error(LogContext.api('suggested-queries', userId, { 
-      courseId,
-      error: error instanceof Error ? error.message : 'Unknown error' 
-    }), 'Error in AI query generation');
-
-    return [...DEFAULT_MESSAGES.SUGGESTED_QUERIES];
-  }
-}
-
-/**
- * Fetches course details from database
- */
-async function getCourseDetails(courseId: string, schoolId: string): Promise<{ code: string, title: string } | null> {
-  try {
-    const supabase = await supabaseService.createAuthenticatedClient();
-    const { data: course, error } = await supabase
-      .from('courses')
-      .select('code, title')
-      .eq('id', courseId)
-      .eq('school_id', schoolId)
-      .single();
-
-    if (error) {
-      throw error;
-    }
-    
-    if (!course?.code || !course?.title) {
-      return null;
-    }
-
-    return {
-      code: course.code,
-      title: course.title
-    };
-  } catch (error) {
-    logger.error({ error, courseId, schoolId }, 'Failed to fetch course details');
-    return null;
-  }
-}
-
-/**
- * Samples course content for AI context
- */
-async function getCourseContentSample(courseId: string): Promise<string[]> {
-  try {
-    const supabase = await supabaseService.createAuthenticatedClient();
-    // Get sample of documents from this course
-    const { data: docs, error: docsError } = await supabase
-      .from('docs')
-      .select('id')
-      .eq('course_id', courseId)
-      .limit(API_CONSTANTS.RAG_COURSE_DOCS_LIMIT);
-
-    if (docsError) {
-      throw docsError;
-    }
-
-    if (!docs || docs.length === 0) {
-      return [];
-    }
-
-    const docIds = docs.map((doc: any) => doc.id);
-
-    // Get content chunks from these documents
-    const { data: chunks, error: chunksError } = await supabase
-      .from('chunks')
-      .select('content')
-      .in('doc_id', docIds)
-      .limit(API_CONSTANTS.RAG_DOCUMENT_LIMIT)
-      .order('chunk_count', { ascending: true });
-
-    if (chunksError) {
-      throw chunksError;
-    }
-
-    if (!chunks || chunks.length === 0) {
-      return [];
-    }
-
-    // Return the content strings, limiting length to avoid token limits
-    return chunks
-      .map((chunk: any) => chunk.content.substring(0, API_CONSTANTS.CHUNK_CONTENT_PREVIEW_LENGTH))
-      .filter((content: string) => content.trim().length > API_CONSTANTS.CONTENT_CHUNK_MIN_LENGTH);
-      
-  } catch (error) {
-    logger.warn({ error, courseId }, 'Failed to get course content sample');
-    return [];
-  }
-}
-
-/**
- * Clears the cache (useful for testing or manual cache invalidation)
- */
+// Legacy functions - no longer needed as caching is handled by assistant worker
 export function clearSuggestedQueriesCache(): void {
-  suggestedQueriesCache.clear();
-  logger.info({}, 'Suggested queries cache cleared');
+  logger.info({}, 'Suggested queries cache now handled by assistant worker');
 }
 
-/**
- * Gets cache statistics for monitoring
- */
 export function getSuggestedQueriesCacheStats(): { size: number, entries: { key: string, age: number }[] } {
-  const now = Date.now();
-  const entries = Array.from(suggestedQueriesCache.entries()).map(([key, value]) => ({
-    key,
-    age: now - value.timestamp
-  }));
-
   return {
-    size: suggestedQueriesCache.size,
-    entries
+    size: 0,
+    entries: []
   };
 }

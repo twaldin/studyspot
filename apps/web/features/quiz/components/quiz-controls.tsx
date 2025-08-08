@@ -2,8 +2,8 @@
 
 import { QuizMode, StudyProgress, StudySettings } from "@/features/quiz/types";
 import { quizService } from "../services/quiz.service";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@studyspot/ui/components/button";
+import { Badge } from "@studyspot/ui/components/badge";
 import {
   ArrowLeft,
   ArrowRight,
@@ -13,7 +13,7 @@ import {
   Shuffle,
   Target,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@studyspot/ui/lib/utils";
 
 interface QuizControlsProps {
   settings: StudySettings;

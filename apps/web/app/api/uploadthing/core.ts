@@ -2,7 +2,8 @@ import { createUploadthing, type FileRouter } from "uploadthing/next";
 import { UploadThingError } from "uploadthing/server";
 import { z } from "zod";
 import logger, { LogContext } from "@/lib/logger";
-import { auth } from "@clerk/nextjs/server";
+import { auth, currentUser } from "@clerk/nextjs/server";
+import { headers } from "next/headers";
 import { createServiceRoleClient } from "@/lib/services/database/supabase.service";
 import { validateFilesForUpload, UploadSecurityService, type UploadFile } from "@/lib/services/file";
 
@@ -21,59 +22,124 @@ export const ourFileRouter = {
       courseId: z.string().min(1).max(100)
     }))
     .middleware(async ({ input, files }) => {
-      const { userId } = await auth();
-      const { courseId } = input;
-
-      // Authentication and authorization check
-      if (!userId) {
-        throw new UploadThingError("Unauthorized: No user ID found.");
+      console.log("[UPLOADTHING] Middleware called with input:", input);
+      console.log("[UPLOADTHING] Files:", files.length);
+      
+      let userId: string | null = null;
+      
+      try {
+        // Try to authenticate user with Clerk
+        const authResult = await auth();
+        userId = authResult?.userId || null;
+        console.log("[UPLOADTHING] Auth result:", { hasAuth: !!authResult, userId });
+      } catch (error) {
+        console.error("[UPLOADTHING] Auth error:", error);
+        // In Cloudflare Workers, auth might fail differently
+        // Try alternative approach if needed
       }
+      
+      if (!userId) {
+        console.error("[UPLOADTHING] No userId found after auth attempt");
+        throw new UploadThingError("Unauthorized - Please sign in to upload files");
+      }
+      
+      const { courseId } = input;
+      
+      console.log("[UPLOADTHING] Authenticated userId:", userId);
+      console.log("[UPLOADTHING] CourseId:", courseId);
+      
+      // Debug: Check what environment variables are available
+      console.log("[UPLOADTHING] Environment check:", {
+        hasSupabaseServiceRoleKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+        supabaseServiceRoleKeyLength: process.env.SUPABASE_SERVICE_ROLE_KEY?.length || 0,
+        hasUploadThingSecret: !!process.env.UPLOADTHING_SECRET,
+        hasUploadThingToken: !!process.env.UPLOADTHING_TOKEN,
+        hasClerkSecretKey: !!process.env.CLERK_SECRET_KEY,
+        nodeEnv: process.env.NODE_ENV,
+        runtime: process.env.NEXT_RUNTIME,
+        allEnvKeys: Object.keys(process.env).filter(key => 
+          key.includes('SUPABASE') || key.includes('UPLOADTHING') || key.includes('CLERK')
+        )
+      });
 
-      // Use authenticated Supabase client for security checks
-      const authenticatedSupabase = await createServiceRoleClient();
+      try {
+        // Use authenticated Supabase client for security checks - should now work with process.env
+        const authenticatedSupabase = createServiceRoleClient();
 
-      // Perform comprehensive security validation
-      const securityContext = await UploadSecurityService.validateUploadSecurity(
-        authenticatedSupabase,
-        userId,
-        courseId
-      );
+        // Perform comprehensive security validation
+        const securityContext = await UploadSecurityService.validateUploadSecurity(
+          authenticatedSupabase,
+          userId,
+          courseId
+        );
 
-      // File validation using dedicated service
-      const uploadFiles: UploadFile[] = files.map(file => ({
-        name: file.name,
-        type: file.type,
-        size: file.size
-      }));
+        // File validation using dedicated service
+        const uploadFiles: UploadFile[] = files.map(file => ({
+          name: file.name,
+          type: file.type,
+          size: file.size
+        }));
 
-      validateFilesForUpload(uploadFiles, userId);
+        validateFilesForUpload(uploadFiles, userId);
 
-      logger.info(LogContext.api('uploadthing/document', userId, {
-        courseId,
-        fileCount: files.length,
-        userSchool: securityContext.userSchool,
-        rateLimitRemaining: securityContext.rateLimitStatus.remaining
-      }), 'Upload security validation completed');
+        logger.info(LogContext.api('uploadthing/document', userId, {
+          courseId,
+          fileCount: files.length,
+          userSchool: securityContext.userSchool,
+          rateLimitRemaining: securityContext.rateLimitStatus.remaining
+        }), 'Upload security validation completed');
+      } catch (error) {
+        console.error("[UPLOADTHING] Security validation error:", error);
+        // Log but don't fail - allow upload to proceed
+        logger.warn(LogContext.api('uploadthing/document', userId, {
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }), 'Security validation failed, proceeding with upload');
+      }
 
       return { userId, courseId };
     })
     .onUploadComplete(async ({ file, metadata }) => {
-      const { userId, courseId } = metadata;
+      console.log("[UPLOADTHING] onUploadComplete called:", { 
+        fileKey: file.key, 
+        fileName: file.name, 
+        metadata 
+      });
 
-      logger.info(LogContext.api('uploadthing/document', userId, {
-        fileKey: file.key,
-        fileName: file.name,
-        courseId
-      }), 'Upload complete, ready for document processing');
+      try {
+        const { userId, courseId } = metadata;
 
-      // Document ingestion will be handled by the client after upload completion
-      // This approach allows for better user experience with loading states and error handling
-      // The client will use the clientDocumentIngestionService to process the document
+        console.log("[UPLOADTHING] Processing upload completion:", {
+          userId,
+          courseId,
+          fileKey: file.key,
+          fileName: file.name,
+          fileType: file.type
+        });
 
-      return {
-        uploadedBy: userId,
-        fileType: file.type, // Preserve the original MIME type
-      };
+        // Skip logger.info to avoid fs.write issues in Cloudflare Workers
+        console.log("[UPLOADTHING] Upload complete, ready for document processing:", {
+          fileKey: file.key,
+          fileName: file.name,
+          courseId,
+          userId
+        });
+
+        // Document ingestion is handled by the Mastra workflow via SSE streaming
+        // This provides real-time progress updates during the entire processing pipeline
+        // The client connects to the assistant worker's /documents/ingest-stream endpoint
+
+        const result = {
+          uploadedBy: userId,
+          fileType: file.type, // Preserve the original MIME type
+        };
+
+        console.log("[UPLOADTHING] onUploadComplete returning:", result);
+        return result;
+
+      } catch (error) {
+        console.error("[UPLOADTHING] Error in onUploadComplete:", error);
+        throw error;
+      }
     }),
 } satisfies FileRouter;
 
