@@ -10,12 +10,16 @@ interface AssistantMessageProps {
   content: string;
   linkedResources?: LinkedResource[];
   isStreaming?: boolean;
+  isTextStreaming?: boolean;
+  toolActivity?: string | null;
 }
 
 const AssistantMessage: React.FC<AssistantMessageProps> = ({
   content,
   linkedResources,
   isStreaming,
+  isTextStreaming,
+  toolActivity,
 }) => {
   // Initialize with content as fallback for SSR
   const [html, setHtml] = useState(content);
@@ -23,7 +27,7 @@ const AssistantMessage: React.FC<AssistantMessageProps> = ({
   // Parse the displayed content as Markdown
   useEffect(() => {
     // Only run on client side
-    if (typeof window === 'undefined') {
+    if (typeof window === "undefined") {
       return;
     }
 
@@ -140,7 +144,8 @@ const AssistantMessage: React.FC<AssistantMessageProps> = ({
 
     let rawHtml = html;
 
-    if (isStreaming) {
+    // Show pencil inline only during active text streaming AND when there's actual content
+    if (isTextStreaming && content.trim()) {
       const pencilSvg =
         `<svg class="inline-block h-5 w-5 animate-pulse" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path><path d="m15 5 4 4"></path></svg>`;
 
@@ -169,12 +174,29 @@ const AssistantMessage: React.FC<AssistantMessageProps> = ({
           dangerouslySetInnerHTML={createMarkup()}
         />
 
+        {/* Show tool activity below the message when active and NOT actively receiving text */}
+        {isStreaming && !isTextStreaming && (
+          <div className="mt-2 flex items-center space-x-2">
+            <div className="flex space-x-1">
+              <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+              <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+              <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></div>
+            </div>
+            <span className="text-sm">
+              StudySpot is {toolActivity || "thinking"}
+            </span>
+          </div>
+        )}
+
         {/* Render linked resources - only show after streaming is complete */}
         {!isStreaming && linkedResources && linkedResources.length > 0 && (
           <div className="mt-3">
             <div className="grid gap-4 grid-cols-1 @md:grid-cols-2 @lg:grid-cols-3">
               {linkedResources.map((resource) => (
-                <LinkedResourceCard key={`${resource.type}-${resource.id}`} resource={resource} />
+                <LinkedResourceCard
+                  key={`${resource.type}-${resource.id}`}
+                  resource={resource}
+                />
               ))}
             </div>
           </div>
@@ -185,3 +207,4 @@ const AssistantMessage: React.FC<AssistantMessageProps> = ({
 };
 
 export default AssistantMessage;
+

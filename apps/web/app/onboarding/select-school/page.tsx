@@ -3,8 +3,8 @@
 import * as React from "react";
 import { Check } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import { cn } from "@studyspot/ui/lib/utils";
+import { Button } from "@studyspot/ui/components/button";
 import {
   Card,
   CardContent,
@@ -12,8 +12,8 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+} from "@studyspot/ui/components/card";
+import { Input } from "@studyspot/ui/components/input";
 import { useSchools } from "@/hooks/api/";
 import { useUser } from "@clerk/nextjs";
 import logger from "@/lib/logger";

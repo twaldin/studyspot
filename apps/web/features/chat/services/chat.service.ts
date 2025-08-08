@@ -1,7 +1,7 @@
 import { Chat } from '../chat.types';
 import { getChats, getChat, createChat, deleteChat, CreateChatData, ChatSummary } from '../chat-operations';
-import { generateMeaningfulTitle } from './chat-title-generator';
 import { augmentMessagesWithResources } from './resource-augmentor';
+import { generateMeaningfulTitle } from './chat-title-generator';
 import logger from '@/lib/logger';
 
 export interface CreateChatRequest {

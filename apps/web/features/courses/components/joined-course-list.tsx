@@ -1,30 +1,14 @@
 "use client";
 
 import React from "react";
-import { Button } from "@/components/ui/button";
-import {
-  Box,
-  FlaskConical,
-  Music,
-  PartyPopper,
-  PlusCircle,
-  Radical,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Button } from "@studyspot/ui/components/button";
+import { PlusCircle } from "lucide-react";
+import { cn } from "@studyspot/ui/lib/utils";
 import Link from "next/link";
 import { ICourse } from "@/features/courses/course.model";
 import { useSetSelectedCourse } from "@/hooks/api/courses";
 import toast from "react-hot-toast";
-
-// Default icons for courses (will be used if no specific icon is provided)
-const defaultCourseIcons = [FlaskConical, Radical, Box, Music, PartyPopper];
-
-// Helper function to get icon for course
-const getCourseIcon = (courseCode: string, index: number) => {
-  // You can add logic here to determine icons based on course code
-  // For now, we'll cycle through default icons
-  return defaultCourseIcons[index % defaultCourseIcons.length];
-};
+import { getCourseIcon } from "@/lib/utils/course-icons";
 
 interface JoinedCourseListProps {
   courses: ICourse[];
@@ -83,8 +67,8 @@ export function JoinedCourseList({
 
   return (
     <>
-      {courses.map((course, index) => {
-        const IconComponent = getCourseIcon(course.code || "", index);
+      {courses.map((course) => {
+        const IconComponent = getCourseIcon(course.icon);
         const isSelected = selectedCourseId === course.id;
 
         return (

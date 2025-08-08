@@ -1,18 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import { FlashcardSetResponse, FlashcardSetWithCards } from "@/features/flashcards/types";
+import {
+  FlashcardSetResponse,
+  FlashcardSetWithCards,
+} from "@/features/flashcards/types";
 import { supabaseService } from "@/lib/services/database/supabase.service";
 import { auth, clerkClient } from "@clerk/nextjs/server";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ setId: string }> }
+  { params }: { params: Promise<{ setId: string }> },
 ) {
   try {
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json<FlashcardSetResponse>(
         { success: false, data: null, error: "Unauthorized" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -21,7 +24,7 @@ export async function GET(
     // Get the flashcard set with its cards
     const supabase = await supabaseService.createAuthenticatedClient();
     const { data: flashcardSetData, error: setError } = await supabase
-      .from('flashcard_sets')
+      .from("flashcard_sets")
       .select(
         `
         id,
@@ -32,25 +35,28 @@ export async function GET(
         created_at,
         updated_at,
         edited_from,
-        courses!flashcard_set_course_id_fkey (
+        courses!flashcard_sets_course_id_fkey (
           title,
           code
         ),
         flashcards(*)
-      `
+      `,
       )
-      .eq('id', setId)
+      .eq("id", setId)
       .single();
 
     if (setError || !flashcardSetData) {
       console.error("Error fetching flashcard set:", setError);
       return NextResponse.json<FlashcardSetResponse>(
         { success: false, data: null, error: "Flashcard set not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
-    console.log("flashcardSetData from Supabase:", JSON.stringify(flashcardSetData, null, 2));
+    console.log(
+      "flashcardSetData from Supabase:",
+      JSON.stringify(flashcardSetData, null, 2),
+    );
 
     // The flashcards are now part of flashcardSetData
     const flashcardsData = (flashcardSetData as any).flashcards;
@@ -58,17 +64,18 @@ export async function GET(
     // Get creator information from Clerk
     let creatorName = undefined;
     let creatorProfileImage = undefined;
-    
+
     try {
       const client = await clerkClient();
       const creator = await client.users.getUser(flashcardSetData.user_id);
-      creatorName = creator.firstName && creator.lastName 
+      creatorName = creator.firstName && creator.lastName
         ? `${creator.firstName} ${creator.lastName}`
-        : creator.firstName || creator.lastName || creator.emailAddresses?.[0]?.emailAddress || 'Unknown User';
+        : creator.firstName || creator.lastName ||
+        creator.emailAddresses?.[0]?.emailAddress || "Unknown User";
       creatorProfileImage = creator.imageUrl;
     } catch (error) {
       console.warn("Could not fetch creator information:", error);
-      creatorName = 'Unknown User';
+      creatorName = "Unknown User";
     }
 
     // Get original title if this is an edited set
@@ -76,9 +83,9 @@ export async function GET(
     if (flashcardSetData.edited_from) {
       try {
         const { data: originalSet } = await supabase
-          .from('flashcard_sets')
-          .select('title')
-          .eq('id', flashcardSetData.edited_from)
+          .from("flashcard_sets")
+          .select("title")
+          .eq("id", flashcardSetData.edited_from)
           .single();
         originalTitle = originalSet?.title;
       } catch (error) {
@@ -89,8 +96,8 @@ export async function GET(
     // Construct the response
     const flashcardSet: FlashcardSetWithCards = {
       id: flashcardSetData.id,
-      title: flashcardSetData.title || '',
-      description: flashcardSetData.description || '',
+      title: flashcardSetData.title || "",
+      description: flashcardSetData.description || "",
       course_id: flashcardSetData.course_id,
       user_id: flashcardSetData.user_id,
       created_at: flashcardSetData.created_at,
@@ -114,7 +121,8 @@ export async function GET(
     console.error("Unexpected error in flashcard set API:", error);
     return NextResponse.json<FlashcardSetResponse>(
       { success: false, data: null, error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
+

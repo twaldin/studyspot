@@ -1,7 +1,8 @@
 'use client';
 
-import { chatStreamingService, StreamingContext } from './chat-streaming.service';
+import { StreamingContext } from './chat-streaming.service';
 import { LinkedResource } from '@/features/chat/chat.types';
+import { persistentStreamClient, PersistentStreamOptions } from './persistent-stream-client.service';
 import logger from '@/lib/logger';
 
 interface ActiveStream {
@@ -9,6 +10,7 @@ interface ActiveStream {
   controller?: AbortController;
   context: StreamingContext;
   promise: Promise<void>;
+  toolActivity?: string | null; // Store current tool activity for this stream
 }
 
 /**
@@ -45,7 +47,7 @@ class StreamingManagerService {
       await new Promise(resolve => setTimeout(resolve, 100));
     }
 
-    logger.info({ chatId }, 'Starting new streaming session');
+    logger.info({ chatId, messageContent, courseId }, 'Starting new streaming session');
 
     const controller = new AbortController();
     
@@ -70,47 +72,107 @@ class StreamingManagerService {
       // Wait for completion
       await streamPromise;
       
+      // Ensure cleanup after successful completion
+      logger.info({ chatId }, 'Streaming completed successfully, ensuring cleanup');
+      
     } catch (error) {
-      logger.error({ chatId, error }, 'Streaming failed');
+      logger.error({ chatId, error: error instanceof Error ? error.message : error }, 'Streaming failed');
+      console.error('[StreamingManager] Error during streaming:', error);
       throw error;
     } finally {
-      // Clean up when done
-      this.activeStreams.delete(chatId);
+      // Clean up when done - double check to ensure it's removed
+      if (this.activeStreams.has(chatId)) {
+        logger.info({ chatId }, 'Removing active stream in finally block');
+        this.activeStreams.delete(chatId);
+      }
+      console.log('[StreamingManager] Cleanup complete, active streams:', Array.from(this.activeStreams.keys()));
     }
   }
 
   /**
-   * Execute the actual streaming
+   * Execute the actual streaming using persistent stream client
    */
   private async executeStreaming(
-    chatId: string, // Add chatId here
+    chatId: string,
     messageContent: string,
     conversationHistory: Array<{ role: string; content: string; linkedResources?: LinkedResource[] }>,
     courseId: string,
     context: StreamingContext,
     signal: AbortSignal
   ): Promise<void> {
-    const response = await chatStreamingService.sendMessage(
-      messageContent,
-      conversationHistory,
-      courseId,
-      chatId, // Pass chatId to sendMessage
-      context.userId
-    );
-
+    logger.info({ chatId, messageContent, courseId }, 'Starting persistent stream session');
+    
     // Check if cancelled
     if (signal.aborted) {
       throw new Error('Streaming cancelled');
     }
 
-    await chatStreamingService.processStreamingResponse(response, context);
+    // Use persistent stream client with enhanced options
+    const streamOptions: PersistentStreamOptions = {
+      chatId,
+      messageContent,
+      conversationHistory,
+      courseId,
+      context,
+      onCatchUpComplete: (totalEvents) => {
+        logger.info({ chatId, totalEvents }, 'Stream catch-up completed');
+      },
+      onCatchUpProgress: (progress, total) => {
+        logger.info({ chatId, progress, total }, 'Stream catch-up progress');
+      },
+      onNoActiveStream: () => {
+        logger.warn({ chatId }, 'No active stream found - this is a new stream');
+      }
+    };
+
+    await persistentStreamClient.connectToStream(streamOptions);
+    
+    logger.info({ chatId }, 'Persistent streaming completed successfully');
+    
+    // Note: Database updates now happen automatically in the assistant worker
+    // No need to call saveMessagesToDatabase here
+  }
+
+  /**
+   * Subscribe to an existing stream (for navigation scenarios)
+   */
+  async subscribeToExistingStream(
+    streamId: string,
+    chatId: string,
+    context: StreamingContext
+  ): Promise<void> {
+    logger.info({ chatId, streamId }, 'Subscribing to existing persistent stream');
+
+    const streamOptions: PersistentStreamOptions = {
+      chatId,
+      messageContent: '', // Not needed for subscription
+      conversationHistory: [], // Not needed for subscription
+      courseId: '', // Not needed for subscription
+      context,
+      onCatchUpComplete: (totalEvents) => {
+        logger.info({ chatId, streamId, totalEvents }, 'Stream subscription catch-up completed');
+      },
+      onCatchUpProgress: (progress, total) => {
+        logger.info({ chatId, streamId, progress, total }, 'Stream subscription catch-up progress');
+      },
+      onNoActiveStream: () => {
+        logger.warn({ chatId, streamId }, 'No active stream found for subscription');
+      }
+    };
+
+    await persistentStreamClient.subscribeToExistingStream(streamId, streamOptions);
+    logger.info({ chatId, streamId }, 'Stream subscription completed successfully');
   }
 
   /**
    * Check if a chat is currently streaming
    */
   isStreaming(chatId: string): boolean {
-    return this.activeStreams.has(chatId);
+    const isActive = this.activeStreams.has(chatId);
+    if (isActive) {
+      console.log('[StreamingManager] Chat is still marked as streaming:', chatId, 'Active streams:', Array.from(this.activeStreams.keys()));
+    }
+    return isActive;
   }
 
   /**
@@ -151,6 +213,51 @@ class StreamingManagerService {
       stream.controller?.abort();
     }
     this.activeStreams.clear();
+  }
+
+  /**
+   * Notify that a stream has completed (called by PersistentStreamClient)
+   */
+  notifyStreamCompleted(chatId: string): void {
+    const wasActive = this.activeStreams.has(chatId);
+    if (wasActive) {
+      logger.info({ chatId }, 'StreamingManager: Removing completed stream from active tracking');
+      this.activeStreams.delete(chatId);
+      console.log('[StreamingManager] Stream completed, active streams:', Array.from(this.activeStreams.keys()));
+    } else {
+      console.log('[StreamingManager] notifyStreamCompleted called but stream was not active:', chatId);
+    }
+  }
+
+  /**
+   * Get stored tool activity for a chat stream
+   */
+  getToolActivity(chatId: string): string | null | undefined {
+    const stream = this.activeStreams.get(chatId);
+    return stream?.toolActivity;
+  }
+
+  /**
+   * Set tool activity for a chat stream (used during streaming)
+   */
+  setToolActivity(chatId: string, activity: string | null): void {
+    const stream = this.activeStreams.get(chatId);
+    if (stream) {
+      stream.toolActivity = activity;
+      logger.debug({ chatId, activity }, 'Updated tool activity for stream');
+    }
+  }
+
+  /**
+   * Get persistent stream status for debugging
+   */
+  async getStreamStatus(streamId?: string): Promise<any> {
+    try {
+      return await persistentStreamClient.getStreamStatus(streamId);
+    } catch (error) {
+      logger.error({ streamId, error }, 'Failed to get stream status');
+      return null;
+    }
   }
 }
 

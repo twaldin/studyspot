@@ -4,11 +4,11 @@ import React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
-import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@studyspot/ui/components/button";
+import { Form, FormControl, FormField, FormItem } from "@studyspot/ui/components/form";
+import { Textarea } from "@studyspot/ui/components/textarea";
 import { MoveRight } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@studyspot/ui/lib/utils";
 
 const formSchema = z.object({
   message: z.string().min(1),

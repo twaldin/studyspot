@@ -15,6 +15,7 @@ export interface Database {
           code: string | null;
           title: string | null;
           school_id: string;
+          icon: string | null;
           created_at: string;
           updated_at: string;
           canvas_course_id: number | null;
@@ -24,6 +25,7 @@ export interface Database {
           code?: string | null;
           title?: string | null;
           school_id: string;
+          icon?: string | null;
           created_at?: string;
           updated_at?: string;
           canvas_course_id?: number | null;
@@ -33,6 +35,7 @@ export interface Database {
           code?: string | null;
           title?: string | null;
           school_id?: string;
+          icon?: string | null;
           created_at?: string;
           updated_at?: string;
           canvas_course_id?: number | null;
