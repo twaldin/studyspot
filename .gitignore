@@ -77,3 +77,4 @@ workers/*/.mastra/
 *TEST_*.md
 test-*.sh
 add-*.sh
+packages/ui/node_modules/
