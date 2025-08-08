@@ -6,7 +6,7 @@
     "dev": "npx mastra dev",
     "build": "./build.sh",
     "build:unsafe": "npx mastra build",
-    "deploy": "cd .mastra/output && wrangler deploy --config wrangler.json",
+    "deploy": "cd .mastra/output && npx wrangler deploy --config wrangler.json",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
