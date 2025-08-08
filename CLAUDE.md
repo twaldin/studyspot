@@ -13,6 +13,7 @@ This is a **pnpm workspace monorepo** with a distributed Cloudflare Workers arch
 ### Applications
 
 #### 1. **@studyspot/web** (`apps/web/`)
+
 - **Purpose**: Main Next.js 15 frontend application deployed as Cloudflare Worker
 - **Tech Stack**: Next.js 15 App Router, TypeScript, TailwindCSS 4, Clerk Auth, TanStack Query
 - **Features**: Course management, document upload, AI chat interface, user onboarding
@@ -20,6 +21,7 @@ This is a **pnpm workspace monorepo** with a distributed Cloudflare Workers arch
 - **Database**: Supabase PostgreSQL with JWT-based RLS security
 
 #### 2. **Assistant Worker** (`workers/assistant/`)
+
 - **Purpose**: Mastra-based AI assistant deployed as Cloudflare Worker
 - **Tech Stack**: Mastra framework with Cloudflare deployer, Anthropic Claude 3.5, OpenAI embeddings, Supabase vector search
 - **Features**: RAG workflows, document retrieval tools, streaming responses, persistent stream management, built-in Mastra playground
@@ -27,6 +29,7 @@ This is a **pnpm workspace monorepo** with a distributed Cloudflare Workers arch
 - **Key Innovation**: Persistent streaming architecture allowing streams to continue even when clients disconnect
 
 #### 3. **landing-page** (`apps/landing-page/`)
+
 - **Purpose**: Marketing/landing page for StudySpot
 - **Tech Stack**: Next.js 15, TailwindCSS
 - **Features**: Static landing page
@@ -35,10 +38,11 @@ This is a **pnpm workspace monorepo** with a distributed Cloudflare Workers arch
 ### Shared Packages
 
 #### **@studyspot/ui** (`packages/ui/`)
+
 - **Purpose**: Shared UI component library and design system for all applications
 - **Tech Stack**: React 19, Radix UI primitives, TailwindCSS 4, TypeScript
 - **Components**: 20+ pre-built components (Button, Card, Dialog, Form, etc.)
-- **Features**: 
+- **Features**:
   - Consistent design system across web app and landing page
   - Radix UI accessibility primitives
   - TailwindCSS 4 styling with CSS variables
@@ -50,6 +54,7 @@ This is a **pnpm workspace monorepo** with a distributed Cloudflare Workers arch
 ### Configuration Management
 
 #### Root Configuration (`config/`)
+
 - **`prompt-configs/`**: Centralized prompt configuration JSON files for AI assistant
   - `active.json`: Currently active prompt configuration with system prompts, RAG decision logic, tool instructions
   - `test.json`, `test1.json`: Test configurations for A/B testing
@@ -60,6 +65,7 @@ This is a **pnpm workspace monorepo** with a distributed Cloudflare Workers arch
 ## Development Commands
 
 ### Root Level Commands
+
 ```bash
 # Local development (concurrent web + assistant worker)
 pnpm dev                    # Starts both web app (port 3000) and assistant worker (port 8787)
@@ -90,6 +96,7 @@ pnpm clean                # Clean all build artifacts
 ```
 
 ### Application-Specific Commands
+
 ```bash
 # Web App (apps/web) - Cloudflare Pages deployment
 cd apps/web
@@ -121,6 +128,7 @@ pnpm lint               # Next.js ESLint
 ### Web Application (`apps/web/`)
 
 #### Framework & Structure
+
 - **Next.js 15 App Router** with TypeScript 5.9.2, TailwindCSS 4.0, strict disabled for rapid development
 - **Cloudflare Workers Compatibility**: OpenNext.js integration with specific webpack configuration for edge runtime
 - **Authentication**: Clerk integration with custom theming and JWT-based Supabase authentication
@@ -128,12 +136,13 @@ pnpm lint               # Next.js ESLint
 - **Styling**: TailwindCSS 4.0 with Radix UI components, custom design system, unoptimized images for Cloudflare
 
 #### Feature-Driven Architecture
+
 ```
 apps/web/
 ├── app/                    # Next.js App Router with protected route groups
 │   ├── (main)/            # Protected route group requiring authentication
 │   │   ├── chat/          # AI chat interface and conversation management
-│   │   ├── courses/       # Course selection and management interface  
+│   │   ├── courses/       # Course selection and management interface
 │   │   ├── content/       # Course content browsing and document viewing
 │   │   └── flashcards/    # Interactive flashcard study interface
 │   ├── api/               # Server-side API routes with comprehensive endpoints
@@ -149,7 +158,7 @@ apps/web/
 │   │   ├── services/                   # Specialized services layer
 │   │   │   ├── chat-streaming.service.ts      # Real-time SSE processing
 │   │   │   ├── persistent-stream-client.service.ts  # New persistent stream client
-│   │   │   ├── chat-title-generator.ts        # AI-powered title generation  
+│   │   │   ├── chat-title-generator.ts        # AI-powered title generation
 │   │   │   ├── resource-augmentor.ts          # Document and resource fetching
 │   │   │   ├── streaming-manager.service.ts   # Legacy stream management (being refactored)
 │   │   │   └── chat.service.ts                # Orchestration layer
@@ -213,6 +222,7 @@ apps/web/
 ```
 
 #### Key Architectural Patterns
+
 - **Function-Based Operations**: Pure functions for business logic in `*-operations.ts` and `*.service.ts` files
 - **Selective Service Layer**: Singleton services only for stateful operations (streaming, global state, external API clients)
 - **Feature Modules**: Domain-specific folders with clear separation of concerns
@@ -228,6 +238,7 @@ apps/web/
 ### Assistant Worker (`workers/assistant/`)
 
 #### Mastra Framework Architecture on Cloudflare Workers
+
 - **Mastra Framework**: Agent orchestration with Cloudflare deployer for edge distribution
 - **Multi-Provider AI**: Anthropic Claude 3.5 Sonnet (primary), OpenAI (embeddings), Google Gemini (optional)
 - **Vector Database**: Supabase pgvector with OpenAI text-embedding-3-small (1536 dimensions)
@@ -235,6 +246,7 @@ apps/web/
 - **Global Edge Distribution**: Cloudflare Workers providing sub-50ms response times worldwide
 
 #### Core Components Architecture
+
 ```
 workers/assistant/
 ├── src/mastra/
@@ -268,9 +280,11 @@ workers/assistant/
 ```
 
 #### Persistent Streaming Architecture (Current Implementation)
+
 The assistant worker features a groundbreaking persistent streaming architecture that solves the fundamental problem of client disconnections during long AI responses:
 
 **Key Features:**
+
 - **Stream Persistence**: Streams continue processing even when no clients are connected
 - **Multi-Client Support**: Multiple subscribers can connect to the same stream
 - **Catch-up Mechanism**: New clients receive all previous events instantly
@@ -279,11 +293,13 @@ The assistant worker features a groundbreaking persistent streaming architecture
 - **Navigation Support**: Seamless stream resumption when navigating between chats
 
 **API Endpoints:**
+
 - `POST /chat/stream` - Create new stream or subscribe to existing
 - `POST /chat/stream/subscribe` - Subscribe to specific stream with catch-up
 - `GET /chat/stream/status` - Stream monitoring and debugging
 
 #### RAG Workflow Architecture
+
 1. **Query Analysis**: Intelligent determination of RAG retrieval necessity using dedicated agent
 2. **Vector Search**: Semantic similarity search across course documents using pgvector
 3. **Document Retrieval**: Complete document reconstruction from chunks with relevance scoring
@@ -292,6 +308,7 @@ The assistant worker features a groundbreaking persistent streaming architecture
 6. **Streaming Response**: Server-Sent Events with tool activity indicators and thinking tags
 
 #### Mastra Configuration & Deployment
+
 - **CloudflareDeployer**: Automated deployment configuration with KV namespace bindings
 - **Custom Build Process**: `build.sh` script prevents environment variable leaks during build
 - **Environment Isolation**: Separate handling of development vs production environment variables
@@ -301,7 +318,9 @@ The assistant worker features a groundbreaking persistent streaming architecture
 ### Configuration Management & Secrets
 
 #### Environment Variables Architecture
+
 **Required Environment Variables:**
+
 ```bash
 # Database (Supabase) - Required for both applications
 SUPABASE_URL=                           # Supabase project URL
@@ -329,6 +348,7 @@ CLOUDFLARE_ACCOUNT_ID=                  # Cloudflare account ID
 ```
 
 #### Secrets Management Best Practices
+
 - **Cloudflare Workers Secrets**: Use `wrangler secret put` for all sensitive data
 - **Development Environment**: Use `.dev.vars` files for local Wrangler development
 - **Production Separation**: Never commit environment variables to wrangler.json
@@ -337,7 +357,9 @@ CLOUDFLARE_ACCOUNT_ID=                  # Cloudflare account ID
 ### Database Architecture & Integration
 
 #### PostgreSQL Schema with Vector Extensions
+
 **Core Tables:**
+
 - **`chunks`**: Document text segments with vector embeddings (1536 dimensions)
   - `id`, `content`, `embedding`, `doc_id`, `course_id`, `chunk_count`
 - **`docs`**: File metadata and course associations
@@ -350,11 +372,14 @@ CLOUDFLARE_ACCOUNT_ID=                  # Cloudflare account ID
   - `id`, `user_id`, `course_id`, `title`, `chats` (JSONB), `created_at`, `updated_at`
 
 **Vector Search Functions:**
+
 - **`match_chunks`**: Semantic similarity search using pgvector
 - **`match_documents_by_course`**: Course-scoped document search
 
 #### Database Service Architecture
+
 **Web App Service** (`apps/web/lib/services/database/supabase.service.ts`):
+
 - Comprehensive singleton service with authenticated and anonymous clients
 - Retry logic with exponential backoff for network resilience
 - Query execution with timeout handling and error categorization
@@ -362,12 +387,14 @@ CLOUDFLARE_ACCOUNT_ID=                  # Cloudflare account ID
 - Cloudflare context integration for service role operations
 
 **Assistant Worker Service** (`workers/assistant/src/services/supabase.service.ts`):
+
 - Multi-environment client management (dev/staging/prod)
 - Direct service role access for RAG operations
 - Optimized for edge runtime performance
 - Comprehensive database operations for AI workflows
 
 #### Security Architecture
+
 - **Row-Level Security (RLS)**: PostgreSQL policies ensuring user data isolation
 - **JWT-based Authentication**: Clerk integration with Supabase custom claims
 - **File Validation Pipeline**: Multi-layer security for document uploads
@@ -375,88 +402,16 @@ CLOUDFLARE_ACCOUNT_ID=                  # Cloudflare account ID
   - DOMPurify for user-generated content sanitization
 - **API Rate Limiting**: Service-layer protection against abuse
 
-## MCP (Model Context Protocol) Integration
+## Development Environment Integration
 
-### Configured MCP Servers
-StudySpot development environment includes six MCP servers for enhanced Claude Code functionality:
+StudySpot is designed to work with Claude Code and supports MCP (Model Context Protocol) servers for enhanced development workflows. Individual developers may configure their own MCP servers and development environments based on their preferences.
 
-1. **shadcn**: `npx -y @heilgar/shadcn-ui-mcp-server`
-   - **Purpose**: shadcn/ui component management and installation
-   - **Usage**: Install and manage UI components from shadcn/ui library
-   - **Best Practice**: Use when adding new UI components to maintain design system consistency
-
-2. **filesystem**: `npx -y @modelcontextprotocol/server-filesystem /Users/twaldin/dev/studyspot-ui`
-   - **Purpose**: File system operations within the project directory
-   - **Usage**: File reading, writing, and directory operations with proper permissions
-   - **Best Practice**: Use for safe file operations within the project boundary
-
-3. **typescript-docs**: `npx -y @modelcontextprotocol/server-everything`
-   - **Purpose**: TypeScript documentation and type information access
-   - **Usage**: Access TypeScript compiler APIs, type definitions, and documentation
-   - **Best Practice**: Use when working with complex TypeScript types or need language server features
-
-4. **memory**: `npx -y @modelcontextprotocol/server-memory`
-   - **Purpose**: Persistent memory across Claude Code sessions
-   - **Usage**: Store and retrieve context, decisions, and progress across multiple sessions
-   - **Best Practice**: Use to maintain context about ongoing refactors, architectural decisions, and session state
-
-5. **mastra**: `npx -y @mastra/mcp-docs-server`
-   - **Purpose**: Mastra framework documentation and examples
-   - **Usage**: Access Mastra documentation, examples, and best practices
-   - **Best Practice**: Essential when working on the assistant worker or RAG workflows
-
-6. **playwright**: `npx @playwright/mcp`
-   - **Purpose**: Browser automation and testing with Playwright
-   - **Usage**: Automate web browser interactions, take screenshots, test web interfaces
-   - **Best Practice**: Use for testing the web application in different browsers and automated UI testing
-
-### MCP Development Workflow Best Practices
-
-#### Memory Server Usage
-- **Session Continuity**: Store architectural decisions, refactor progress, and complex context
-- **Multi-Session Projects**: Maintain state across multiple Claude Code sessions
-- **Decision Documentation**: Record why certain architectural choices were made
-
-#### Playwright Integration
-- **UI Testing**: Test the web application interface in different scenarios
-- **Screenshot Documentation**: Capture UI states for documentation
-- **Cross-Browser Testing**: Verify functionality across different browsers
-- **Development Preview**: Take screenshots of development changes
-
-#### Filesystem + TypeScript Docs Combination
-- **Safe File Operations**: Use filesystem MCP for reading/writing files within project boundaries
-- **Type-Aware Development**: Leverage typescript-docs for complex type operations
-- **Code Analysis**: Analyze TypeScript code structure and dependencies
-
-### Development Commands with MCP Integration
-
-#### Starting Development with MCP Servers
-```bash
-# Start both web and assistant development with all MCP servers available
-pnpm dev
-
-# In separate terminal, use Claude Code with full MCP access for development tasks
-claude code
-
-# Within Claude Code, you can:
-# - Use memory server to maintain context
-# - Use playwright to test the running application
-# - Use filesystem server for safe file operations
-# - Use mastra server for assistant worker development
-# - Use shadcn server for UI component management
-```
-
-#### MCP-Enhanced Development Workflow
-1. **Start Development**: `pnpm dev` to run both web (port 3000) and assistant worker (port 8787)
-2. **Use Memory Server**: Store context about current development session and architectural decisions
-3. **Playwright Testing**: Navigate to `http://localhost:3000` and test application functionality
-4. **Mastra Documentation**: Reference Mastra docs when modifying assistant worker
-5. **Filesystem Operations**: Make safe changes to files within the project directory
-6. **TypeScript Support**: Get enhanced type checking and documentation
+For specific MCP configurations and personal development setups, refer to your local CLAUDE.local.md file (not tracked in git).
 
 ## Code Conventions & Patterns
 
 ### Service Architecture Patterns
+
 - **Function-First Approach**: Pure functions for stateless business logic and database operations
 - **Selective Singletons**: Singleton pattern only for legitimate use cases (streaming services, external API clients, global state)
 - **Operations Pattern**: Database operations and business logic in `*-operations.ts` files using pure functions
@@ -466,14 +421,16 @@ claude code
 - **Logging**: Pino logger with structured logging and pretty formatting in development
 
 ### File Naming & Organization Conventions
+
 - **Operations**: `*-operations.ts` - Database operations and pure business logic functions
 - **Services**: `*.service.ts` - Complex stateful business logic (use sparingly, prefer operations)
-- **Types**: `*.types.ts` - TypeScript interface definitions  
+- **Types**: `*.types.ts` - TypeScript interface definitions
 - **Components**: `*.tsx` - React components with PascalCase naming
 - **Hooks**: `use-*.ts` - Custom React hooks with camelCase naming
 - **Utils**: `*.ts` - Pure utility functions for simple transformations
 
 ### Import Conventions
+
 - **Path Aliases**: `@/*` maps to application root in web app
 - **Absolute Imports**: Prefer absolute imports over relative for clarity
 - **Function Imports**: Import individual functions from operations and utility files
@@ -482,6 +439,7 @@ claude code
 - **AI Service Layer**: Always use consolidated AI services (`lib/services/ai/`) instead of direct client imports
 
 ### AI Provider Integration Standards
+
 - **Multi-Provider Support**: Anthropic Claude 3.5, OpenAI (embeddings), Google Gemini
 - **Unified Interface**: Consistent service layer abstractions across different AI providers
 - **Model Configuration**: Environment-based model selection and API key management
@@ -492,6 +450,7 @@ claude code
 ## Testing & Quality Assurance
 
 ### Development Testing Approach
+
 - **Manual Testing**: Primary approach using Mastra Playground and direct interaction
 - **Mastra Playground**: Built-in testing via assistant worker's Mastra playground at development URL
 - **RAG Workflow Testing**: Test vector search, document retrieval, and response generation
@@ -499,6 +458,7 @@ claude code
 - **Cross-Browser Testing**: Use MCP Playwright server for automated browser testing
 
 ### Quality Evaluation Process
+
 1. **Mastra Playground**: Execute workflows and test configurations in real-time
 2. **Local Development Testing**: Direct interaction with assistant worker endpoints
 3. **Document Usage Monitoring**: Track which documents are being referenced in responses
@@ -506,6 +466,7 @@ claude code
 5. **MCP Playwright Testing**: Automated UI testing and screenshot verification
 
 ### Performance Optimization
+
 - **Cloudflare Edge Distribution**: Sub-50ms response times globally
 - **Vector Search Optimization**: Efficient pgvector queries with similarity thresholds
 - **Persistent Streaming**: Eliminates reconnection overhead and lost responses
@@ -515,6 +476,7 @@ claude code
 ## Deployment Architecture
 
 ### Cloudflare Workers Platform
+
 - **Global Edge Network**: 180+ locations worldwide for optimal performance
 - **Automatic Scaling**: Handle traffic spikes without infrastructure management
 - **Worker-to-Worker Communication**: Direct service bindings between applications
@@ -524,6 +486,7 @@ claude code
 ### Deployment Commands & Processes
 
 #### Web Application Deployment
+
 ```bash
 cd apps/web
 pnpm build:cloudflare      # OpenNext.js build for Cloudflare Pages
@@ -531,6 +494,7 @@ pnpm deploy               # Deploy to Cloudflare Pages
 ```
 
 #### Assistant Worker Deployment
+
 ```bash
 cd workers/assistant
 pnpm build                # Custom build script with env isolation
@@ -538,11 +502,13 @@ pnpm deploy               # Deploy to Cloudflare Workers via Mastra
 ```
 
 #### Environment-Specific Deployments
+
 - **Development**: Local Wrangler development with `.dev.vars`
 - **Staging**: Preview deployments with environment-specific secrets
 - **Production**: Full Cloudflare deployment with optimized configuration
 
 ### Infrastructure Monitoring
+
 - **Cloudflare Analytics**: Built-in performance and error monitoring
 - **Supabase Monitoring**: Database performance and query optimization
 - **Custom Logging**: Structured logging with Pino for debugging and analysis
@@ -551,18 +517,21 @@ pnpm deploy               # Deploy to Cloudflare Workers via Mastra
 ## Architecture Design Principles
 
 ### Function-First Architecture Benefits
+
 - **Testability**: Pure functions enable comprehensive unit testing
 - **Maintainability**: Clear separation of concerns and minimal side effects
 - **Scalability**: Stateless functions scale horizontally on edge infrastructure
 - **Debugging**: Easier to trace issues and understand data flow
 
 ### Anti-Patterns Eliminated
+
 - ❌ **Singleton Abuse**: No more singleton classes for stateless operations
 - ❌ **Unnecessary Abstraction**: Removed wrapper classes around simple operations
 - ❌ **Mixed Responsibilities**: Clear separation between database, business logic, and presentation layers
 - ❌ **Direct Client Imports**: All AI integrations go through service layer abstraction
 
 ### Current Best Practices
+
 - ✅ **Feature-Driven Organization**: Domain-specific code in `features/` directories
 - ✅ **Clear Separation of Concerns**: Operations, services, utils, and components have distinct roles
 - ✅ **Testable Architecture**: Pure functions and modular design enable comprehensive testing
@@ -574,6 +543,7 @@ pnpm deploy               # Deploy to Cloudflare Workers via Mastra
 ## Development Workflow Optimization
 
 ### Recommended Development Flow
+
 1. **Environment Setup**: Configure all required environment variables
 2. **MCP Server Verification**: Ensure all six MCP servers are connected (`claude mcp list`)
 3. **Concurrent Development**: Start both applications with `pnpm dev`
@@ -582,6 +552,7 @@ pnpm deploy               # Deploy to Cloudflare Workers via Mastra
 6. **Type Safety**: Leverage TypeScript MCP server for enhanced development experience
 
 ### Common Development Tasks
+
 - **Adding New Features**: Follow feature-first architecture in appropriate domain directory
 - **Database Changes**: Update both type definitions and service layer implementations
 - **AI Prompt Tuning**: Modify centralized prompt configurations in `config/prompt-configs/`
@@ -590,6 +561,7 @@ pnpm deploy               # Deploy to Cloudflare Workers via Mastra
 - **Performance Optimization**: Monitor Cloudflare analytics and optimize edge performance
 
 ### Troubleshooting & Debugging
+
 - **MCP Server Issues**: Use `claude mcp list` to verify server health
 - **Database Connection**: Check Supabase service layer for connection issues
 - **Streaming Problems**: Monitor persistent stream manager logs and status endpoints
@@ -597,3 +569,4 @@ pnpm deploy               # Deploy to Cloudflare Workers via Mastra
 - **Deployment Failures**: Check Cloudflare Workers logs and secret configuration
 
 This comprehensive guide ensures future Claude instances can effectively navigate and contribute to the StudySpot codebase while following established architectural patterns and leveraging the full MCP server ecosystem.
+
