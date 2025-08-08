@@ -16,6 +16,7 @@
 # next.js
 /.next/
 /out/
+.open-next/
 
 # production
 /build
@@ -23,6 +24,7 @@
 # misc
 .DS_Store
 *.pem
+.npmrc
 
 # debug
 npm-debug.log*
@@ -35,6 +37,13 @@ yarn-error.log*
 
 # vercel
 .vercel
+
+# cloudflare
+.wrangler
+
+# mastra build output
+.mastra/
+workers/*/.mastra/
 
 # typescript
 *.tsbuildinfo
@@ -51,4 +60,21 @@ apps/*/.next/
 apps/*/node_modules/
 apps/*/dist/
 apps/*/.turbo/
-packages/*/node_modules/
+
+# Workers-specific ignores
+workers/*/node_modules/
+workers/*/.dev.vars
+workers/*/.wrangler/
+workers/*/dist/
+workers/*/.cache/
+workers/*/.mastra/
+
+# Temporary and backup files
+*.log
+*.backup.*
+*CHECKLIST.md
+*TROUBLESHOOTING.md
+*TEST_*.md
+test-*.sh
+add-*.sh
+packages/ui/node_modules/

@@ -8,7 +8,7 @@ import { Button } from "@studyspot/ui/components/button";
 import { Form, FormControl, FormField, FormItem } from "@studyspot/ui/components/form";
 import { Textarea } from "@studyspot/ui/components/textarea";
 import { MoveRight } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@studyspot/ui/lib/utils";
 
 const formSchema = z.object({
   message: z.string().min(1),

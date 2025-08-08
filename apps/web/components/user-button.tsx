@@ -13,7 +13,7 @@ import {
 import {
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@studyspot/ui/components/sidebar";
+} from "@/components/ui/sidebar";
 import { useClerk, useUser } from "@clerk/nextjs";
 import { useRemoveSchool } from "@/hooks/api";
 import { useRouter } from "next/navigation";

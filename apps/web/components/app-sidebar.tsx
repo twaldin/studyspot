@@ -42,7 +42,7 @@ import {
   SidebarHeader,
   SidebarMenu,
   useSidebar,
-} from "@studyspot/ui/components/sidebar";
+} from "@/components/ui/sidebar";
 import { Button } from "@studyspot/ui/components/button";
 import { Separator } from "@studyspot/ui/components/separator";
 import React from "react";
@@ -237,6 +237,7 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <ChatList
               chats={chats}
+              courses={allCourses}
               isLoading={isLoadingChats}
               error={chatsError}
               onChatSelect={onChatSelect}

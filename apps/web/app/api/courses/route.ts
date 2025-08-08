@@ -17,7 +17,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const auth = await validateAuthWithSchool();
-    const { title, code, uploadedFileUrl, tempFileKeys } = await request.json();
+    const { title, code, icon, uploadedFileUrl, tempFileKeys } = await request.json();
 
     if (!title || !code) {
       return NextResponse.json(
@@ -50,6 +50,7 @@ export async function POST(request: Request) {
     const result = await createCourse(auth.supabase, {
       title,
       code,
+      icon,
       schoolId: auth.selectedSchool,
       uploadedFileUrl,
       tempFileKeys,

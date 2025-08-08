@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { Loader2 } from "lucide-react";
 
@@ -8,6 +8,7 @@ export interface ProcessingFile {
   status: "processing" | "success" | "failed";
   error?: string;
   reason?: string;
+  progress?: string; // Current processing step
 }
 
 export interface DocumentProcessingState {
@@ -50,6 +51,7 @@ export function useDocumentProcessing() {
               status: (success ? "success" : "failed") as "success" | "failed",
               error,
               reason,
+              progress: undefined, // Clear progress when complete
             }
             : file
         );
@@ -66,6 +68,18 @@ export function useDocumentProcessing() {
           toastShown: prev.toastShown,
         };
       });
+    },
+    [],
+  );
+
+  const updateFileProgress = useCallback(
+    (fileId: string, progress: string) => {
+      setState((prev) => ({
+        ...prev,
+        processingFiles: prev.processingFiles.map((file) =>
+          file.id === fileId ? { ...file, progress } : file
+        ),
+      }));
     },
     [],
   );
@@ -87,17 +101,31 @@ export function useDocumentProcessing() {
   }, []);
 
   useEffect(() => {
-    if (state.isProcessing && state.processingFiles.length > 0 && !state.hasFinished) {
+    if (
+      state.isProcessing && state.processingFiles.length > 0 &&
+      !state.hasFinished
+    ) {
       if (state.processingFiles.length === 1) {
-        toast.loading(`Processing ${state.processingFiles[0].name}`, {
+        const file = state.processingFiles[0];
+        const message = file.progress
+          ? `${file.name}: ${file.progress}`
+          : `Processing ${file.name}`;
+        toast.loading(message, {
           id: "processing-files",
           duration: Infinity,
         });
       } else {
-        toast.loading(`Processing ${state.processingFiles.length} files`, {
-          id: "processing-files",
-          duration: Infinity,
-        });
+        const processingCount = state.processingFiles.filter((f) =>
+          f.status === "processing"
+        ).length;
+        toast.loading(
+          `${state.processingFiles.length - processingCount
+          }/${state.processingFiles.length} files processed`,
+          {
+            id: "processing-files",
+            duration: Infinity,
+          },
+        );
       }
     } else if (state.hasFinished) {
       toast.dismiss("processing-files");
@@ -105,7 +133,7 @@ export function useDocumentProcessing() {
       const totalFiles = processingFiles.length;
       if (totalFiles > 0) {
         const successCount = processingFiles.filter(
-          (f) => f.status === "success"
+          (f) => f.status === "success",
         ).length;
         const failedCount = totalFiles - successCount;
 
@@ -116,8 +144,8 @@ export function useDocumentProcessing() {
               duration: 4000,
             });
           } else {
-            const errorMessage =
-              file.reason || file.error || "Processing failed";
+            const errorMessage = file.reason || file.error ||
+              "Processing failed";
             toast.error(`${file.name}: ${errorMessage}`, {
               duration: 6000,
             });
@@ -164,7 +192,9 @@ export function useDocumentProcessing() {
     state,
     startProcessing,
     markFileComplete,
+    updateFileProgress,
     finishProcessing,
     clearProcessing,
   };
 }
+

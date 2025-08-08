@@ -252,10 +252,9 @@ export class SupabaseService {
    * Get Supabase URL from environment
    */
   private getSupabaseUrl(): string {
+    // Ensure env is initialized
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    if (!url) {
-      throw new Error("NEXT_PUBLIC_SUPABASE_URL environment variable is not set");
-    }
+    if (!url) throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL');
     return url;
   }
 
@@ -263,10 +262,9 @@ export class SupabaseService {
    * Get Supabase anonymous key from environment
    */
   private getSupabaseAnonKey(): string {
+    // Ensure env is initialized
     const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    if (!key) {
-      throw new Error("NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable is not set");
-    }
+    if (!key) throw new Error('Missing NEXT_PUBLIC_SUPABASE_ANON_KEY');
     return key;
   }
 
@@ -299,14 +297,59 @@ export const supabaseService = SupabaseService.getInstance();
 /**
  * Creates a service role client for admin operations
  */
+// Import at the top of the file (will be no-op if not available)
+let getCloudflareContext: any;
+try {
+  getCloudflareContext = require('@opennextjs/cloudflare').getCloudflareContext;
+} catch (e) {
+  // Not in Cloudflare environment
+}
+
 export function createServiceRoleClient() {
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    logger.error("SUPABASE_SERVICE_ROLE_KEY is not set");
+  let supabaseUrl: string | undefined;
+  let serviceRoleKey: string | undefined;
+  
+  // Try Cloudflare context first (production)
+  if (typeof getCloudflareContext === 'function') {
+    try {
+      const context = getCloudflareContext();
+      if (context?.env) {
+        // In Cloudflare Workers, secrets are in context.env
+        supabaseUrl = context.env.SUPABASE_URL || context.env.NEXT_PUBLIC_SUPABASE_URL;
+        serviceRoleKey = context.env.SUPABASE_SERVICE_ROLE_KEY;
+        
+        if (serviceRoleKey) {
+          logger.info("Using SUPABASE_SERVICE_ROLE_KEY from Cloudflare context");
+        }
+      }
+    } catch (error) {
+      logger.warn("Failed to get Cloudflare context:", error);
+    }
+  }
+  
+  // Fallback to process.env (local dev)
+  if (!supabaseUrl) {
+    supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+  }
+  if (!serviceRoleKey) {
+    serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (serviceRoleKey) {
+      logger.info("Using SUPABASE_SERVICE_ROLE_KEY from process.env");
+    }
+  }
+  
+  if (!serviceRoleKey) {
+    logger.error("SUPABASE_SERVICE_ROLE_KEY is not set in Cloudflare context or process.env");
     throw new Error("SUPABASE_SERVICE_ROLE_KEY is not set");
+  }
+  
+  if (!supabaseUrl) {
+    logger.error("SUPABASE_URL is not set");
+    throw new Error("SUPABASE_URL is not set");
   }
 
   return createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    supabaseUrl,
+    serviceRoleKey,
   );
 }

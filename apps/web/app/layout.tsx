@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import { Crimson_Text } from "next/font/google";
-import "@studyspot/ui/globals.css";
+import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ClerkThemeProvider } from "@/components/clerk-theme-provider";
 import { cn } from "@studyspot/ui/lib/utils";
 import { QueryProvider } from "@/lib/providers/query-provider";
 import { DeveloperModeProvider } from "@/contexts/developer-mode-context";
+import { ConditionalLayout } from "./conditional-layout";
 
 const crimsonText = Crimson_Text({
   weight: ["400", "600", "700"],
@@ -16,7 +17,15 @@ const crimsonText = Crimson_Text({
 export const metadata: Metadata = {
   title: "StudySpot UI",
   description: "StudySpot UI Testing Environment",
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+    apple: "/favicon.ico",
+  },
 };
+
+// Remove force-dynamic as it can cause routing issues with OpenNext.js
+// Let Next.js automatically determine rendering mode based on usage
 
 export default function RootLayout({
   children,
@@ -35,7 +44,9 @@ export default function RootLayout({
           >
             <ClerkThemeProvider>
               <DeveloperModeProvider>
-                {children}
+                <ConditionalLayout>
+                  {children}
+                </ConditionalLayout>
               </DeveloperModeProvider>
             </ClerkThemeProvider>
           </ThemeProvider>

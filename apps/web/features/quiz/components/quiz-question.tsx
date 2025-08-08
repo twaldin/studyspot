@@ -10,7 +10,7 @@ import {
 } from "@/features/quiz/types";
 import { Card, CardContent } from "@studyspot/ui/components/card";
 import { Button } from "@studyspot/ui/components/button";
-import { cn } from "@/lib/utils";
+import { cn } from "@studyspot/ui/lib/utils";
 import { QuizContent } from "./quiz-content";
 
 interface QuizQuestionProps {

@@ -125,8 +125,9 @@ export function useCreateChat() {
         return [chatSummary, ...old];
       });
       
-      // Set individual chat data
-      queryClient.setQueryData(queryKeys.chats.detail(newChat.id), newChat);
+      // Don't cache the detailed chat here - it will be fetched when navigating to the chat
+      // This prevents caching incomplete data (messages without linkedResources)
+      // The streaming completion will properly update the cache with complete data
       
       logger.info({ chatId: newChat.id }, 'Created new chat');
     },
@@ -141,6 +142,7 @@ export function useDeleteChat() {
   const queryClient = useQueryClient();
   const { data: school } = useUserSchool();
   const schoolId = school?.id;
+  const { joinedCourses } = useAuthenticatedUser();
 
   return useMutation({
     mutationKey: mutationKeys.chats.delete,
@@ -149,36 +151,48 @@ export function useDeleteChat() {
       return chatId;
     },
     onMutate: async (deletedChatId: string) => {
+      // Use the same query key structure as the chat list
+      const chatListQueryKey = [...queryKeys.chats.list(schoolId), 'joined-courses', joinedCourses];
+      
       await queryClient.cancelQueries({
-        queryKey: queryKeys.chats.list(schoolId),
+        queryKey: chatListQueryKey,
       });
 
-      const previousChats = queryClient.getQueryData(
-        queryKeys.chats.list(schoolId)
-      );
+      const previousChats = queryClient.getQueryData(chatListQueryKey);
 
+      // Optimistically remove the chat from the list
       queryClient.setQueryData(
-        queryKeys.chats.list(schoolId),
+        chatListQueryKey,
         (old: ChatSummary[] | undefined) =>
           old?.filter((chat) => chat.id !== deletedChatId) || []
       );
 
-      return { previousChats };
+      return { previousChats, chatListQueryKey };
     },
     onError: (err, deletedChatId, context) => {
-      if (context?.previousChats) {
+      // Rollback optimistic update on error
+      if (context?.previousChats && context.chatListQueryKey) {
         queryClient.setQueryData(
-          queryKeys.chats.list(schoolId),
+          context.chatListQueryKey,
           context.previousChats
         );
       }
       logger.error({ error: err, chatId: deletedChatId }, "Failed to delete chat");
     },
-    onSettled: (deletedChatId) => {
+    onSettled: (deletedChatId, error, variables, context) => {
+      // Invalidate both the specific query key and general chat queries
+      if (context?.chatListQueryKey) {
+        queryClient.invalidateQueries({
+          queryKey: context.chatListQueryKey,
+        });
+      }
+      
+      // Also invalidate general chat list queries to be safe
       queryClient.invalidateQueries({
         queryKey: queryKeys.chats.list(schoolId),
       });
 
+      // Remove the individual chat from cache
       if (deletedChatId) {
         queryClient.removeQueries({
           queryKey: queryKeys.chats.detail(deletedChatId),
@@ -381,7 +395,7 @@ export function useUpdateChatCacheWithHistory() {
     mutationKey: mutationKeys.chats.updateCacheWithHistory,
     mutationFn: async ({ chatId, messages }: {
       chatId: string;
-      messages: Array<{ role: string; content: string; linkedDocumentIds?: string[] }>;
+      messages: Array<{ role: string; content: string; linkedResources?: any[]; linked_resources?: Array<{ type: string; id: string }> }>;
     }) => {
       // This doesn't make an API call, just updates the cache
       return { chatId, messages };
@@ -391,13 +405,23 @@ export function useUpdateChatCacheWithHistory() {
       queryClient.setQueryData(queryKeys.chats.detail(chatId), (oldData: any) => {
         if (!oldData) return oldData;
         
-        // Update the chat data with complete message history
+        // Convert the messages to match the API response format (augmented messages with linkedResources)
+        const apiFormattedMessages = messages.map(msg => ({
+          role: msg.role,
+          content: msg.content,
+          // Keep full linkedResources objects for immediate use without re-fetching
+          linkedResources: msg.linkedResources || [],
+          // Keep refs for database compatibility
+          linked_resources: msg.linked_resources || []
+        }));
+        
+        // Update the chat data with complete message history in API format
         const updatedData = {
           ...oldData,
-          chats: messages
+          chats: apiFormattedMessages
         };
         
-        logger.info('Updated chat cache with full conversation history', { chatId, messagesCount: messages.length });
+        logger.info('Updated chat cache with full conversation history including linkedResources', { chatId, messagesCount: messages.length });
         return updatedData;
       });
     },

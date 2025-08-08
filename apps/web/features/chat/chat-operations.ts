@@ -124,6 +124,36 @@ export async function createChat(data: CreateChatData): Promise<Chat> {
 }
 
 /**
+ * Update chat messages
+ */
+export async function updateChatMessages(
+  chatId: string, 
+  userId: string, 
+  messages: Array<{
+    role: string;
+    content: string;
+    linkedDocumentIds?: string[];
+  }>
+): Promise<void> {
+    logger.info({ chatId, userId, messageCount: messages.length }, '[ChatOperations] Updating chat messages');
+
+    const supabase = await supabaseService.createAuthenticatedClient();
+    
+    const { error } = await supabase
+      .from('chats')
+      .update({ chats: messages })
+      .eq('id', chatId)
+      .eq('user_id', userId);
+
+    if (error) {
+      logger.error({ error, chatId, userId }, '[ChatOperations] Supabase error updating chat');
+      throw new Error('Failed to update chat in database');
+    }
+
+    logger.info({ chatId, userId }, '[ChatOperations] Chat messages updated successfully');
+}
+
+/**
  * Delete a chat
  */
 export async function deleteChat(chatId: string, userId: string): Promise<void> {

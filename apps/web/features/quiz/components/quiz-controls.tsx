@@ -13,7 +13,7 @@ import {
   Shuffle,
   Target,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@studyspot/ui/lib/utils";
 
 interface QuizControlsProps {
   settings: StudySettings;

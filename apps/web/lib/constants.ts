@@ -26,13 +26,6 @@ export const API_CONSTANTS = {
   BYTES_TO_KB_DIVISOR: 1024,
 } as const;
 
-// External URLs
-export const EXTERNAL_URLS = {
-  BREVO_API: "https://api.brevo.com/v3/contacts",
-  SOCIAL_INSTAGRAM: "https://instagram.com",
-  SOCIAL_YOUTUBE: "https://youtube.com",
-  SVG_NAMESPACE: "http://www.w3.org/2000/svg",
-} as const;
 
 // Default messages and prompts
 export const DEFAULT_MESSAGES = {
