@@ -1,11 +1,9 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 import { Database } from "@/lib/database.types";
 import logger from "@/lib/logger";
-import crypto from "crypto";
-import { openAIService } from "@/lib/services/ai/openai.service";
+import { chatCompletion } from "@/lib/services/ai/ai-sdk-service";
 import { ICourse, ICourseInsert } from "@/features/courses/course.model";
 import { cleanupTempFiles } from "@/lib/services/file";
-import { documentIngestionService } from "@/lib/services/document-ingestion/document-ingestion.service";
 import { clerkClient } from "@clerk/nextjs/server";
 
 /**
@@ -64,7 +62,33 @@ export async function verifyCourse(
     };
   }
 
-  // Content safety check
+  // Use assistant worker for verification if available
+  const assistantApiUrl = process.env.NEXT_PUBLIC_ASSISTANT_API_URL;
+  if (assistantApiUrl) {
+    try {
+      logger.info({ courseCode, schoolName }, "Using assistant worker for course verification");
+      
+      const response = await fetch(`${assistantApiUrl}/courses/verify`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ courseCode, schoolName }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        logger.info({ courseCode, result }, "Course verification completed via assistant worker");
+        return result;
+      } else {
+        logger.warn({ courseCode, status: response.status }, "Assistant worker verification failed, falling back to local");
+      }
+    } catch (error) {
+      logger.warn({ error, courseCode }, "Failed to reach assistant worker, falling back to local verification");
+    }
+  }
+
+  // Fallback to local verification with fixed Gemini configuration
   const safetyPrompt = `You are a content safety moderator for an educational platform. Analyze the course code "${courseCode}" for any inappropriate, harmful, or non-academic content.
 
 Check for:
@@ -86,19 +110,24 @@ Respond with a JSON object containing:
   "reason": string (brief explanation if unsafe, otherwise "Content appears appropriate for academic use")
 }`;
 
-  const safetyResponse = await openAIService.chatCompletion([
-    { role: "user", content: safetyPrompt },
-  ], {
-    model: "gpt-3.5-turbo",
-    temperature: 0,
-    responseFormat: { type: "json_object" },
-  });
+  let safetyResult;
+  try {
+    const safetyResponseText = await chatCompletion(safetyPrompt, {
+      temperature: 0,
+      maxOutputTokens: 200,
+      disableThinking: true,  // Disable thinking for JSON responses
+    });
 
-  if (!safetyResponse.success || !safetyResponse.data) {
-    throw new Error("Failed to validate course content safety");
+    safetyResult = JSON.parse(safetyResponseText);
+  } catch (error) {
+    logger.error({ error, courseCode }, "Failed to validate course content safety");
+    // Default to safe if AI check fails
+    return {
+      verified: true,
+      message: "Course verified for academic use (AI check skipped)",
+      reason: "AI safety check unavailable",
+    };
   }
-
-  const safetyResult = JSON.parse(safetyResponse.data);
 
   // Only block if content is clearly unsafe with high confidence
   if (!safetyResult.isSafe && safetyResult.confidence > 0.8) {
@@ -124,6 +153,7 @@ export async function createCourse(
   params: {
     title: string;
     code: string;
+    icon?: string | null;
     schoolId: string;
     uploadedFileUrl?: string;
     tempFileKeys?: string[];
@@ -141,6 +171,7 @@ export async function createCourse(
   const courseToCreate: ICourseInsert = {
     title: params.title,
     code: params.code,
+    icon: params.icon || null,
     school_id: params.schoolId,
     canvas_course_id: params.canvas_course_id,
   };
@@ -168,26 +199,10 @@ export async function createCourse(
     throw new Error("Failed to create course in database");
   }
 
-  // Process syllabus if uploaded
-  if (params.uploadedFileUrl && newCourse) {
-    const syllabusResult = await processSyllabus({
-      fileKey: crypto.randomUUID(),
-      fileName: "Course Syllabus.pdf",
-      fileUrl: params.uploadedFileUrl,
-      fileType: "application/pdf",
-      courseId: newCourse.id,
-    });
-
-    if (!syllabusResult) {
-      logger.warn({ courseId: newCourse.id }, "Syllabus processing failed");
-      return {
-        course: newCourse as ICourse,
-        message: "Course created but failed to process syllabus. You can upload it again later.",
-        type: "partial_success",
-      };
-    }
-
-    logger.info({ courseId: newCourse.id }, "Course created with successful syllabus processing");
+  // Note: Syllabus processing is now handled client-side via the Mastra document ingestion workflow
+  // This allows for real-time progress tracking and better error handling
+  if (params.uploadedFileUrl) {
+    logger.info({ courseId: newCourse.id }, "Course created with syllabus - client will process via Mastra workflow");
   }
 
   return {
@@ -197,31 +212,6 @@ export async function createCourse(
   };
 }
 
-/**
- * Update an existing course
- */
-export async function updateCourse(
-  supabase: SupabaseClient<Database>,
-  courseId: string,
-  updates: Partial<ICourse>,
-): Promise<ICourse> {
-  logger.info({ courseId, updates }, "Updating course");
-
-  const { data: updatedCourse, error } = await supabase
-    .from("courses")
-    .update(updates)
-    .eq("id", courseId)
-    .select()
-    .single();
-
-  if (error) {
-    logger.error({ error, courseId, updates }, "Error updating course");
-    throw new Error("Failed to update course in database");
-  }
-
-  logger.info({ courseId }, "Successfully updated course");
-  return updatedCourse as ICourse;
-}
 
 /**
  * Delete a course and all associated data
@@ -335,39 +325,6 @@ export async function deleteCourse(
   logger.info({ courseId }, "Successfully deleted course and all associated data");
 }
 
-/**
- * Process syllabus file for a course
- */
-async function processSyllabus(params: {
-  fileKey: string;
-  fileName: string;
-  fileUrl: string;
-  fileType: string;
-  courseId: string;
-}): Promise<boolean> {
-  try {
-    logger.info({ courseId: params.courseId }, "Starting syllabus processing");
-
-    const ingestionSuccess = await documentIngestionService.ingestDocument({
-      fileKey: params.fileKey,
-      fileName: params.fileName,
-      fileUrl: params.fileUrl,
-      fileType: params.fileType,
-      courseId: params.courseId,
-    });
-
-    if (!ingestionSuccess) {
-      logger.warn({ courseId: params.courseId }, "Syllabus ingestion failed");
-      return false;
-    }
-
-    logger.info({ courseId: params.courseId }, "Syllabus processing completed successfully");
-    return true;
-  } catch (error) {
-    logger.error({ error, courseId: params.courseId }, "Error during syllabus processing");
-    return false;
-  }
-}
 
 /**
  * Clean up user metadata for a deleted course

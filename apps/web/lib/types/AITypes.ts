@@ -78,6 +78,7 @@ export interface ClaudeChatParams {
 
 export interface GeminiConfig extends AIConfig {
   model?: "gemini-pro" | "gemini-pro-flash" | "gemini-pro-flash-latest";
+  disableThinking?: boolean;
 }
 
 export interface GeminiChatParams {
@@ -94,6 +95,7 @@ export const CourseInfoSchema = z.object({
   courseCode: z.string().nullable(),
   courseTitle: z.string().nullable(),
   schoolName: z.string().nullable(),
+  icon: z.string().nullable(),
 });
 
 export type CourseInfo = z.infer<typeof CourseInfoSchema>;

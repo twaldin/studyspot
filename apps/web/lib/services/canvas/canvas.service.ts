@@ -9,7 +9,7 @@ import { createServiceRoleClient } from '../database/supabase.service';
 import { CanvasAPIError } from './canvas.error';
 import { UTApi } from "uploadthing/server";
 import { courseCodeGeneratorService } from '../ai/course-code-generator.service';
-import { documentIngestionService } from '../document-ingestion/document-ingestion.service';
+// Use the same ingestion API as the file upload form
 
 const utapi = new UTApi();
 
@@ -229,15 +229,30 @@ async function ingestContentForCourse(
             const uploadedFileResponse = await utapi.uploadFiles(new File([fileContent], fileMetadata.display_name, { type: fileMetadata['content-type'] }));
             if (uploadedFileResponse.error) throw new Error('File upload via UTApi failed', { cause: uploadedFileResponse.error });
 
-            const { key, url } = uploadedFileResponse.data;
+            const { key, ufsUrl } = uploadedFileResponse.data;
 
-            await documentIngestionService.ingestDocument({
-              fileKey: key,
-              fileName: fileMetadata.display_name,
-              fileUrl: url,
-              fileType: fileMetadata['content-type'],
-              courseId: dbCourse.id,
+            // Use the same ingestion API as the file upload form
+            const ingestionResponse = await fetch('/api/documents/ingest-stream', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                files: [{
+                  fileKey: key,
+                  fileName: fileMetadata.display_name,
+                  fileUrl: ufsUrl,
+                  fileType: fileMetadata['content-type'],
+                }],
+                courseId: dbCourse.id,
+                userId,
+              }),
             });
+
+            if (!ingestionResponse.ok) {
+              const errorText = await ingestionResponse.text();
+              throw new Error(`Document ingestion failed: ${errorText}`);
+            }
 
             logger.info({ courseId: dbCourse.id, fileName: fileMetadata.display_name }, "Successfully ingested file.");
 
@@ -269,15 +284,30 @@ async function ingestContentForCourse(
         const uploadedFileResponse = await utapi.uploadFiles(new File([fileContent], file.display_name, { type: file['content-type'] }));
         if (uploadedFileResponse.error) throw new Error('File upload via UTApi failed', { cause: uploadedFileResponse.error });
 
-        const { key, url } = uploadedFileResponse.data;
+        const { key, ufsUrl } = uploadedFileResponse.data;
 
-        await documentIngestionService.ingestDocument({
-          fileKey: key,
-          fileName: file.display_name,
-          fileUrl: url,
-          fileType: file['content-type'],
-          courseId: dbCourse.id,
+        // Use the same ingestion API as the file upload form
+        const ingestionResponse = await fetch('/api/documents/ingest-stream', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            files: [{
+              fileKey: key,
+              fileName: file.display_name,
+              fileUrl: ufsUrl,
+              fileType: file['content-type'],
+            }],
+            courseId: dbCourse.id,
+            userId,
+          }),
         });
+
+        if (!ingestionResponse.ok) {
+          const errorText = await ingestionResponse.text();
+          throw new Error(`Document ingestion failed: ${errorText}`);
+        }
 
         logger.info({ courseId: dbCourse.id, fileName: file.display_name }, "Successfully ingested file.");
       } catch (ingestionError: any) {

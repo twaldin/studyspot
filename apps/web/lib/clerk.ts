@@ -92,10 +92,6 @@ export const clearUserCache = (userId: string) => {
   userDataCache.delete(userId);
 };
 
-// Clear all cached user data
-export const clearAllUserCache = () => {
-  userDataCache.clear();
-};
 
 export const getSelectedCourseForUser = async (userId: string, forceFresh = false) => {
   try {
@@ -141,51 +137,4 @@ export const getUserOnboardingStatus = async (userId: string, forceFresh = false
   }
 };
 
-/**
- * Clean up invalid courses from user's joined courses array
- * This is useful when courses get deleted and we need to clean up user metadata
- */
-export const cleanupInvalidJoinedCourses = async (
-  userId: string, 
-  validCourseIds: string[]
-) => {
-  try {
-    const client = await clerkClient();
-    const user = await client.users.getUser(userId);
-    const currentJoinedCourses = (user.publicMetadata?.joinedCourses as string[]) || [];
-    
-    // Filter out invalid course IDs
-    const validJoinedCourses = currentJoinedCourses.filter(courseId => 
-      validCourseIds.includes(courseId)
-    );
-    
-    // Only update if there were invalid courses to remove
-    if (validJoinedCourses.length !== currentJoinedCourses.length) {
-      await client.users.updateUserMetadata(userId, {
-        publicMetadata: {
-          ...user.publicMetadata,
-          joinedCourses: validJoinedCourses,
-        },
-      });
-      
-      clearUserCache(userId);
-      
-      logger.info(
-        { 
-          userId, 
-          removedCourses: currentJoinedCourses.filter(id => !validCourseIds.includes(id)),
-          remainingCount: validJoinedCourses.length 
-        },
-        "Cleaned up invalid joined courses from user metadata"
-      );
-      
-      return true; // Indicates cleanup was performed
-    }
-    
-    return false; // No cleanup needed
-  } catch (error) {
-    logger.error({ error, userId }, "Error cleaning up invalid joined courses");
-    throw new Error("Failed to cleanup invalid joined courses for user.");
-  }
-};
 

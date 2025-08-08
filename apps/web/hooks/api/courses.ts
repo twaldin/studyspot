@@ -15,7 +15,9 @@ import { UserSchool } from "@/features/auth/types";
 interface CreateCourseRequest {
   code: string;
   title: string;
-  uploadedFileUrl: string;
+  icon?: string | null;
+  uploadedFileUrl?: string;
+  tempFileKeys?: string[];
 }
 
 interface CreateCourseResponse {
@@ -100,13 +102,30 @@ export function useSuggestedQueries(courseId?: string) {
   return useQuery({
     queryKey: queryKeys.courses.suggestedQueries(courseId!),
     queryFn: async () => {
+      console.log('[useSuggestedQueries Hook] queryFn called with courseId:', courseId);
+      
       const response = await apiClient<
         SuggestedQueriesResponse & { fromCache?: boolean }
       >(`/suggested-queries?courseId=${courseId}`);
-      return response.suggestedQueries || [];
+      
+      console.log('[useSuggestedQueries Hook] Raw API response:', {
+        response,
+        hasSuggestedQueries: !!response.suggestedQueries,
+        suggestedQueries: response.suggestedQueries,
+        responseType: typeof response,
+        responseKeys: Object.keys(response)
+      });
+      
+      const queries = response.suggestedQueries || [];
+      console.log('[useSuggestedQueries Hook] Returning queries:', queries);
+      
+      return queries;
     },
     enabled: isAuthenticated && !!courseId,
-    staleTime: 15 * 60 * 1000, // 15 minutes for suggested queries
+    staleTime: 30 * 1000, // 30 seconds - much shorter to avoid stale defaults
+    gcTime: 5 * 60 * 1000, // 5 minutes garbage collection
+    refetchOnMount: true, // Always refetch when component mounts
+    refetchOnWindowFocus: false,
   });
 }
 

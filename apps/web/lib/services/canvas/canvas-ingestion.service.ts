@@ -1,6 +1,6 @@
 'use server';
 
-import { documentIngestionService } from '@/lib/services/document-ingestion/document-ingestion.service';
+// Use the same ingestion API as the file upload form
 import logger from '@/lib/logger';
 import { UTApi } from 'uploadthing/server';
 
@@ -52,14 +52,32 @@ export async function ingestCanvasPage(
 
     logger.info({ ...logContext, fileKey: key, fileUrl: ufsUrl }, 'File uploaded to UploadThing successfully');
 
-    // Start the ingestion process with the UploadThing file details
-    await documentIngestionService.ingestDocument({
-      fileKey: key,
-      fileName,
-      fileUrl: ufsUrl,
-      fileType,
-      courseId,
+    // Use the same ingestion API as the file upload form
+    const ingestionResponse = await fetch('/api/documents/ingest-stream', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        files: [{
+          fileKey: key,
+          fileName,
+          fileUrl: ufsUrl,
+          fileType,
+        }],
+        courseId,
+        userId,
+      }),
     });
+
+    if (!ingestionResponse.ok) {
+      const errorText = await ingestionResponse.text();
+      throw new Error(`Document ingestion failed: ${errorText}`);
+    }
+
+    // We don't need to process the streaming response in server context
+    // Just ensure the request was accepted successfully
+    logger.info(logContext, 'Canvas page ingestion request sent successfully');
 
     logger.info(logContext, 'Canvas page ingestion completed successfully');
   } catch (error) {

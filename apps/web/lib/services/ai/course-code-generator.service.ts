@@ -1,16 +1,12 @@
 
-import { Gemini, GEMINI_MODEL } from "@/lib/llamaindex-imports";
+import { geminiService } from "./gemini.service";
 import logger from "@/lib/logger";
 
 class CourseCodeGeneratorService {
   private static instance: CourseCodeGeneratorService;
-  private gemini: Gemini;
 
   private constructor() {
-    this.gemini = new Gemini({
-      apiKey: process.env.GEMINI_API_KEY,
-      model: GEMINI_MODEL.GEMINI_PRO_FLASH_LATEST,
-    });
+    // Use existing gemini service instead of direct LlamaIndex integration
   }
 
   public static getInstance(): CourseCodeGeneratorService {
@@ -29,27 +25,22 @@ Course Title: "${courseTitle}"
 
 Generated Course Code:
 For example, if the course title is MATH301 - An Introduction to Calculus, the correct course code could be "CALC301". If the course title is "Introduction to Machine Learning", a suitable course code could be "ML101". If the course title is "Advanced Quantum Physics", a suitable course code could be "PHY300".`;
-      const response = await this.gemini.chat({
-        messages: [
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
+      const result = await geminiService.chat([
+        {
+          role: "user",
+          content: prompt,
+        }
+      ], {
+        disableThinking: true, // Disable thinking for simple generation tasks
+        temperature: 0.3, // Lower temperature for more consistent output
+        maxTokens: 50 // Short response needed
       });
 
-      let content = "";
-      const messageContent = response.message?.content;
-      if (typeof messageContent === "string") {
-        content = messageContent;
-      } else if (Array.isArray(messageContent)) {
-        const textContent = messageContent.find(
-          (item) => item.type === "text",
-        );
-        content = textContent?.text || "";
+      if (!result.success || !result.data) {
+        throw new Error(result.error || "Failed to get response from Gemini");
       }
 
-      let courseCode = content.trim();
+      let courseCode = result.data.trim();
 
       // Fallback to a simpler method if the generated code is invalid
       if (!courseCode || courseCode.length > 8 || courseCode.length < 4) {
