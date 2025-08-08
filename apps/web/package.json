@@ -8,8 +8,8 @@
     "build:cloudflare": "npx @opennextjs/cloudflare@latest build",
     "dev:wrangler": "wrangler dev --port 3000",
     "preview": "wrangler dev --port 3000 --env preview",
-    "deploy": "npm run build:cloudflare && wrangler deploy",
-    "deploy:preview": "npm run build:cloudflare && wrangler deploy --env preview",
+    "deploy": "npm run build:cloudflare && npx wrangler deploy",
+    "deploy:preview": "npm run build:cloudflare && npx wrangler deploy --env preview",
     "secrets:list": "wrangler secret list",
     "secret:add": "wrangler secret put",
     "lint": "next lint"
