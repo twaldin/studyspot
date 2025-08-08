@@ -2,8 +2,8 @@
 
 import { QuizMode, StudyProgress, StudySettings } from "@/features/quiz/types";
 import { quizService } from "../services/quiz.service";
-import { Button } from "@studyspot/ui/components/button";
-import { Badge } from "@studyspot/ui/components/badge";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft,
   ArrowRight,

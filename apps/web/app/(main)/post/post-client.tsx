@@ -1,11 +1,11 @@
 'use client'
 
 import { ArrowLeft, Heart, MessageSquare, Flag } from 'lucide-react'
-import { Button } from '@studyspot/ui/components/button'
-import { Card, CardContent, CardHeader } from '@studyspot/ui/components/card'
-import { Textarea } from '@studyspot/ui/components/textarea'
-import { Separator } from '@studyspot/ui/components/separator'
-import { Badge } from '@studyspot/ui/components/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Textarea } from '@/components/ui/textarea'
+import { Separator } from '@/components/ui/separator'
+import { Badge } from '@/components/ui/badge'
 
 export function PostClient() {
   return (

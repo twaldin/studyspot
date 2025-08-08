@@ -9,7 +9,7 @@ import {
   SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@studyspot/ui/components/sidebar";
+} from "@/components/ui/sidebar";
 import { useStreamingChats } from "@/features/chat/PendingChatContext";
 
 export interface ChatSummary {

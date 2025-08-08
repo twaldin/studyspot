@@ -15,8 +15,8 @@ import {
   StudySettings,
   StudyState,
 } from "@/features/quiz/types";
-import { Button } from "@studyspot/ui/components/button";
-import { Badge } from "@studyspot/ui/components/badge";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   BookOpen,
   Calendar,

@@ -1,12 +1,12 @@
 import { AppSidebar } from "@/components/app-sidebar"
 import { AppRightSidebar } from "@/components/app-right-sidebar"
 import { DynamicBreadcrumb } from "@/components/dynamic-breadcrumb"
-import { Separator } from "@studyspot/ui/components/separator"
+import { Separator } from "@/components/ui/separator"
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
-} from "@studyspot/ui/components/sidebar"
+} from "@/components/ui/sidebar"
 import { CommandPalette } from "@/components/command-palette";
 import { ChatNavigationProvider } from "@/features/chat/ChatNavigationContext";
 import { PendingChatProvider } from "@/features/chat/PendingChatContext";

@@ -10,7 +10,7 @@ import { useChat } from "@/hooks/api/chats";
 import { useSelectedCourse } from "@/hooks/api/courses";
 import { useAuthenticatedUser, queryKeys } from "@/hooks/api/base";
 import { Message } from "@/features/chat/chat.types";
-import { Skeleton } from "@studyspot/ui/components/skeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollToBottomButton } from "@/components/scroll-to-bottom";
 import { chatStateService } from "@/features/chat/services/chat-state.service";
 import { chatStreamingService, type StreamingResponse } from "@/features/chat/services/chat-streaming.service";

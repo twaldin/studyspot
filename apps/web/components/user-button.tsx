@@ -2,18 +2,18 @@
 
 import React from "react";
 import { User } from "lucide-react";
-import { Button } from "@studyspot/ui/components/button";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@studyspot/ui/components/dropdown-menu";
+} from "@/components/ui/dropdown-menu";
 import {
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@studyspot/ui/components/sidebar";
+} from "@/components/ui/sidebar";
 import { useClerk, useUser } from "@clerk/nextjs";
 import { useRemoveSchool } from "@/hooks/api";
 import { useRouter } from "next/navigation";

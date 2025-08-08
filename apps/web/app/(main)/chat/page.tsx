@@ -2,7 +2,7 @@
 
 import { Suspense } from "react"
 import { ChatPageContent } from "./chat-client"
-import { Skeleton } from "@studyspot/ui/components/skeleton"
+import { Skeleton } from "@/components/ui/skeleton"
 
 function ChatLoading() {
   return (

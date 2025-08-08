@@ -2,8 +2,8 @@
 
 import React from "react";
 import { Moon, Sun } from "lucide-react";
-import { Button } from "@studyspot/ui/components/button";
-import { SidebarMenuButton, SidebarMenuItem } from "@studyspot/ui/components/sidebar";
+import { Button } from "@/components/ui/button";
+import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { useTheme } from "next-themes";
 
 interface DarkModeButtonProps {

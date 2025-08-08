@@ -5,7 +5,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@studyspot/ui/components/card";
+} from "@/components/ui/card";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,8 +16,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@studyspot/ui/components/alert-dialog";
-import { Button } from "@studyspot/ui/components/button";
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import { Document } from "@/lib/types/Document";
 import { useEffect, useRef, useState } from "react";
 import { Trash2 } from "lucide-react";
