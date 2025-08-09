@@ -64,25 +64,45 @@ export function QuizQuestion({
 
   const getOptionFontSize = (text: string, optionCount: number) => {
     const length = text.length;
-    const baseScale = optionCount === 4 ? 0.85 : 1; // Smaller for 2x2 grid
+    const baseScale = optionCount === 4 ? 1 : 1.2; // Keep full size even for 2x2 grid
     
-    if (length < 20) return `clamp(${0.75 * baseScale}rem,${3 * baseScale}cqw,${1.25 * baseScale}rem)`; // Short option
-    if (length < 40) return `clamp(${0.625 * baseScale}rem,${2.5 * baseScale}cqw,${1.125 * baseScale}rem)`; // Medium option
-    if (length < 80) return `clamp(${0.5 * baseScale}rem,${2.25 * baseScale}cqw,${1 * baseScale}rem)`; // Long option
-    return `clamp(${0.5 * baseScale}rem,${2 * baseScale}cqw,${0.875 * baseScale}rem)`; // Very long option
+    if (length < 20) return `clamp(${1.25 * baseScale}rem,${5 * baseScale}cqw,${2.5 * baseScale}rem)`; // Short option - much larger
+    if (length < 40) return `clamp(${1 * baseScale}rem,${4.5 * baseScale}cqw,${2 * baseScale}rem)`; // Medium option - larger
+    if (length < 80) return `clamp(${0.875 * baseScale}rem,${4 * baseScale}cqw,${1.75 * baseScale}rem)`; // Long option - larger
+    if (length < 120) return `clamp(${0.75 * baseScale}rem,${3.5 * baseScale}cqw,${1.5 * baseScale}rem)`; // Longer option
+    return `clamp(${0.625 * baseScale}rem,${3 * baseScale}cqw,${1.25 * baseScale}rem)`; // Very long option - still readable
   };
+
+  // Calculate consistent font size based on the longest option
+  const getConsistentOptionFontSize = () => {
+    // Find the longest option text
+    const maxLength = Math.max(
+      question.option_a?.length || 0,
+      question.option_b?.length || 0,
+      question.option_c?.length || 0,
+      question.option_d?.length || 0
+    );
+    
+    // Get font size for the longest option
+    const optionCount = allOptions.filter(opt => opt.text).length;
+    return getOptionFontSize('x'.repeat(maxLength), optionCount);
+  };
+
+  const consistentOptionFontSize = getConsistentOptionFontSize();
 
   const getMaxTextLines = (text: string, optionCount: number) => {
     const length = text.length;
     if (optionCount === 4) {
-      // 2x2 grid - more restrictive
-      if (length < 30) return 2;
-      return 3;
+      // 2x2 grid - allow more lines for readability
+      if (length < 30) return 3;
+      if (length < 60) return 4;
+      return 5;
     }
-    // Other layouts - more generous
-    if (length < 50) return 2;
-    if (length < 100) return 3;
-    return 4;
+    // Other layouts - even more generous
+    if (length < 50) return 3;
+    if (length < 100) return 4;
+    if (length < 150) return 5;
+    return 6;
   };
 
   // Filter options when user answered incorrectly - only show selected and correct answers
@@ -165,22 +185,36 @@ export function QuizQuestion({
           <div className="h-full flex flex-col min-h-0" style={{ gap: "clamp(0.5rem,2cqh,1.5rem)" }}>
             {/* Question Text */}
             <div 
-              className="text-center"
+              className="text-center px-4"
               style={{
                 fontSize: getQuestionFontSize(question.question_text),
-                lineHeight: "1.25",
+                lineHeight: "1.4",
                 flex: "0 1 auto",
-                maxHeight: "35%",
-                overflow: "hidden",
+                maxHeight: "40%",
+                overflow: "auto",
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "center"
+                justifyContent: "center",
+                wordWrap: "break-word",
+                hyphens: "auto"
               }}
             >
-              <QuizContent
-                content={question.question_text}
-                className="font-semibold text-gray-900 dark:text-gray-100"
-              />
+              <div style={{ 
+                width: "100%",
+                maxWidth: "100%",
+                wordBreak: "break-word",
+                whiteSpace: "normal"
+              }}>
+                <QuizContent
+                  content={question.question_text}
+                  className="font-semibold text-gray-900 dark:text-gray-100"
+                  style={{
+                    textAlign: "center",
+                    width: "100%",
+                    display: "block"
+                  }}
+                />
+              </div>
             </div>
 
             {/* Multiple Choice Options */}
@@ -269,7 +303,7 @@ export function QuizQuestion({
                               content={option.text}
                               className="leading-tight text-gray-900 dark:text-gray-100 font-medium"
                               style={{
-                                fontSize: getOptionFontSize(option.text, options.length),
+                                fontSize: consistentOptionFontSize,
                                 lineHeight: "1.3",
                                 display: "-webkit-box",
                                 WebkitLineClamp: getMaxTextLines(option.text, options.length),

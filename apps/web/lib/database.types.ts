@@ -160,6 +160,9 @@ export interface Database {
           title: string;
           chats: Json;
           created_at: string;
+          is_public: boolean;
+          share_token: string;
+          visibility_mode: 'private' | 'link-only' | 'course';
         };
         Insert: {
           id?: string;
@@ -168,6 +171,9 @@ export interface Database {
           title: string;
           chats: Json;
           created_at?: string;
+          is_public?: boolean;
+          share_token?: string;
+          visibility_mode?: 'private' | 'link-only' | 'course';
         };
         Update: {
           id?: string;
@@ -176,6 +182,9 @@ export interface Database {
           title?: string;
           chats?: Json;
           created_at?: string;
+          is_public?: boolean;
+          share_token?: string;
+          visibility_mode?: 'private' | 'link-only' | 'course';
         };
         Relationships: [
           {
@@ -244,6 +253,217 @@ export interface Database {
             foreignKeyName: "lecture_chat_messages_session_id_fkey";
             columns: ["session_id"];
             referencedRelation: "lecture_chat_sessions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      flashcard_sets: {
+        Row: {
+          id: string;
+          user_id: string;
+          course_id: string;
+          title: string;
+          description: string | null;
+          created_at: string;
+          updated_at: string;
+          is_public: boolean;
+          share_token: string;
+          visibility_mode: 'private' | 'link-only' | 'course';
+          creator_name: string | null;
+          course_code: string | null;
+          course_name: string | null;
+          edited_from: string | null;
+          original_title: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          course_id: string;
+          title: string;
+          description?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          is_public?: boolean;
+          share_token?: string;
+          visibility_mode?: 'private' | 'link-only' | 'course';
+          creator_name?: string | null;
+          course_code?: string | null;
+          course_name?: string | null;
+          edited_from?: string | null;
+          original_title?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          course_id?: string;
+          title?: string;
+          description?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          is_public?: boolean;
+          share_token?: string;
+          visibility_mode?: 'private' | 'link-only' | 'course';
+          creator_name?: string | null;
+          course_code?: string | null;
+          course_name?: string | null;
+          edited_from?: string | null;
+          original_title?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "flashcard_sets_course_id_fkey";
+            columns: ["course_id"];
+            referencedRelation: "courses";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      flashcards: {
+        Row: {
+          id: string;
+          set_id: string;
+          side1: string;
+          side2: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          set_id: string;
+          side1: string;
+          side2: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          set_id?: string;
+          side1?: string;
+          side2?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "flashcards_set_id_fkey";
+            columns: ["set_id"];
+            referencedRelation: "flashcard_sets";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      quizzes: {
+        Row: {
+          id: string;
+          user_id: string;
+          course_id: string;
+          title: string;
+          description: string | null;
+          difficulty_level: string | null;
+          question_count: number;
+          created_at: string;
+          updated_at: string;
+          is_public: boolean;
+          share_token: string;
+          visibility_mode: 'private' | 'link-only' | 'course';
+          creator_name: string | null;
+          course_code: string | null;
+          course_name: string | null;
+          edited_from: string | null;
+          original_title: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          course_id: string;
+          title: string;
+          description?: string | null;
+          difficulty_level?: string | null;
+          question_count?: number;
+          created_at?: string;
+          updated_at?: string;
+          is_public?: boolean;
+          share_token?: string;
+          visibility_mode?: 'private' | 'link-only' | 'course';
+          creator_name?: string | null;
+          course_code?: string | null;
+          course_name?: string | null;
+          edited_from?: string | null;
+          original_title?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          course_id?: string;
+          title?: string;
+          description?: string | null;
+          difficulty_level?: string | null;
+          question_count?: number;
+          created_at?: string;
+          updated_at?: string;
+          is_public?: boolean;
+          share_token?: string;
+          visibility_mode?: 'private' | 'link-only' | 'course';
+          creator_name?: string | null;
+          course_code?: string | null;
+          course_name?: string | null;
+          edited_from?: string | null;
+          original_title?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "quizzes_course_id_fkey";
+            columns: ["course_id"];
+            referencedRelation: "courses";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      quiz_questions: {
+        Row: {
+          id: string;
+          quiz_id: string;
+          question: string;
+          option_a: string;
+          option_b: string;
+          option_c: string | null;
+          option_d: string | null;
+          correct_answer: string;
+          explanation: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          quiz_id: string;
+          question: string;
+          option_a: string;
+          option_b: string;
+          option_c?: string | null;
+          option_d?: string | null;
+          correct_answer: string;
+          explanation?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          quiz_id?: string;
+          question?: string;
+          option_a?: string;
+          option_b?: string;
+          option_c?: string | null;
+          option_d?: string | null;
+          correct_answer?: string;
+          explanation?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "quiz_questions_quiz_id_fkey";
+            columns: ["quiz_id"];
+            referencedRelation: "quizzes";
             referencedColumns: ["id"];
           },
         ];

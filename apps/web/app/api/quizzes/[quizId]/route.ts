@@ -37,7 +37,8 @@ export async function GET(
         total_questions,
         courses!quizzes_course_id_fkey (
           title,
-          code
+          code,
+          icon
         ),
         quiz_questions(*)
       `,

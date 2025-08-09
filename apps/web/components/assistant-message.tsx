@@ -1,10 +1,19 @@
 // This component renders a message from the assistant in the chat window.
 import { marked } from "marked";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import DOMPurify from "dompurify";
 import { renderMarkdownWithLatex } from "@/lib/renderMarkdown";
 import { LinkedResourceCard } from "@/components/linked-resource-card";
+import { ShareModal } from "@/components/share-modal";
 import { LinkedResource } from "@/features/chat/chat.types";
+import { Button } from "@studyspot/ui/components/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@studyspot/ui/components/dropdown-menu";
+import { ChevronDown, ChevronUp, Copy, Share } from "lucide-react";
+import toast from "react-hot-toast";
 
 interface AssistantMessageProps {
   content: string;
@@ -12,6 +21,8 @@ interface AssistantMessageProps {
   isStreaming?: boolean;
   isTextStreaming?: boolean;
   toolActivity?: string | null;
+  chatId?: string;
+  chatTitle?: string;
 }
 
 const AssistantMessage: React.FC<AssistantMessageProps> = ({
@@ -20,9 +31,13 @@ const AssistantMessage: React.FC<AssistantMessageProps> = ({
   isStreaming,
   isTextStreaming,
   toolActivity,
+  chatId,
+  chatTitle,
 }) => {
   // Initialize with content as fallback for SSR
   const [html, setHtml] = useState(content);
+  const [resourcesOpen, setResourcesOpen] = useState(true);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   // Parse the displayed content as Markdown
   useEffect(() => {
@@ -166,9 +181,20 @@ const AssistantMessage: React.FC<AssistantMessageProps> = ({
     return { __html: sanitizedHtml };
   };
 
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(content);
+      toast.success("Message copied to clipboard!");
+    } catch (error) {
+      toast.error("Failed to copy message");
+    }
+  };
+
+  const isFinished = !isStreaming;
+
   return (
     <div className="mx-2.75 flex justify-start">
-      <div className="py-0 max-w-xl">
+      <div className="py-0 max-w-xl relative">
         <div
           className="markdown-content leading-[1.8] select-text"
           dangerouslySetInnerHTML={createMarkup()}
@@ -178,9 +204,12 @@ const AssistantMessage: React.FC<AssistantMessageProps> = ({
         {isStreaming && !isTextStreaming && (
           <div className="mt-2 flex items-center space-x-2">
             <div className="flex space-x-1">
-              <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-              <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-              <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></div>
+              <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce [animation-delay:-0.3s]">
+              </div>
+              <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce [animation-delay:-0.15s]">
+              </div>
+              <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce">
+              </div>
             </div>
             <span className="text-sm">
               StudySpot is {toolActivity || "thinking"}
@@ -188,23 +217,94 @@ const AssistantMessage: React.FC<AssistantMessageProps> = ({
           </div>
         )}
 
-        {/* Render linked resources - only show after streaming is complete */}
-        {!isStreaming && linkedResources && linkedResources.length > 0 && (
-          <div className="mt-3">
-            <div className="grid gap-4 grid-cols-1 @md:grid-cols-2 @lg:grid-cols-3">
-              {linkedResources.map((resource) => (
-                <LinkedResourceCard
-                  key={`${resource.type}-${resource.id}`}
-                  resource={resource}
-                />
-              ))}
+        {/* Bottom controls for finished messages */}
+        {isFinished && (
+          <div className="flex items-center justify-between mt-3 text-xs text-muted-foreground">
+            {/* Left: Resources dropdown */}
+            <div className="flex items-center">
+              {linkedResources && linkedResources.length > 0
+                ? (
+                  <DropdownMenu
+                    open={resourcesOpen}
+                    onOpenChange={() => {
+                      // Completely ignore all automatic open/close events
+                      // Only manual setState calls will change the dropdown
+                    }}
+                    modal={false}
+                  >
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs gap-1 cursor-pointer"
+                        onClick={() => {
+                          setResourcesOpen(!resourcesOpen);
+                        }}
+                      >
+                        Resources
+                        {resourcesOpen
+                          ? <ChevronUp className="h-3 w-3" />
+                          : <ChevronDown className="h-3 w-3" />}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align="start"
+                      className="p-0 w-auto max-w-xl border-none shadow-none bg-transparent"
+                    >
+                      <div className="grid gap-4 grid-cols-1 @md:grid-cols-2 @lg:grid-cols-3">
+                        {linkedResources.map((resource) => (
+                          <LinkedResourceCard
+                            key={`${resource.type}-${resource.id}`}
+                            resource={resource}
+                          />
+                        ))}
+                      </div>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )
+                : (
+                  <div className="h-7" /> // Spacer when no resources
+                )}
+            </div>
+
+            {/* Right: Share and Copy buttons */}
+            <div className="flex items-center gap-1">
+              <Button
+                onClick={handleCopy}
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0 cursor-pointer"
+              >
+                <Copy className="h-3 w-3" />
+              </Button>
+              {chatId && (
+                <Button
+                  onClick={() => setIsShareModalOpen(true)}
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0 cursor-pointer"
+                >
+                  <Share className="h-3 w-3" />
+                </Button>
+              )}
             </div>
           </div>
         )}
       </div>
+
+      {/* Share Modal */}
+      {chatId && (
+        <ShareModal
+          isOpen={isShareModalOpen}
+          onClose={() => setIsShareModalOpen(false)}
+          url={`/chat/${chatId}`}
+          title={chatTitle || "Chat"}
+          type="chat"
+          resourceId={chatId}
+        />
+      )}
     </div>
   );
 };
 
 export default AssistantMessage;
-
