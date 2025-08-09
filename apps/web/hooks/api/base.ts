@@ -196,9 +196,16 @@ export const mutationKeys = {
   
   flashcards: {
     save: () => ['flashcards', 'save'] as const,
+    delete: ['flashcards', 'delete'] as const,
   },
   
   quizzes: {
     save: () => ['quizzes', 'save'] as const,
+    delete: ['quizzes', 'delete'] as const,
+  },
+  
+  content: {
+    deleteFlashcardSet: ['content', 'deleteFlashcardSet'] as const,
+    deleteQuiz: ['content', 'deleteQuiz'] as const,
   },
 } as const;

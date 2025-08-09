@@ -141,13 +141,78 @@ export function ShareModal({
         setIsPublic(true);
         setVisibility('link-only');
         setActualShareUrl(data.share_url);
-        toast.success('Content is now public and ready to share!');
+        
+        // Show specific feedback for chats with auto-shared linkedresources
+        if (type === 'chat' && data.linked_resources_shared) {
+          const { quizzes, flashcards } = data.linked_resources_shared;
+          const totalShared = quizzes + flashcards;
+          
+          if (totalShared > 0) {
+            const resourceText = [];
+            if (quizzes > 0) resourceText.push(`${quizzes} quiz${quizzes > 1 ? 'es' : ''}`);
+            if (flashcards > 0) resourceText.push(`${flashcards} flashcard set${flashcards > 1 ? 's' : ''}`);
+            
+            toast.success(
+              `Chat is now public! Also shared ${resourceText.join(' and ')} referenced in this chat.`,
+              { duration: 4000 }
+            );
+          } else {
+            toast.success('Chat is now public and ready to share!');
+          }
+        } else {
+          toast.success('Content is now public and ready to share!');
+        }
       } else {
         throw new Error('Failed to make content public');
       }
     } catch (error) {
       console.error('Failed to make content public:', error);
       toast.error('Failed to make content public');
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
+  const handleMakePrivate = async () => {
+    if (!resourceId || isSharing) return;
+    
+    setIsSharing(true);
+    try {
+      let endpoint = '';
+      switch (type) {
+        case 'chat':
+          endpoint = `/api/chats/${resourceId}/share`;
+          break;
+        case 'flashcard':
+          endpoint = `/api/flashcard-sets/${resourceId}/share`;
+          break;
+        case 'quiz':
+          endpoint = `/api/quizzes/${resourceId}/share`;
+          break;
+      }
+
+      const response = await fetch(endpoint, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          is_public: false,
+          visibility_mode: 'private',
+        }),
+      });
+
+      if (response.ok) {
+        setIsPublic(false);
+        setVisibility('link-only');
+        setActualShareUrl(null);
+        toast.success(`${type === 'chat' ? 'Chat' : type === 'flashcard' ? 'Flashcard Set' : 'Quiz'} is now private`);
+      } else {
+        throw new Error('Failed to make content private');
+      }
+    } catch (error) {
+      console.error('Failed to make content private:', error);
+      toast.error('Failed to make content private');
     } finally {
       setIsSharing(false);
     }
@@ -262,6 +327,22 @@ export function ShareModal({
                 <p className="text-sm text-muted-foreground mb-3">
                   This {type} is currently private. Make it public to share with others.
                 </p>
+                
+                {/* Special notice for chats about auto-sharing linkedresources */}
+                {type === 'chat' && (
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-md p-3 mb-3">
+                    <div className="flex items-start gap-2">
+                      <svg className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <div className="text-xs text-blue-700 dark:text-blue-300">
+                        <p className="font-medium mb-1">Linked content will also be shared</p>
+                        <p>Any quizzes or flashcard sets referenced in this chat will automatically be made public too.</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
                 <Button 
                   onClick={handleMakePublic}
                   disabled={isSharing}
@@ -288,6 +369,31 @@ export function ShareModal({
                 onCheckedChange={handleVisibilityChange}
                 disabled={isSharing}
               />
+            </div>
+          )}
+
+          {/* Make Private Section - Show when content is public for testing */}
+          {hasLoaded && isPublic && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between rounded-lg border p-3 bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-700">
+                <div className="flex items-center gap-2">
+                  <svg className="h-4 w-4 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  <Label htmlFor="make-private" className="text-sm font-normal text-orange-700 dark:text-orange-300">
+                    Make Private (Testing)
+                  </Label>
+                </div>
+                <Button
+                  onClick={handleMakePrivate}
+                  disabled={isSharing}
+                  variant="outline"
+                  size="sm"
+                  className="border-orange-300 text-orange-700 hover:bg-orange-100 dark:border-orange-600 dark:text-orange-300 dark:hover:bg-orange-900/40"
+                >
+                  {isSharing ? 'Making Private...' : 'Make Private'}
+                </Button>
+              </div>
             </div>
           )}
 

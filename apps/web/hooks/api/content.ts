@@ -1,5 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
-import { queryKeys } from './base';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { queryKeys, mutationKeys, apiClient } from './base';
 
 export interface ContentFlashcardSet {
   id: string;
@@ -64,5 +64,51 @@ export function useContentQuizzes(courseId?: string) {
       return data.quizzes;
     },
     enabled: !!courseId,
+  });
+}
+
+// Delete flashcard set mutation
+export function useDeleteFlashcardSet() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationKey: mutationKeys.content.deleteFlashcardSet,
+    mutationFn: async (flashcardSetId: string) => {
+      const response = await apiClient<{ 
+        message: string; 
+        flashcardSetId: string; 
+        title: string; 
+      }>(`/flashcard-sets/${flashcardSetId}`, { method: "DELETE" });
+      return { flashcardSetId, title: response.title };
+    },
+    onSuccess: () => {
+      // Invalidate all content-related queries
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.content.all,
+      });
+    },
+  });
+}
+
+// Delete quiz mutation
+export function useDeleteQuiz() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationKey: mutationKeys.content.deleteQuiz,
+    mutationFn: async (quizId: string) => {
+      const response = await apiClient<{ 
+        message: string; 
+        quizId: string; 
+        title: string; 
+      }>(`/quizzes/${quizId}`, { method: "DELETE" });
+      return { quizId, title: response.title };
+    },
+    onSuccess: () => {
+      // Invalidate all content-related queries
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.content.all,
+      });
+    },
   });
 }
