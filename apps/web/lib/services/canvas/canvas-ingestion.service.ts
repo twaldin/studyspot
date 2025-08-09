@@ -62,7 +62,7 @@ export async function ingestCanvasPage(
     logger.info({ ...logContext, fileKey: key, fileUrl: ufsUrl }, 'File uploaded to UploadThing successfully');
 
     // Use the same ingestion API as the file upload form
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
     const ingestUrl = `${baseUrl}/api/documents/ingest-stream`;
     logger.info({ ...logContext, url: ingestUrl }, 'Sending document ingestion request');
 

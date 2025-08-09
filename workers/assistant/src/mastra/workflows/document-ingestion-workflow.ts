@@ -456,9 +456,11 @@ export async function executeDocumentIngestion(input: {
   chunkCount?: number;
 }> {
   const { onProgress } = input;
+  let currentStep = "initialization";
 
   try {
     // Step 1: Download and validate
+    currentStep = "download-validate";
     onProgress?.("Downloading and validating file...");
     const downloadResult = await downloadAndValidateStep.execute({
       inputData: {
@@ -469,6 +471,7 @@ export async function executeDocumentIngestion(input: {
     });
 
     // Step 2: Check for duplicates
+    currentStep = "check-duplicate";
     onProgress?.("Checking for duplicates...");
     const duplicateResult = await checkDuplicateStep.execute({
       inputData: {
@@ -487,6 +490,7 @@ export async function executeDocumentIngestion(input: {
     }
 
     // Step 3: Extract content
+    currentStep = "extract-content";
     onProgress?.("Extracting content with LlamaParse...");
     const extractResult = await extractContentStep.execute({
       inputData: {
@@ -505,6 +509,7 @@ export async function executeDocumentIngestion(input: {
     }
 
     // Step 4: Chunk document
+    currentStep = "chunk-document";
     onProgress?.("Processing document chunks...");
     const chunkResult = await chunkDocumentStep.execute({
       inputData: {
@@ -515,6 +520,7 @@ export async function executeDocumentIngestion(input: {
     });
 
     // Step 5: Check relevance
+    currentStep = "check-relevance";
     onProgress?.("Checking document relevance...");
     const relevanceResult = await checkRelevanceStep.execute({
       inputData: {
@@ -535,6 +541,7 @@ export async function executeDocumentIngestion(input: {
     }
 
     // Step 6: Generate embeddings
+    currentStep = "generate-embeddings";
     onProgress?.("Generating embeddings...");
     const embeddingResult = await generateEmbeddingsStep.execute({
       inputData: {
@@ -545,6 +552,7 @@ export async function executeDocumentIngestion(input: {
     });
 
     // Step 7: Store in database
+    currentStep = "store-database";
     onProgress?.("Storing in database...");
     const storeResult = await storeInDatabaseStep.execute({
       inputData: {
@@ -570,7 +578,7 @@ export async function executeDocumentIngestion(input: {
       chunkCount: storeResult.chunkCount,
     };
   } catch (error) {
-    console.error("[Document Ingestion] Error:", error);
+    console.error(`[Document Ingestion] Error at step: ${currentStep}`, error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
