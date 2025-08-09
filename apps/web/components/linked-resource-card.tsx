@@ -181,11 +181,6 @@ export const LinkedResourceCard: React.FC<LinkedResourceCardProps> = (
                   <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
                     {quizResource.questionCount} questions
                   </span>
-                  {quizResource.difficultyLevel && (
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
-                      {quizResource.difficultyLevel}
-                    </span>
-                  )}
                   <span className="text-xs text-gray-500 dark:text-gray-400">
                     Take quiz →
                   </span>

@@ -34,7 +34,6 @@ export function QuizEditMode({
   
   const [quizTitle, setQuizTitle] = useState(quiz.title);
   const [quizDescription, setQuizDescription] = useState(quiz.description);
-  const [difficultyLevel, setDifficultyLevel] = useState<'easy' | 'medium' | 'hard' | undefined>(quiz.difficulty_level);
 
   const handleQuestionEdit = (
     questionId: string, 
@@ -56,8 +55,7 @@ export function QuizEditMode({
   const handleSave = async () => {
     if (!editState.hasUnsavedChanges && 
         quizTitle === quiz.title && 
-        quizDescription === quiz.description &&
-        difficultyLevel === quiz.difficulty_level) {
+        quizDescription === quiz.description) {
       toast.error("No changes to save");
       return;
     }
@@ -67,8 +65,7 @@ export function QuizEditMode({
         editState,
         quizTitle,
         quizDescription,
-        quiz.course_id,
-        difficultyLevel
+        quiz.course_id
       );
 
       // Add edited_from field if creating a new copy
@@ -100,8 +97,7 @@ export function QuizEditMode({
   const editedQuestions = Array.from(editState.editedQuestions.values());
   const hasAnyChanges = editState.hasUnsavedChanges || 
                        quizTitle !== quiz.title || 
-                       quizDescription !== quiz.description ||
-                       difficultyLevel !== quiz.difficulty_level;
+                       quizDescription !== quiz.description;
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
@@ -154,19 +150,6 @@ export function QuizEditMode({
                 onChange={(e) => setQuizTitle(e.target.value)}
                 placeholder="Enter quiz title"
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="difficulty-level">Difficulty Level</Label>
-              <Select value={difficultyLevel} onValueChange={(value: 'easy' | 'medium' | 'hard') => setDifficultyLevel(value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select difficulty" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="easy">Easy</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="hard">Hard</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
           </div>
           <div className="space-y-2">

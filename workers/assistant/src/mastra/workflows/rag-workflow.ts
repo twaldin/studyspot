@@ -12,7 +12,8 @@ const RAGWorkflowInputSchema = z.object({
   question: z.string().min(1, 'Question is required'),
   conversationHistory: z.array(z.object({
     role: z.enum(['user', 'assistant', 'system']),
-    content: z.string()
+    content: z.string(),
+    linkedDocumentIds: z.array(z.string()).optional()
   })).default([]),
   courseId: z.string().uuid().optional(),
   userId: z.string().optional(),
@@ -136,13 +137,10 @@ const studySpotAgentStep = createStep({
     }
     
     // Update chat if sessionId provided
+    // NOTE: Database update is handled by PersistentStreamManager, not here
+    // This prevents duplicate assistant messages in the database
     if (sessionId) {
-      try {
-        await SupabaseService.updateAssistantMessageInChat(sessionId, response, resourceIds);
-        console.log(`[RAGWorkflow] Successfully updated chat: ${sessionId}`);
-      } catch (error) {
-        console.error('[RAGWorkflow] Failed to update chat:', error);
-      }
+      console.log(`[RAGWorkflow] Workflow completed for chat: ${sessionId} (database update handled by stream manager)`);
     }
     
     // Clean up stores
@@ -420,18 +418,10 @@ export class RAGWorkflowStreaming {
         });
       }
       
-      // Update chat if sessionId provided
+      // NOTE: Database update is handled by PersistentStreamManager, not here
+      // This prevents duplicate assistant messages in the database
       if (input.sessionId) {
-        try {
-          await SupabaseService.updateAssistantMessageInChat(
-            input.sessionId, 
-            fullResponseText, 
-            resourceIds || []
-          );
-          console.log(`[RAGWorkflow] Successfully updated chat: ${input.sessionId}`);
-        } catch (error) {
-          console.error('[RAGWorkflow] Failed to update chat:', error);
-        }
+        console.log(`[RAGWorkflow] Streaming workflow completed for chat: ${input.sessionId} (database update handled by stream manager)`);
       }
       
       // Clean up stores

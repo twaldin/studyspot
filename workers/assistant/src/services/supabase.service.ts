@@ -614,36 +614,73 @@ export class SupabaseService {
 
   /**
    * Update chat with complete conversation including user message and assistant response
-   * This method ensures that follow-up messages are properly persisted to the database
+   * CRITICAL: Uses database as source of truth for historical messages to prevent data loss
+   * The conversationHistory parameter is kept for compatibility but NOT used for reconstruction
    */
   static async updateChatWithCompleteConversation(
     chatId: string,
     userMessage: string,
     assistantResponse: string,
     linkedResources: Array<{ type: 'document' | 'flashcard_set' | 'quiz'; id: string }>,
-    conversationHistory: Array<{ role: string; content: string; linkedResources?: any[] }>
+    conversationHistory: Array<{ role: string; content: string; linkedDocumentIds?: string[] }>
   ): Promise<{ success: boolean; error?: string }> {
     try {
       const client = this.getClient();
       
       console.log(`[SupabaseService] Updating chat ${chatId} with complete conversation`);
 
-      // Build the complete messages array
-      const messages = [...conversationHistory];
+      // CRITICAL FIX: Fetch current messages from database (source of truth)
+      // Never reconstruct historical messages from frontend state
+      const { data: chatData, error: fetchError } = await client
+        .from('chats')
+        .select('chats')
+        .eq('id', chatId)
+        .single();
+
+      if (fetchError || !chatData) {
+        console.error(`[SupabaseService] Could not fetch chat ${chatId} for conversation update:`, fetchError);
+        return { success: false, error: 'Chat not found or could not be fetched' };
+      }
+
+      // Start with existing messages from database (preserves original structure)
+      const messages = Array.isArray(chatData.chats) ? [...chatData.chats] : [];
       
-      // Add the new user message
-      messages.push({
-        role: 'user',
-        content: userMessage,
-        linkedResources: []
-      });
+      // Check if this user message already exists (initial message case)
+      const userMessageExists = messages.some(msg => 
+        msg.role === 'user' && msg.content === userMessage
+      );
       
-      // Add the assistant response
-      messages.push({
-        role: 'assistant',
-        content: assistantResponse,
-        linked_resources: linkedResources
-      });
+      // Only add user message if it doesn't already exist
+      if (!userMessageExists) {
+        messages.push({
+          role: 'user',
+          content: userMessage
+        });
+      }
+      
+      // Check if there's an empty assistant message to update (initial message case)
+      let updatedExistingAssistant = false;
+      for (let i = messages.length - 1; i >= 0; i--) {
+        if (messages[i].role === 'assistant' && (messages[i].content === '' || messages[i].content.trim() === '')) {
+          // Update the empty assistant message instead of adding a new one
+          messages[i] = {
+            role: 'assistant',
+            content: assistantResponse,
+            linked_resources: linkedResources
+          };
+          updatedExistingAssistant = true;
+          break;
+        }
+      }
+      
+      // Only add new assistant message if we didn't update an existing empty one
+      if (!updatedExistingAssistant) {
+        messages.push({
+          role: 'assistant',
+          content: assistantResponse,
+          linked_resources: linkedResources
+        });
+      }
 
       // Save the complete conversation to the database
       const { error: updateError } = await client

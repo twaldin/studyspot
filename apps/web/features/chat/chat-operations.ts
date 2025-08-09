@@ -7,6 +7,7 @@ export interface ChatSummary {
   title: string;
   created_at: string;
   course_id: string;
+  user_id?: string; // Added to support school-wide chat visibility
 }
 
 export interface CreateChatData {
@@ -21,10 +22,10 @@ export interface CreateChatData {
 }
 
 /**
- * Get all chats for a user, filtered by their current school
+ * Get user's own chats (filtered by user_id) - used for sidebar
  */
 export async function getChats(userId: string, selectedSchool: string): Promise<ChatSummary[]> {
-    logger.info({ userId, selectedSchool }, '[ChatOperations] Fetching chats for user');
+    logger.info({ userId, selectedSchool }, '[ChatOperations] Fetching user chats for sidebar');
 
     const supabase = await supabaseService.createAuthenticatedClient();
     
@@ -35,33 +36,35 @@ export async function getChats(userId: string, selectedSchool: string): Promise<
         title,
         created_at,
         course_id,
+        user_id,
         courses!inner (
           school_id
         )
       `)
-      .eq('user_id', userId)
+      .eq('user_id', userId) // Filter by user_id for sidebar - shared chats use getChat() instead
       .eq('courses.school_id', selectedSchool)
       .order('created_at', { ascending: false });
 
     if (error) {
-      logger.error({ error, userId, selectedSchool }, '[ChatOperations] Supabase error fetching chats');
-      throw new Error('Failed to fetch chats from database');
+      logger.error({ error, userId, selectedSchool }, '[ChatOperations] Supabase error fetching user chats');
+      throw new Error('Failed to fetch user chats from database');
     }
 
-    // Clean up the response to remove the courses data but keep course_id
+    // Clean up the response to remove the courses data but keep course_id and user_id
     const cleanedChats: ChatSummary[] = (chats || []).map((chat: any) => ({
       id: chat.id,
       title: chat.title,
       created_at: chat.created_at,
-      course_id: chat.course_id
+      course_id: chat.course_id,
+      user_id: chat.user_id
     }));
 
-    logger.info({ userId, selectedSchool, count: cleanedChats.length }, '[ChatOperations] Successfully fetched chats');
+    logger.info({ userId, selectedSchool, count: cleanedChats.length }, '[ChatOperations] Successfully fetched user chats');
     return cleanedChats;
 }
 
 /**
- * Get a specific chat by ID with school verification
+ * Get a specific chat by ID with school verification (relies on RLS for access control)
  */
 export async function getChat(chatId: string, userId: string, selectedSchool: string): Promise<Chat> {
     logger.info({ chatId, userId, selectedSchool }, '[ChatOperations] Fetching chat details');
@@ -77,7 +80,7 @@ export async function getChat(chatId: string, userId: string, selectedSchool: st
         )
       `)
       .eq('id', chatId)
-      .eq('user_id', userId)
+      // RLS will ensure only accessible chats are returned
       .eq('courses.school_id', selectedSchool)
       .single();
 

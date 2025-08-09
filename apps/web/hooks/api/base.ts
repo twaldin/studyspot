@@ -151,6 +151,13 @@ export const queryKeys = {
     detail: (id: string) => [...queryKeys.quizzes.details(), id] as const,
     attempts: (quizId: string) => [...queryKeys.quizzes.all, 'attempts', quizId] as const,
   },
+  
+  // Content-related queries (for content page)
+  content: {
+    all: ['content'] as const,
+    flashcards: (courseId?: string) => [...queryKeys.content.all, 'flashcards', { courseId }] as const,
+    quizzes: (courseId?: string) => [...queryKeys.content.all, 'quizzes', { courseId }] as const,
+  },
 } as const;
 
 // Mutation key factories

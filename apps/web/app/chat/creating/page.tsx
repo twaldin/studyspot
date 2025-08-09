@@ -84,26 +84,21 @@ function CreatingChatContent() {
   if (optimisticChat?.status === 'failed') {
     return (
       <div className="mx-auto w-full max-w-3xl h-full flex flex-col p-6 pt-0">
-        <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
-          <div className="flex flex-col gap-4 py-4">
+        <div className="flex-1 overflow-y-auto scrollbar-hidden">
+          <div className="flex flex-col gap-4 py-0">
             {/* User message */}
             <UserMessage className="w-fit max-w-2xl self-end">
               {optimisticChat.userMessage}
             </UserMessage>
             
             {/* Error state */}
-            <div className="w-fit max-w-2xl self-start">
-              <div className="bg-red-50 text-red-700 p-4 rounded-lg">
-                <p className="font-medium">Failed to create chat</p>
-                <p className="text-sm mt-1">{optimisticChat.error || 'Something went wrong'}</p>
-                <button 
-                  onClick={handleRetry}
-                  className="mt-2 text-sm text-red-600 hover:text-red-800 underline"
-                >
-                  Try again
-                </button>
-              </div>
-            </div>
+            <AssistantMessage
+              content={`Failed to create chat: ${optimisticChat.error || 'Something went wrong'}`}
+              isStreaming={false}
+              isTextStreaming={false}
+              chatId={tempId || "creating-error"}
+              chatTitle="Chat Creation Failed"
+            />
           </div>
         </div>
 
@@ -121,22 +116,29 @@ function CreatingChatContent() {
 
   return (
     <div className="mx-auto w-full max-w-3xl h-full flex flex-col p-6 pt-0">
-      <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
-        <div className="flex flex-col gap-4 py-4">
+      <div className="flex-1 overflow-y-auto scrollbar-hidden">
+        <div className="flex flex-col gap-4 py-0">
           {/* User message */}
           <UserMessage className="w-fit max-w-2xl self-end">
             {optimisticChat.userMessage}
           </UserMessage>
           
           {/* Assistant thinking state */}
-          <div className="w-fit max-w-2xl self-start">
-            <AssistantMessage
-              content=""
-              isStreaming={true}
-              isTextStreaming={false}
-              toolActivity="thinking"
-            />
-          </div>
+          <AssistantMessage
+            content=""
+            isStreaming={true}
+            isTextStreaming={false}
+            toolActivity="thinking"
+            chatId={tempId || "creating"}
+            chatTitle="Creating Chat..."
+          />
+          
+          {/* Dynamic space for assistant responses - only when replying */}
+          <div 
+            style={{ 
+              height: `${Math.max(window.innerHeight * 0.6, 300)}px` 
+            }} 
+          />
         </div>
       </div>
 

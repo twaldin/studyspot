@@ -26,7 +26,6 @@ export interface Quiz {
   created_at: string;
   updated_at: string;
   edited_from?: string; // Foreign key to original quiz
-  difficulty_level?: 'easy' | 'medium' | 'hard';
   is_public?: boolean;
   // Computed fields for display
   question_count?: number;
@@ -112,7 +111,6 @@ export interface SaveQuizRequest {
   title: string;
   description: string;
   course_id: string;
-  difficulty_level?: 'easy' | 'medium' | 'hard';
   edited_from?: string; // ID of the original quiz if this is an edit
   questions: Array<{
     question_text: string;

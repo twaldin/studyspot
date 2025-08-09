@@ -12,16 +12,31 @@ export async function augmentMessagesWithResources(messages: Message[]): Promise
     flashcard_set: new Set<string>(),
   };
 
-  // Collect all unique resource IDs
+  // Collect all unique resource IDs from both formats
   messages.forEach(message => {
-    if (message.role === 'assistant' && message.linkedResources) {
-      message.linkedResources.forEach(resource => {
-        if (resource.type === 'document') {
-          resourceIds.document.add(resource.id);
-        } else if (resource.type === 'flashcard_set') {
-          resourceIds.flashcard_set.add(resource.id);
-        }
-      });
+    if (message.role === 'assistant') {
+      // Handle UI format (linkedResources)
+      if (message.linkedResources) {
+        message.linkedResources.forEach(resource => {
+          if (resource.type === 'document') {
+            resourceIds.document.add(resource.id);
+          } else if (resource.type === 'flashcard_set') {
+            resourceIds.flashcard_set.add(resource.id);
+          }
+        });
+      }
+      
+      // Handle database format (linked_resources)
+      const dbResources = (message as any).linked_resources;
+      if (dbResources && Array.isArray(dbResources)) {
+        dbResources.forEach(resource => {
+          if (resource.type === 'document') {
+            resourceIds.document.add(resource.id);
+          } else if (resource.type === 'flashcard_set') {
+            resourceIds.flashcard_set.add(resource.id);
+          }
+        });
+      }
     }
   });
 

@@ -329,16 +329,6 @@ export default function QuizPage() {
           >
             {quiz.title}
           </h1>
-          {quiz.difficulty_level && (
-            <Badge
-              variant="secondary"
-              className={quizService.getDifficultyColorClass(
-                quiz.difficulty_level,
-              )}
-            >
-              {quizService.formatDifficultyLevel(quiz.difficulty_level)}
-            </Badge>
-          )}
         </div>
 
         {/* Course and Meta Info */}

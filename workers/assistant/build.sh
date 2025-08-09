@@ -35,7 +35,7 @@ echo "Build complete! wrangler.json should now be clean."
 echo "Creating .dev.vars for local development..."
 if [ -f "../../.env" ]; then
     # Extract required variables from root .env
-    grep -E "^(SUPABASE_URL|SUPABASE_SERVICE_ROLE_KEY|ANTHROPIC_API_KEY|OPENAI_API_KEY|GEMINI_API_KEY|CLOUDFLARE_API_TOKEN)=" ../../.env > .mastra/output/.dev.vars
+    grep -E "^(SUPABASE_URL|SUPABASE_SERVICE_ROLE_KEY|ANTHROPIC_API_KEY|OPENAI_API_KEY|GEMINI_API_KEY|CLOUDFLARE_API_TOKEN|LLAMA_CLOUD_API_KEY)=" ../../.env > .mastra/output/.dev.vars
     echo "Created .dev.vars with environment variables from root .env"
 else
     echo "Warning: Root .env file not found. Manual .dev.vars creation may be required."
@@ -53,3 +53,4 @@ echo "  wrangler secret put SUPABASE_URL"
 echo "  wrangler secret put SUPABASE_SERVICE_ROLE_KEY"
 echo "  wrangler secret put GEMINI_API_KEY"
 echo "  wrangler secret put CLOUDFLARE_API_TOKEN"
+echo "  wrangler secret put LLAMA_CLOUD_API_KEY"
