@@ -15,9 +15,15 @@ import { chatStateService } from "@/features/chat/services/chat-state.service";
 import { chatStreamingService } from "@/features/chat/services/chat-streaming.service";
 import { streamingManager } from "@/features/chat/services/streaming-manager.service";
 import { useStreamingChats } from "@/features/chat/PendingChatContext";
+import { useAnonymousUserOptional } from "@/contexts/anonymous-user-context";
 import logger from "@/lib/logger";
 
-export function ChatPageContent() {
+interface ChatPageContentProps {
+  isPublicView?: boolean;
+  onMessageLimitReached?: () => void;
+}
+
+export function ChatPageContent({ isPublicView = false, onMessageLimitReached }: ChatPageContentProps) {
   const params = useParams();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -30,6 +36,7 @@ export function ChatPageContent() {
   const { userId } = useAuthenticatedUser()
   const { setStreamingStatus, updateStreamingMessage, getStreamingMessage, removeOptimisticChat } = useStreamingChats()
   const updateChatCache = useUpdateChatCacheWithHistory()
+  const anonymousUser = useAnonymousUserOptional()
   
   const [messages, setMessages] = useState<Message[]>([])
   const [isReplying, setIsReplying] = useState(false)
@@ -402,6 +409,15 @@ export function ChatPageContent() {
   });
 
   const handleFormSubmit = useCallback(async (values: { message: string }) => {
+    // Check anonymous user limits first
+    if (isPublicView && anonymousUser?.isAnonymous) {
+      const canSendMessage = anonymousUser.useChatMessage();
+      if (!canSendMessage) {
+        onMessageLimitReached?.();
+        return;
+      }
+    }
+
     if (!selectedCourse || !chatId) {
       setError('Please select a course first')
       return
@@ -491,7 +507,7 @@ export function ChatPageContent() {
         error instanceof Error ? error : new Error('Failed to send message')
       )
     }
-  }, [chatId, selectedCourse, messages, router, setStreamingStatus, chat?.title, updateStreamingMessage, queryClient, scrollToUserMessage, userId])
+  }, [chatId, selectedCourse, messages, router, setStreamingStatus, chat?.title, updateStreamingMessage, queryClient, scrollToUserMessage, userId, isPublicView, anonymousUser, onMessageLimitReached])
 
   if (!chatId) {
     return (
@@ -513,6 +529,7 @@ export function ChatPageContent() {
           {error}
         </div>
       )}
+
       
       <div 
         ref={chatContainerRef}
@@ -536,6 +553,8 @@ export function ChatPageContent() {
                 isStreaming={true}
                 isTextStreaming={false}
                 toolActivity="thinking"
+                chatId={chatId}
+                chatTitle={chat?.title}
               />
             </>
           ) : (
@@ -553,6 +572,8 @@ export function ChatPageContent() {
                   isStreaming={isReplying && i === messages.length - 1}
                   isTextStreaming={isTextStreaming && i === messages.length - 1}
                   toolActivity={i === messages.length - 1 ? toolActivity : null}
+                  chatId={chatId}
+                  chatTitle={chat?.title}
                 />
               )
             )
@@ -573,6 +594,7 @@ export function ChatPageContent() {
           placeholder="Can you help me with..."
         />
       </div>
+
     </div>
   )
 }

@@ -16,6 +16,11 @@ const isProtectedRoute = createRouteMatcher([
 ]);
 
 const isOnboardingRoute = createRouteMatcher(["/onboarding(.*)"]);
+const isPublicShareRoute = createRouteMatcher([
+  "/chat/(.*)/share/(.*)",
+  "/flashcards/(.*)/share/(.*)", 
+  "/quiz/(.*)/share/(.*)",
+]);
 
 export default clerkMiddleware(async (auth, req) => {
   try {
@@ -23,6 +28,11 @@ export default clerkMiddleware(async (auth, req) => {
     if (process.env.openNextDebug === "true") {
       console.log("[MIDDLEWARE] Request URL:", req.url);
       console.log("[MIDDLEWARE] Request pathname:", req.nextUrl.pathname);
+    }
+
+    // Allow public share routes without authentication
+    if (isPublicShareRoute(req)) {
+      return NextResponse.next();
     }
 
     if (isProtectedRoute(req)) {
