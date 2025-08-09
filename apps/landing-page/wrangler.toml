@@ -1,0 +1,23 @@
+name = "studyspot-landing"
+main = ".open-next/worker.js"
+compatibility_date = "2025-04-01"
+compatibility_flags = ["nodejs_compat", "nodejs_compat_populate_process_env", "enable_weak_ref"]
+
+# Account configuration
+account_id = "869782f5d7c9391d085cd41c42977a47"
+
+# Static asset binding (required for OpenNext.js)
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
+
+[vars]
+ENVIRONMENT = "production"
+NODE_ENV = "production"
+openNextDebug = "true"
+WRANGLER_BUILD_CONDITIONS = ""
+WRANGLER_BUILD_PLATFORM = "node"
+
+# Note: This is a static landing page, so minimal environment variables needed
+# Any secrets should be set via CLI:
+# wrangler secret put SECRET_NAME
