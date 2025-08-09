@@ -354,7 +354,6 @@ export class QuizService {
     quizTitle: string,
     quizDescription: string,
     courseId: string,
-    difficultyLevel?: "easy" | "medium" | "hard",
   ): SaveQuizRequest {
     const questions = Array.from(editState.editedQuestions.values())
       .map((edit, index) => ({
@@ -372,7 +371,6 @@ export class QuizService {
       title: quizTitle,
       description: quizDescription,
       course_id: courseId,
-      difficulty_level: difficultyLevel,
       questions,
     };
   }
@@ -484,29 +482,6 @@ export class QuizService {
     return date.toLocaleDateString();
   }
 
-  /**
-   * Format difficulty level for display
-   */
-  formatDifficultyLevel(level?: string): string {
-    if (!level) return "";
-    return level.charAt(0).toUpperCase() + level.slice(1);
-  }
-
-  /**
-   * Get difficulty color class
-   */
-  getDifficultyColorClass(level?: string): string {
-    switch (level) {
-      case "easy":
-        return "text-green-600 dark:text-green-400";
-      case "medium":
-        return "text-yellow-600 dark:text-yellow-400";
-      case "hard":
-        return "text-red-600 dark:text-red-400";
-      default:
-        return "text-gray-600 dark:text-gray-400";
-    }
-  }
 
   /**
    * Switch to a different quiz mode (review, retake, practice)

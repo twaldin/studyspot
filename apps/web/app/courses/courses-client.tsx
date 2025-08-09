@@ -42,6 +42,7 @@ import { ICourse } from "@/features/courses/course.model";
 
 export function CoursesPageContent() {
   const searchInputRef = React.useRef<HTMLInputElement>(null);
+  const [searchQuery, setSearchQuery] = React.useState("");
   
   const [isCreateCourseDialogOpen, setCreateCourseDialogOpen] = React.useState(
     false,
@@ -59,6 +60,17 @@ export function CoursesPageContent() {
   const setSelectedCourseMutation = useSetSelectedCourse();
   const deleteCourseMutation = useDeleteCourse();
   const { isDeveloperModeEnabled } = useDeveloperMode();
+
+  // Filter courses based on search query
+  const filteredCourses = React.useMemo(() => {
+    if (!courses || !searchQuery.trim()) return courses;
+    
+    const query = searchQuery.toLowerCase().trim();
+    return courses.filter(course => 
+      course.code.toLowerCase().includes(query) ||
+      course.title.toLowerCase().includes(query)
+    );
+  }, [courses, searchQuery]);
 
   
   // Auto-focus the search input when component mounts
@@ -154,6 +166,8 @@ export function CoursesPageContent() {
               type="search"
               placeholder="Search for courses..."
               className="w-full rounded-lg bg-background pl-8"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
           <div className="flex items-center gap-4">
@@ -193,9 +207,17 @@ export function CoursesPageContent() {
                 </p>
               </div>
             )
+            : filteredCourses?.length === 0
+            ? (
+              <div className="flex items-center justify-center h-32">
+                <p className="text-muted-foreground">
+                  No courses match your search "{searchQuery}"
+                </p>
+              </div>
+            )
             : (
               <div className="grid gap-4 @md:grid-cols-2 @lg:grid-cols-3">
-                {courses?.map((course, i) => {
+                {filteredCourses?.map((course, i) => {
                   const isJoined = !isJoinedCoursesLoading &&
                     joinedCourses.includes(course.id);
                   const isJoinedLoading = isJoinedCoursesLoading;

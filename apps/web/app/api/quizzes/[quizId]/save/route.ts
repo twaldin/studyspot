@@ -73,7 +73,6 @@ export async function POST(
         .update({
           title: saveRequest.title,
           description: saveRequest.description,
-          difficulty_level: saveRequest.difficulty_level,
           updated_at: now
         })
         .eq('id', originalQuizId);
@@ -102,7 +101,6 @@ export async function POST(
           description: saveRequest.description,
           course_id: saveRequest.course_id,
           created_by: userId,
-          difficulty_level: saveRequest.difficulty_level,
           edited_from: saveRequest.edited_from,
           created_at: now,
           updated_at: now

@@ -21,10 +21,12 @@ export async function POST(
     const supabase = await supabaseService.createAuthenticatedClient();
     
     // Get the chat's course_id and course details, but only if it belongs to the current school
+    // Remove user_id filter to allow selecting courses from school-wide chats
     const { data: chat, error } = await supabase
       .from('chats')
       .select(`
         course_id,
+        user_id,
         courses!inner (
           id,
           title,
@@ -33,7 +35,7 @@ export async function POST(
         )
       `)
       .eq('id', chatId)
-      .eq('user_id', auth.userId)
+      // RLS will ensure only accessible chats are returned
       .eq('courses.school_id', auth.selectedSchool)
       .single();
 

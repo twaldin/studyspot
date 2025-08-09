@@ -155,7 +155,6 @@ export class ChatStreamingService {
               title: quiz.title || 'Untitled Quiz',
               description: quiz.description,
               questionCount: quiz.question_count || 0,
-              difficultyLevel: quiz.difficulty_level
             });
           }
         }

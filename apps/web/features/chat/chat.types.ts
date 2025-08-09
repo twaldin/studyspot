@@ -34,7 +34,6 @@ export interface QuizResource {
   title: string;
   description?: string;
   questionCount: number;
-  difficultyLevel?: string;
 }
 
 // Unified resource interface for chat display
@@ -55,6 +54,7 @@ export interface Chat {
   title: string;
   created_at: string;
   course_id: string;
+  user_id: string; // Added to support checking ownership
   chats: Message[];
 }
 
