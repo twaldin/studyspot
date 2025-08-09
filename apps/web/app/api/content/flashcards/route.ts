@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
       title: set.title,
       description: set.description,
       cardCount: (set as any).flashcards?.[0]?.count || 0,
-      created_by: set.created_by,
+      created_by: set.user_id,
       visibility_mode: set.visibility_mode,
       is_public: set.is_public,
       created_at: set.created_at,

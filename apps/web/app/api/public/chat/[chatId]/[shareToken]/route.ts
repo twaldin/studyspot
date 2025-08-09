@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/services/database/supabase.service';
+import { augmentMessagesWithPublicResources } from '@/features/chat/services/resource-augmentor';
 
 export async function GET(
   request: NextRequest,
@@ -40,11 +41,15 @@ export async function GET(
       }, { status: 404 });
     }
 
+    // Augment messages with public linkedResources
+    const messages = chat.chats || [];
+    const augmentedMessages = await augmentMessagesWithPublicResources(messages);
+
     // Return only safe, necessary data for public view
     return NextResponse.json({
       id: chat.id,
       title: chat.title,
-      messages: chat.chats, // The conversation history
+      messages: augmentedMessages, // The conversation history with linkedResources
       course: {
         id: chat.course_id,
         code: chat.courses.code,

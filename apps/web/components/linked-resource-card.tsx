@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import {
   DocumentResource,
@@ -23,17 +23,48 @@ import { DocumentCard } from "@/components/document-card";
 import { Trash2 } from "lucide-react";
 import { useDeveloperMode } from "@/contexts/developer-mode-context";
 import { useDeleteDocument } from "@/hooks/api/documents";
+import { useDeleteFlashcardSet, useDeleteQuiz } from "@/hooks/api/content";
+import { useAuthenticatedUser } from "@/hooks/api/base";
 import toast from "react-hot-toast";
 
 interface LinkedResourceCardProps {
   resource: LinkedResource;
+  useShareUrls?: boolean; // When true, use share URLs instead of regular URLs
 }
 
 export const LinkedResourceCard: React.FC<LinkedResourceCardProps> = (
-  { resource },
+  { resource, useShareUrls = false },
 ) => {
   const { isDeveloperModeEnabled } = useDeveloperMode();
+  const { userId } = useAuthenticatedUser();
   const deleteDocumentMutation = useDeleteDocument();
+  const deleteFlashcardSetMutation = useDeleteFlashcardSet();
+  const deleteQuizMutation = useDeleteQuiz();
+
+  // Generate the appropriate URL for a resource based on context
+  const getResourceUrl = (resource: LinkedResource): string => {
+    if (!useShareUrls) {
+      // Normal URLs
+      if (resource.type === 'flashcard_set') return `/flashcards/${resource.id}`;
+      if (resource.type === 'quiz') return `/quiz/${resource.id}`;
+    } else {
+      // Share URLs
+      const resourceWithToken = resource as any;
+      if (resource.type === 'flashcard_set' && resourceWithToken.share_token) {
+        return `/flashcards/${resource.id}/share/${resourceWithToken.share_token}`;
+      }
+      if (resource.type === 'quiz' && resourceWithToken.share_token) {
+        return `/quiz/${resource.id}/share/${resourceWithToken.share_token}`;
+      }
+      
+      // Fallback to normal URL if share_token is missing
+      if (resource.type === 'flashcard_set') return `/flashcards/${resource.id}`;
+      if (resource.type === 'quiz') return `/quiz/${resource.id}`;
+    }
+    
+    // Default fallback
+    return '#';
+  };
 
   const handleDeleteDocument = (documentId: string, fileName: string) => {
     deleteDocumentMutation.mutate(documentId, {
@@ -44,6 +75,107 @@ export const LinkedResourceCard: React.FC<LinkedResourceCardProps> = (
         toast.error(error.message || "Failed to delete document");
       },
     });
+  };
+
+  const handleDeleteFlashcardSet = (flashcardSetId: string, title: string) => {
+    deleteFlashcardSetMutation.mutate(flashcardSetId, {
+      onSuccess: () => {
+        toast.success(`Successfully deleted flashcard set "${title}"`);
+      },
+      onError: (error: any) => {
+        toast.error(error.message || "Failed to delete flashcard set");
+      },
+    });
+  };
+
+  const handleDeleteQuiz = (quizId: string, title: string) => {
+    deleteQuizMutation.mutate(quizId, {
+      onSuccess: () => {
+        toast.success(`Successfully deleted quiz "${title}"`);
+      },
+      onError: (error: any) => {
+        toast.error(error.message || "Failed to delete quiz");
+      },
+    });
+  };
+
+  // Check if user owns this content (for delete permissions)
+  const isUserOwned = (resource: LinkedResource) => {
+    if (resource.type === 'document') {
+      return false; // Documents don't have ownership implemented yet
+    }
+    return resource.created_by === userId;
+  };
+
+  // Delete button component for owned content
+  const DeleteButton = ({ resource }: { resource: LinkedResource }) => {
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+    const handleButtonClick = (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      e.nativeEvent.stopImmediatePropagation();
+      setIsDialogOpen(true);
+    };
+
+    const handleDelete = () => {
+      if (resource.type === 'flashcard_set') {
+        handleDeleteFlashcardSet(resource.id, resource.title);
+      } else if (resource.type === 'quiz') {
+        handleDeleteQuiz(resource.id, resource.title);
+      }
+      setIsDialogOpen(false);
+    };
+
+    const getDeleteMessage = () => {
+      const type = resource.type === 'flashcard_set' ? 'flashcard set' : 'quiz';
+      return `This will permanently delete the ${type} "${resource.title}" and all its content. This action cannot be undone.`;
+    };
+
+    if (!isUserOwned(resource)) return null;
+
+    return (
+      <>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute top-2 right-2 z-50 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700"
+          onClick={handleButtonClick}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          style={{ pointerEvents: 'auto' }}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+
+        <AlertDialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete {resource.type === 'flashcard_set' ? 'Flashcard Set' : 'Quiz'}?</AlertDialogTitle>
+              <AlertDialogDescription>
+                {getDeleteMessage()}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setIsDialogOpen(false)}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDelete}
+                disabled={deleteFlashcardSetMutation.isPending || deleteQuizMutation.isPending}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                {(deleteFlashcardSetMutation.isPending || deleteQuizMutation.isPending)
+                  ? "Deleting..."
+                  : `Delete ${resource.type === 'flashcard_set' ? 'Flashcard Set' : 'Quiz'}`}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </>
+    );
   };
 
   // Handle document resources using existing DocumentCard
@@ -90,8 +222,9 @@ export const LinkedResourceCard: React.FC<LinkedResourceCardProps> = (
     const flashcardResource = resource as FlashcardSetResource;
 
     return (
-      <Card className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer py-3">
-        <Link href={`/flashcards/${flashcardResource.id}`} className="block">
+      <Card className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer py-3 relative group">
+        <DeleteButton resource={flashcardResource} />
+        <Link href={getResourceUrl(flashcardResource)} className="block">
           <CardContent className="px-4 py-0">
             <div className="flex items-start gap-3">
               {/* Flashcard icon */}
@@ -144,8 +277,9 @@ export const LinkedResourceCard: React.FC<LinkedResourceCardProps> = (
     const quizResource = resource as QuizResource;
 
     return (
-      <Card className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer py-3">
-        <Link href={`/quiz/${quizResource.id}`} className="block">
+      <Card className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer py-3 relative group">
+        <DeleteButton resource={quizResource} />
+        <Link href={getResourceUrl(quizResource)} className="block">
           <CardContent className="px-4 py-0">
             <div className="flex items-start gap-3">
               {/* Quiz icon */}

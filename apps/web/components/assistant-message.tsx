@@ -20,6 +20,7 @@ interface AssistantMessageProps {
   chatId?: string;
   chatTitle?: string;
   chatContainerRef?: React.RefObject<HTMLDivElement>;
+  isPublicShare?: boolean; // When true, use share URLs for linkedResources
 }
 
 const AssistantMessage: React.FC<AssistantMessageProps> = ({
@@ -31,6 +32,7 @@ const AssistantMessage: React.FC<AssistantMessageProps> = ({
   chatId,
   chatTitle,
   chatContainerRef,
+  isPublicShare = false,
 }) => {
   // Initialize with content as fallback for SSR
   const [html, setHtml] = useState(content);
@@ -364,6 +366,7 @@ const AssistantMessage: React.FC<AssistantMessageProps> = ({
                           <LinkedResourceCard
                             key={`${resource.type}-${resource.id}`}
                             resource={resource}
+                            useShareUrls={isPublicShare}
                           />
                         ))}
                       </div>

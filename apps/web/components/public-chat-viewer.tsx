@@ -53,6 +53,7 @@ export function PublicChatViewer({ chatData, onSignUpPrompt }: PublicChatViewerP
                     isTextStreaming={false}
                     chatId={chatData.id}
                     chatTitle={chatData.title}
+                    isPublicShare={true}
                   />
                 )
               )}
