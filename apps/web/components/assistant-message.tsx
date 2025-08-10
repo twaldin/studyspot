@@ -36,7 +36,7 @@ const AssistantMessage: React.FC<AssistantMessageProps> = ({
 }) => {
   // Initialize with content as fallback for SSR
   const [html, setHtml] = useState(content);
-  const [resourcesOpen, setResourcesOpen] = useState(false); // Start collapsed
+  const [resourcesOpen, setResourcesOpen] = useState(true); // Start open
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const resourcesSectionRef = useRef<HTMLDivElement>(null);
 
