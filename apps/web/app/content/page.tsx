@@ -195,15 +195,12 @@ export default function ContentPage() {
     return items;
   }, [documents, flashcards, quizzes, showDocuments, showFlashcards, showQuizzes, activeTab, userId]);
 
-  // Filter content based on search query
+  // Filter content based on search query using fuzzy search
   const filteredContent = React.useMemo(() => {
     if (!searchQuery.trim()) return allContent;
     
-    const query = searchQuery.toLowerCase().trim();
-    return allContent.filter(item => 
-      item.title.toLowerCase().includes(query) ||
-      (item.description && item.description.toLowerCase().includes(query))
-    );
+    const { fuzzySearchMultiField } = require('@/lib/services/search/fuzzy-search.service');
+    return fuzzySearchMultiField(allContent, searchQuery, ['title', 'description'], 0.1);
   }, [allContent, searchQuery]);
 
   // Sort content using debounced sort value

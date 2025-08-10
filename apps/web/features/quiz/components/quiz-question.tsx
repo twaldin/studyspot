@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Check, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { useMemo } from "react";
 import {
   OptionLabel,
   QuestionAnswerState,
@@ -30,6 +31,12 @@ interface QuizQuestionProps {
   canNavigateNext?: boolean;
 }
 
+interface ShuffledOption {
+  originalLabel: OptionLabel;
+  text: string;
+  displayIndex: number;
+}
+
 export function QuizQuestion({
   question,
   answerState,
@@ -46,72 +53,51 @@ export function QuizQuestion({
   canNavigatePrevious = false,
   canNavigateNext = false,
 }: QuizQuestionProps) {
-  const allOptions = [
-    { label: "A" as OptionLabel, text: question.option_a },
-    { label: "B" as OptionLabel, text: question.option_b },
-    { label: "C" as OptionLabel, text: question.option_c },
-    { label: "D" as OptionLabel, text: question.option_d },
-  ];
-
-  // Calculate dynamic font sizes based on content length
-  const getQuestionFontSize = (text: string) => {
-    const length = text.length;
-    if (length < 50) return "clamp(1rem,5cqw,2.5rem)"; // Short question - large text
-    if (length < 100) return "clamp(0.875rem,4.5cqw,2rem)"; // Medium question
-    if (length < 200) return "clamp(0.75rem,4cqw,1.75rem)"; // Long question
-    return "clamp(0.625rem,3.5cqw,1.5rem)"; // Very long question
-  };
-
-  const getOptionFontSize = (text: string, optionCount: number) => {
-    const length = text.length;
-    const baseScale = optionCount === 4 ? 1 : 1.2; // Keep full size even for 2x2 grid
+  // Shuffle answers while maintaining correct answer tracking
+  const shuffledOptions = useMemo<ShuffledOption[]>(() => {
+    const baseOptions = [
+      { originalLabel: "A" as OptionLabel, text: question.option_a },
+      { originalLabel: "B" as OptionLabel, text: question.option_b },
+      { originalLabel: "C" as OptionLabel, text: question.option_c },
+      { originalLabel: "D" as OptionLabel, text: question.option_d },
+    ].filter(opt => opt.text); // Remove empty options
     
-    if (length < 20) return `clamp(${1.25 * baseScale}rem,${5 * baseScale}cqw,${2.5 * baseScale}rem)`; // Short option - much larger
-    if (length < 40) return `clamp(${1 * baseScale}rem,${4.5 * baseScale}cqw,${2 * baseScale}rem)`; // Medium option - larger
-    if (length < 80) return `clamp(${0.875 * baseScale}rem,${4 * baseScale}cqw,${1.75 * baseScale}rem)`; // Long option - larger
-    if (length < 120) return `clamp(${0.75 * baseScale}rem,${3.5 * baseScale}cqw,${1.5 * baseScale}rem)`; // Longer option
-    return `clamp(${0.625 * baseScale}rem,${3 * baseScale}cqw,${1.25 * baseScale}rem)`; // Very long option - still readable
-  };
-
-  // Calculate consistent font size based on the longest option
-  const getConsistentOptionFontSize = () => {
-    // Find the longest option text
-    const maxLength = Math.max(
-      question.option_a?.length || 0,
-      question.option_b?.length || 0,
-      question.option_c?.length || 0,
-      question.option_d?.length || 0
-    );
-    
-    // Get font size for the longest option
-    const optionCount = allOptions.filter(opt => opt.text).length;
-    return getOptionFontSize('x'.repeat(maxLength), optionCount);
-  };
-
-  const consistentOptionFontSize = getConsistentOptionFontSize();
-
-  const getMaxTextLines = (text: string, optionCount: number) => {
-    const length = text.length;
-    if (optionCount === 4) {
-      // 2x2 grid - allow more lines for readability
-      if (length < 30) return 3;
-      if (length < 60) return 4;
-      return 5;
+    // Don't shuffle in review mode to maintain consistency
+    if (quizMode === 'review' || answerState.hasAnswered) {
+      return baseOptions.map((opt, idx) => ({
+        ...opt,
+        displayIndex: idx
+      }));
     }
-    // Other layouts - even more generous
-    if (length < 50) return 3;
-    if (length < 100) return 4;
-    if (length < 150) return 5;
-    return 6;
-  };
+    
+    // Create a deterministic shuffle based on question ID
+    // This ensures the same question always has the same shuffle pattern
+    const seed = question.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const shuffled = [...baseOptions];
+    
+    // Fisher-Yates shuffle with seeded randomness
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(((seed * (i + 1)) % 1000) / 1000 * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    
+    return shuffled.map((opt, idx) => ({
+      ...opt,
+      displayIndex: idx
+    }));
+  }, [question.id, question.option_a, question.option_b, question.option_c, question.option_d, quizMode, answerState.hasAnswered]);
 
   // Filter options when user answered incorrectly - only show selected and correct answers
-  const options = answerState.hasAnswered && !answerState.isCorrect
-    ? allOptions.filter(option => 
-        option.label === answerState.selectedAnswer || 
-        option.label === question.correct_answer
-      )
-    : allOptions;
+  const visibleOptions = useMemo(() => {
+    if (answerState.hasAnswered && !answerState.isCorrect) {
+      // Only show the selected wrong answer and the correct answer
+      return shuffledOptions.filter(option => 
+        option.originalLabel === answerState.selectedAnswer || 
+        option.originalLabel === question.correct_answer
+      );
+    }
+    return shuffledOptions;
+  }, [shuffledOptions, answerState, question.correct_answer]);
 
   const getOptionState = (optionLabel: OptionLabel) => {
     // In review mode, show the results based on the original answer
@@ -172,156 +158,113 @@ export function QuizQuestion({
   return (
     <div
       className={cn(
-        "relative w-full h-full mx-auto",
+        "relative w-full h-full mx-auto flex flex-col",
         className,
       )}
-      style={{
-        containerType: "size",
-      }}
     >
       {/* Question Card - Takes available space */}
-      <Card className="w-full h-full bg-card shadow-lg rounded-xl overflow-hidden">
-        <CardContent className="p-[clamp(0.75rem,3cqw,2rem)] h-full flex flex-col overflow-hidden min-h-0">
-          <div className="h-full flex flex-col min-h-0" style={{ gap: "clamp(0.5rem,2cqh,1.5rem)" }}>
-            {/* Question Text */}
-            <div 
-              className="text-center px-4"
+      <Card className="w-full h-full bg-card shadow-lg rounded-xl overflow-hidden flex flex-col">
+        <CardContent 
+          className="h-full flex flex-col overflow-hidden min-h-0"
+          style={{
+            padding: 'clamp(1rem, 3vw, 1.5rem)'
+          }}
+        >
+          {/* Question Text - Fixed height portion */}
+          <div className="flex-shrink-0 mb-4 text-center">
+            <QuizContent
+              content={question.question_text}
+              className="font-semibold text-gray-900 dark:text-gray-100"
               style={{
-                fontSize: getQuestionFontSize(question.question_text),
-                lineHeight: "1.4",
-                flex: "0 1 auto",
-                maxHeight: "40%",
-                overflow: "auto",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                wordWrap: "break-word",
-                hyphens: "auto"
+                fontSize: 'clamp(1rem, 2.5vw, 1.5rem)',
+                lineHeight: '1.4'
               }}
-            >
-              <div style={{ 
-                width: "100%",
-                maxWidth: "100%",
-                wordBreak: "break-word",
-                whiteSpace: "normal"
-              }}>
-                <QuizContent
-                  content={question.question_text}
-                  className="font-semibold text-gray-900 dark:text-gray-100"
-                  style={{
-                    textAlign: "center",
-                    width: "100%",
-                    display: "block"
-                  }}
-                />
-              </div>
-            </div>
+            />
+          </div>
 
-            {/* Multiple Choice Options */}
+          {/* Answer Options Grid - Flexible height portion */}
+          <div className="flex-1 min-h-0 overflow-hidden">
             <div 
-              className="grid min-h-0"
+              className={cn(
+                "h-full grid gap-2 md:gap-3",
+                visibleOptions.length === 2 && "grid-cols-1 md:grid-cols-2",
+                visibleOptions.length === 3 && "grid-cols-1",
+                visibleOptions.length === 4 && "grid-cols-1 md:grid-cols-2",
+                visibleOptions.length > 4 && "grid-cols-1"
+              )}
               style={{
-                gridTemplateColumns: options.length === 2 ? "1fr 1fr" : 
-                                   options.length === 3 ? "1fr" : 
-                                   options.length === 4 ? "1fr 1fr" : "1fr",
-                gridTemplateRows: options.length === 2 ? "1fr" : 
-                                 options.length === 3 ? "repeat(3, minmax(0, 1fr))" : 
-                                 options.length === 4 ? "1fr 1fr" : 
-                                 `repeat(${options.length}, minmax(0, 1fr))`,
-                gap: "clamp(0.25rem,1.5cqh,0.75rem)",
-                flex: "1 1 0",
-                minHeight: "0",
-                height: "100%",
+                gridAutoRows: visibleOptions.length <= 2 ? "1fr" : 
+                              visibleOptions.length === 3 ? "minmax(0, 1fr)" :
+                              visibleOptions.length === 4 ? "minmax(0, 1fr)" :
+                              "minmax(80px, 1fr)"
               }}
             >
-              {options.map((option) => {
-                const state = getOptionState(option.label);
+              {visibleOptions.map((option) => {
+                const state = getOptionState(option.originalLabel);
                 const canClick = !disabled && !answerState.hasAnswered && quizMode !== 'review';
 
                 return (
                   <motion.div 
-                    key={option.label} 
-                    className="min-h-0 min-w-0"
+                    key={option.originalLabel} 
+                    className="min-h-0"
                     layout
                     initial={{ opacity: 1, scale: 1 }}
                     animate={{ 
-                      opacity: answerState.hasAnswered && !answerState.isCorrect && 
-                        !(option.label === answerState.selectedAnswer || option.label === question.correct_answer) ? 0.3 : 1,
+                      opacity: 1,
                       scale: 1
                     }}
-                    exit={{ opacity: 0, scale: 0.8 }}
                     transition={{ duration: 0.3, ease: "easeInOut" }}
-                    style={{
-                      height: "100%",
-                      minHeight: "0",
-                      display: "flex",
-                      flexDirection: "column"
-                    }}
                   >
                     <Card
                       className={cn(
-                        "border-2 transition-all duration-300 cursor-pointer flex-1",
+                        "h-full border-2 transition-all duration-300 cursor-pointer",
                         getOptionClassName(state),
-                        canClick && "hover:shadow-md",
+                        canClick && "hover:shadow-md hover:scale-[1.02]",
                       )}
-                      onClick={() => canClick && onAnswerSelect(option.label)}
-                      style={{
-                        minHeight: "0",
-                        height: "100%",
-                        display: "flex",
-                        flexDirection: "column"
-                      }}
+                      onClick={() => canClick && onAnswerSelect(option.originalLabel)}
                     >
                       <CardContent 
-                        className="flex-1 flex items-center overflow-hidden"
+                        className="h-full flex items-center"
                         style={{
-                          padding: "clamp(0.5rem,min(2cqh,2cqw),1rem)",
-                          minHeight: "0"
+                          padding: 'clamp(0.75rem, 2vw, 1rem)'
                         }}
                       >
                         <div 
-                          className="flex items-center w-full min-w-0"
+                          className="flex items-center w-full"
                           style={{
-                            gap: "clamp(0.25rem,min(1.5cqw,1.5cqh),0.75rem)"
+                            gap: 'clamp(0.5rem, 1.5vw, 0.75rem)'
                           }}
                         >
-                          {/* Option Label */}
+                          {/* Option Label - Display the visual label (A, B, C, D) */}
                           <div 
                             className="flex-shrink-0 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center font-bold"
                             style={{
-                              width: "clamp(1.25rem,min(3.5cqw,3.5cqh),2rem)",
-                              height: "clamp(1.25rem,min(3.5cqw,3.5cqh),2rem)",
-                              fontSize: "clamp(0.625rem,min(1.75cqw,1.75cqh),0.875rem)"
+                              width: 'clamp(2rem, 5vw, 2.5rem)',
+                              height: 'clamp(2rem, 5vw, 2.5rem)',
+                              fontSize: 'clamp(0.875rem, 2vw, 1.125rem)'
                             }}
                           >
-                            {option.label}
+                            {String.fromCharCode(65 + option.displayIndex)}
                           </div>
 
                           {/* Option Text */}
-                          <div className="flex-1 min-w-0 overflow-hidden">
+                          <div className="flex-1 min-w-0">
                             <QuizContent
                               content={option.text}
-                              className="leading-tight text-gray-900 dark:text-gray-100 font-medium"
+                              className="text-gray-900 dark:text-gray-100 font-medium line-clamp-3"
                               style={{
-                                fontSize: consistentOptionFontSize,
-                                lineHeight: "1.3",
-                                display: "-webkit-box",
-                                WebkitLineClamp: getMaxTextLines(option.text, options.length),
-                                WebkitBoxOrient: "vertical",
-                                overflow: "hidden"
+                                fontSize: 'clamp(0.875rem, 2vw, 1.125rem)',
+                                lineHeight: '1.3'
                               }}
                             />
                           </div>
 
                           {/* State Icon */}
-                          <div 
-                            className="flex-shrink-0"
-                            style={{
-                              fontSize: "clamp(0.75rem,min(2cqw,2cqh),1rem)"
-                            }}
-                          >
-                            {getOptionIcon(option.label, state)}
-                          </div>
+                          {getOptionIcon(option.originalLabel, state) && (
+                            <div className="flex-shrink-0">
+                              {getOptionIcon(option.originalLabel, state)}
+                            </div>
+                          )}
                         </div>
                       </CardContent>
                     </Card>
@@ -330,13 +273,15 @@ export function QuizQuestion({
               })}
             </div>
 
-            {/* Feedback Section */}
+          </div>
+
+          {/* Feedback Section */}
+          <div className="flex-shrink-0 mt-4">
             {!answerState.hasAnswered && (
               <div 
                 className="text-center text-gray-500 dark:text-gray-400"
                 style={{
-                  fontSize: "clamp(0.75rem,2cqw,0.875rem)",
-                  flex: "0 0 auto"
+                  fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)'
                 }}
               >
                 <p>Select an answer to see feedback.</p>
@@ -348,79 +293,68 @@ export function QuizQuestion({
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="rounded-lg border overflow-hidden"
+                className="rounded-lg border"
                 style={{
-                  padding: "clamp(0.5rem,2cqh,1rem)",
-                  flex: "0 0 auto"
+                  padding: 'clamp(0.75rem, 2vw, 1rem)'
                 }}
               >
-                {answerState.isCorrect
-                  ? (
-                    <div 
-                      className="flex items-center text-green-700 dark:text-green-300"
-                      style={{ gap: "clamp(0.25rem,1.5cqw,0.75rem)" }}
+                {answerState.isCorrect ? (
+                  <div className="flex items-center gap-2 text-green-700 dark:text-green-300">
+                    <Check className="h-5 w-5" />
+                    <span 
+                      className="font-medium"
+                      style={{
+                        fontSize: 'clamp(0.875rem, 2vw, 1rem)'
+                      }}
                     >
-                      <Check style={{ width: "clamp(1rem,2.5cqw,1.25rem)", height: "clamp(1rem,2.5cqw,1.25rem)" }} />
+                      Correct!
+                    </span>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-red-700 dark:text-red-300">
+                      <X className="h-5 w-5" />
                       <span 
                         className="font-medium"
-                        style={{ fontSize: "clamp(0.875rem,2.5cqw,1rem)" }}
+                        style={{
+                          fontSize: 'clamp(0.875rem, 2vw, 1rem)'
+                        }}
                       >
-                        Correct!
+                        Incorrect. The correct answer is {String.fromCharCode(65 + shuffledOptions.findIndex(opt => opt.originalLabel === question.correct_answer))}.
                       </span>
                     </div>
-                  )
-                  : (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "clamp(0.5rem,1.5cqh,0.75rem)" }}>
-                      <div 
-                        className="flex items-center text-red-700 dark:text-red-300"
-                        style={{ gap: "clamp(0.25rem,1.5cqw,0.75rem)" }}
-                      >
-                        <X style={{ width: "clamp(1rem,2.5cqw,1.25rem)", height: "clamp(1rem,2.5cqw,1.25rem)" }} />
-                        <span 
-                          className="font-medium"
-                          style={{ fontSize: "clamp(0.875rem,2.5cqw,1rem)" }}
-                        >
-                          Incorrect. The correct answer is {question.correct_answer}.
-                        </span>
-                      </div>
 
-                      {/* Explanation */}
-                      {question.explanation && (
-                        <div 
-                          className="text-gray-600 dark:text-gray-400 border-t border-gray-200 dark:border-gray-700"
+                    {/* Explanation */}
+                    {question.explanation && (
+                      <div 
+                        className="text-gray-600 dark:text-gray-400 border-t border-gray-200 dark:border-gray-700 pt-3"
+                        style={{
+                          fontSize: 'clamp(0.75rem, 1.75vw, 0.875rem)'
+                        }}
+                      >
+                        <QuizContent content={question.explanation} />
+                      </div>
+                    )}
+
+                    {/* Next Button for incorrect answers */}
+                    {onNext && (
+                      <div className="pt-2">
+                        <Button
+                          onClick={onNext}
+                          variant="outline"
+                          size="sm"
+                          className="gap-2"
                           style={{
-                            paddingTop: "clamp(0.5rem,1.5cqh,0.75rem)",
-                            marginTop: "clamp(0.5rem,1.5cqh,0.75rem)",
-                            fontSize: "clamp(0.75rem,2cqw,0.875rem)",
+                            fontSize: 'clamp(0.75rem, 1.75vw, 0.875rem)'
                           }}
                         >
-                          <QuizContent
-                            content={question.explanation}
-                            className="overflow-hidden"
-                          />
-                        </div>
-                      )}
-
-                      {/* Next Button for incorrect answers */}
-                      {onNext && (
-                        <div style={{ paddingTop: "clamp(0.5rem,1.5cqh,0.75rem)" }}>
-                          <Button
-                            onClick={onNext}
-                            variant="outline"
-                            size="sm"
-                            className="gap-2"
-                            style={{
-                              fontSize: "clamp(0.75rem,2cqw,0.875rem)",
-                              padding: "clamp(0.5rem,1.5cqh,0.75rem) clamp(0.75rem,2cqw,1rem)",
-                            }}
-                          >
-                            {isFinalQuestion ? "Finish Quiz" : "Next Question"}
-                            <ChevronRight style={{ width: "clamp(0.875rem,2cqw,1rem)", height: "clamp(0.875rem,2cqw,1rem)" }} />
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                          {isFinalQuestion ? "Finish Quiz" : "Next Question"}
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </motion.div>
             )}
           </div>
@@ -431,11 +365,11 @@ export function QuizQuestion({
       <div 
         className="absolute bg-card dark:bg-background text-gray-900 dark:text-white font-bold rounded-full flex items-center justify-center shadow-lg"
         style={{
-          top: "clamp(-0.75rem,-2cqh,-1rem)",
-          right: "clamp(-0.75rem,-2cqw,-1rem)",
-          width: "clamp(1.5rem,4cqw,2.5rem)",
-          height: "clamp(1.5rem,4cqw,2.5rem)",
-          fontSize: "clamp(0.75rem,2cqw,1rem)",
+          top: 'clamp(-0.75rem, -2vw, -1rem)',
+          right: 'clamp(-0.75rem, -2vw, -1rem)',
+          width: 'clamp(2.5rem, 6vw, 3rem)',
+          height: 'clamp(2.5rem, 6vw, 3rem)',
+          fontSize: 'clamp(0.875rem, 2vw, 1.125rem)'
         }}
       >
         {question.order_index + 1}

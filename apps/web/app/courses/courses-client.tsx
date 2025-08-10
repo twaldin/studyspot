@@ -61,15 +61,12 @@ export function CoursesPageContent() {
   const deleteCourseMutation = useDeleteCourse();
   const { isDeveloperModeEnabled } = useDeveloperMode();
 
-  // Filter courses based on search query
+  // Filter courses based on search query using fuzzy search
   const filteredCourses = React.useMemo(() => {
     if (!courses || !searchQuery.trim()) return courses;
     
-    const query = searchQuery.toLowerCase().trim();
-    return courses.filter(course => 
-      course.code.toLowerCase().includes(query) ||
-      course.title.toLowerCase().includes(query)
-    );
+    const { fuzzySearchMultiField } = require('@/lib/services/search/fuzzy-search.service');
+    return fuzzySearchMultiField(courses, searchQuery, ['code', 'title'], 0.1);
   }, [courses, searchQuery]);
 
   
