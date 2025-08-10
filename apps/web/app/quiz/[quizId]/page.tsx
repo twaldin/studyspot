@@ -50,6 +50,7 @@ import {
   Loader2,
   Maximize,
   RotateCcw,
+  Share,
   Shuffle,
   Target,
 } from "lucide-react";
@@ -60,6 +61,8 @@ import {
   QuizCompletionDialog,
   QuizCompletionMode,
 } from "@/components/quiz-completion-dialog";
+import { ShareModal } from "@/components/share-modal";
+import { getCourseIcon } from "@/lib/utils/course-icons";
 
 export default function QuizPage() {
   const params = useParams();
@@ -74,6 +77,7 @@ export default function QuizPage() {
   const [studyState, setStudyState] = useState<StudyState | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showCompletionDialog, setShowCompletionDialog] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   // Initialize study state when quiz loads
   useEffect(() => {
@@ -325,16 +329,6 @@ export default function QuizPage() {
           >
             {quiz.title}
           </h1>
-          {quiz.difficulty_level && (
-            <Badge
-              variant="secondary"
-              className={quizService.getDifficultyColorClass(
-                quiz.difficulty_level,
-              )}
-            >
-              {quizService.formatDifficultyLevel(quiz.difficulty_level)}
-            </Badge>
-          )}
         </div>
 
         {/* Course and Meta Info */}
@@ -352,7 +346,10 @@ export default function QuizPage() {
 
           <div className="flex items-center gap-6 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
-              <BookOpen className="h-4 w-4" />
+              {(() => {
+                const CourseIcon = getCourseIcon((quiz.courses as any)?.icon);
+                return <CourseIcon className="h-4 w-4" />;
+              })()}
               <span>
                 {quiz.course_code} - {quiz.course_name}
               </span>
@@ -494,6 +491,14 @@ export default function QuizPage() {
             >
               <Edit3 className="h-4 w-4" />
             </Button>
+            <Button
+              onClick={() => setIsShareModalOpen(true)}
+              variant="ghost"
+              size="icon"
+              className="cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            >
+              <Share className="h-4 w-4" />
+            </Button>
           </div>
 
           {/* Right Controls */}
@@ -553,6 +558,19 @@ export default function QuizPage() {
           onOpenChange={setShowCompletionDialog}
           progress={studyState.progress}
           onModeSelect={handleQuizModeSelect}
+        />
+      )}
+
+      {/* Share Modal */}
+      {quiz && (
+        <ShareModal
+          isOpen={isShareModalOpen}
+          onClose={() => setIsShareModalOpen(false)}
+          url={`/quiz/${quizId}`}
+          title={quiz.title}
+          type="quiz"
+          courseCode={quiz.course_code}
+          resourceId={quizId}
         />
       )}
     </>

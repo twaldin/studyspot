@@ -35,6 +35,9 @@ interface DocumentCardProps {
 function PDFPreview({ url, width }: { url: string; width: number }) {
   const [isClient, setIsClient] = useState(false);
   const [pdfComponents, setPdfComponents] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     setIsClient(true);
@@ -49,13 +52,33 @@ function PDFPreview({ url, width }: { url: string; width: number }) {
         setPdfComponents(reactPdf);
       }).catch((error) => {
         console.error("Failed to load react-pdf:", error);
+        setHasError(true);
       });
     }
+
+    return () => {
+      // Cleanup: Cancel any ongoing PDF operations
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, []);
 
-  if (!isClient || !pdfComponents) {
+  // Reset states when URL changes
+  useEffect(() => {
+    setIsLoading(true);
+    setHasError(false);
+    
+    // Cancel previous operations
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+  }, [url]);
+
+  if (!isClient || !pdfComponents || hasError) {
     return (
-      <div className="absolute bottom-[-80px] right-[0px] w-26 h-32 bg-gray-100 border border-gray-200 rounded-md shadow-sm rotate-6 opacity-80 z-0 flex items-center justify-center">
+      <div className="absolute bottom-[-80px] right-[0px] w-32 h-32 bg-gray-100 border border-gray-200 rounded-md shadow-sm rotate-6 opacity-80 z-0 flex items-center justify-center">
         <div className="text-xs text-gray-500">PDF Preview</div>
       </div>
     );
@@ -63,10 +86,46 @@ function PDFPreview({ url, width }: { url: string; width: number }) {
 
   const { Document: PdfDocument, Page } = pdfComponents;
 
+  const handleLoadSuccess = () => {
+    setIsLoading(false);
+    setHasError(false);
+  };
+
+  const handleLoadError = (error: Error) => {
+    console.warn("PDF load error:", error.message);
+    setHasError(true);
+    setIsLoading(false);
+  };
+
   return (
     <div className="absolute bottom-[-80px] right-[0px] w-32 h-32 bg-white border border-gray-200 rounded-md shadow-sm rotate-6 opacity-80 z-0 overflow-hidden">
-      <PdfDocument file={url} loading={null} error="Failed to load PDF.">
-        <Page pageNumber={1} width={width} />
+      {isLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
+          <div className="text-xs text-gray-400">Loading...</div>
+        </div>
+      )}
+      
+      <PdfDocument 
+        file={url} 
+        loading={null} 
+        error="Failed to load PDF."
+        onLoadSuccess={handleLoadSuccess}
+        onLoadError={handleLoadError}
+      >
+        <Page 
+          pageNumber={1} 
+          width={width}
+          loading={null}
+          error="Failed to load page."
+          onRenderError={(error) => {
+            // Ignore TextLayer cancellation errors during re-renders
+            if (error.message?.includes('TextLayer task cancelled') || 
+                error.message?.includes('AbortException')) {
+              return;
+            }
+            console.warn("PDF render error:", error);
+          }}
+        />
       </PdfDocument>
     </div>
   );

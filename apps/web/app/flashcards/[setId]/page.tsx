@@ -52,11 +52,14 @@ import {
   Maximize,
   RotateCcw,
   Shuffle,
+  Share,
   User,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { cn } from "@studyspot/ui/lib/utils";
 import { useConfetti } from "@/hooks/use-confetti";
+import { ShareModal } from "@/components/share-modal";
+import { getCourseIcon } from "@/lib/utils/course-icons";
 
 export default function FlashcardSetPage() {
   const params = useParams();
@@ -76,6 +79,7 @@ export default function FlashcardSetPage() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [studyState, setStudyState] = useState<StudyState | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   // Initialize study state when flashcard set loads
   useEffect(() => {
@@ -256,7 +260,10 @@ export default function FlashcardSetPage() {
 
           <div className="flex items-center gap-6 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
-              <BookOpen className="h-4 w-4" />
+              {(() => {
+                const CourseIcon = getCourseIcon((flashcardSet.courses as any)?.icon);
+                return <CourseIcon className="h-4 w-4" />;
+              })()}
               <span>
                 {flashcardSet.course_code} - {flashcardSet.course_name}
               </span>
@@ -380,6 +387,14 @@ export default function FlashcardSetPage() {
           {/* Right Controls */}
           <div className="flex items-center gap-2">
             <Button
+              onClick={() => setIsShareModalOpen(true)}
+              variant="ghost"
+              size="icon"
+              className="cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            >
+              <Share className="h-4 w-4" />
+            </Button>
+            <Button
               onClick={handleFullscreen}
               variant="ghost"
               size="icon"
@@ -414,6 +429,19 @@ export default function FlashcardSetPage() {
             {renderContent()}
           </div>
         </div>
+      )}
+
+      {/* Share Modal */}
+      {flashcardSet && (
+        <ShareModal
+          isOpen={isShareModalOpen}
+          onClose={() => setIsShareModalOpen(false)}
+          url={`/flashcards/${setId}`}
+          title={flashcardSet.title}
+          type="flashcard"
+          courseCode={flashcardSet.course_code}
+          resourceId={setId}
+        />
       )}
     </>
   );

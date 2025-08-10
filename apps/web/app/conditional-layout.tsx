@@ -58,7 +58,7 @@ export function ConditionalLayout({ children }: { children: ReactNode }) {
                   </kbd>
                 </p>
               </header>
-              <main className="h-[calc(100vh-4rem)] overflow-y-auto">{children}</main>
+              <main className="h-[calc(100vh-4rem)] overflow-y-auto scrollbar-hidden">{children}</main>
             </SidebarInset>
           </SidebarProvider>
           <AppRightSidebar />
