@@ -61,6 +61,18 @@ const canvasAnnouncementSchema = z.object({
   html_url: z.string(),
 });
 
+const canvasSyllabusSchema = z.object({
+  syllabus_body: z.string().nullable(),
+  html_url: z.string(),
+});
+
+const canvasDiscussionSchema = z.object({
+  id: z.number(),
+  title: z.string(),
+  message: z.string().nullable(),
+  html_url: z.string(),
+});
+
 export type CanvasCourse = z.infer<typeof canvasCourseSchema> & {
   availableContentTypes?: string[];
 };
@@ -69,6 +81,8 @@ export type CanvasFile = z.infer<typeof canvasFileSchema>;
 export type CanvasAssignment = z.infer<typeof canvasAssignmentSchema>;
 export type CanvasFrontPage = z.infer<typeof canvasFrontPageSchema>;
 export type CanvasAnnouncement = z.infer<typeof canvasAnnouncementSchema>;
+export type CanvasSyllabus = z.infer<typeof canvasSyllabusSchema>;
+export type CanvasDiscussion = z.infer<typeof canvasDiscussionSchema>;
 
 
 const baseUrl = 'https://canvas.instructure.com/api/v1';
@@ -348,6 +362,55 @@ async function ingestContentForCourse(
       }
     }
   }
+
+  if (contentTypes.includes('Syllabus')) {
+    try {
+      const syllabus = await getCanvasCourseSyllabus(canvasCourseId, accessToken);
+      if (syllabus && syllabus.syllabus_body) {
+        const cleanBody = syllabus.syllabus_body.replace(/<[^>]*>?/gm, '').trim();
+        if (cleanBody) {
+          await ingestCanvasPage(userId, dbCourse.id, 'Syllabus', cleanBody, syllabus.html_url);
+          logger.info({ courseId: dbCourse.id }, "Successfully ingested syllabus.");
+        } else {
+          logger.warn({ courseId: dbCourse.id }, "Skipping empty syllabus.");
+        }
+      }
+    } catch (ingestionError: any) {
+      logger.error(
+        {
+          error: ingestionError.message,
+        },
+        "Failed to ingest syllabus, continuing with next item."
+      );
+    }
+  }
+
+  if (contentTypes.includes('Discussions')) {
+    const discussions = await getCanvasDiscussions(canvasCourseId, accessToken);
+    for (const discussion of discussions) {
+      try {
+        if (discussion.message) {
+          const cleanMessage = discussion.message.replace(/<[^>]*>?/gm, '').trim();
+          if (cleanMessage) {
+            await ingestCanvasPage(userId, dbCourse.id, discussion.title, cleanMessage, discussion.html_url);
+            logger.info({ courseId: dbCourse.id, discussionTitle: discussion.title }, "Successfully ingested discussion.");
+          } else {
+            logger.warn({ courseId: dbCourse.id, discussionTitle: discussion.title }, "Skipping empty discussion after HTML stripping.");
+          }
+        } else {
+          logger.warn({ courseId: dbCourse.id, discussionTitle: discussion.title }, "Skipping empty discussion.");
+        }
+      } catch (ingestionError: any) {
+        logger.error(
+          {
+            discussionTitle: discussion.title,
+            error: ingestionError.message,
+          },
+          "Failed to ingest discussion, continuing with next item."
+        );
+      }
+    }
+  }
 }
 
 export async function getCanvasCourses(accessToken: string): Promise<CanvasCourse[]> {
@@ -380,13 +443,20 @@ export async function getCanvasCourses(accessToken: string): Promise<CanvasCours
           fetch(`${baseUrl}/courses/${course.id}/files?per_page=1`, { headers: { Authorization: `Bearer ${accessToken}` } }),
           // Check for Assignments
           fetch(`${baseUrl}/courses/${course.id}/assignments?per_page=1`, { headers: { Authorization: `Bearer ${accessToken}` } }),
+          // Check for Syllabus
+          fetch(`${baseUrl}/courses/${course.id}?include[]=syllabus_body`, { headers: { Authorization: `Bearer ${accessToken}` } }),
+          // Check for Discussions
+          fetch(`${baseUrl}/courses/${course.id}/discussion_topics?per_page=1`, { headers: { Authorization: `Bearer ${accessToken}` } }),
         ]);
 
-        const [homepageResult, announcementsResult, modulesResult, filesResult, assignmentsResult] = await Promise.all(contentChecks.map(async res => {
+        const [homepageResult, announcementsResult, modulesResult, filesResult, assignmentsResult, syllabusResult, discussionsResult] = await Promise.all(contentChecks.map(async res => {
           if (res.status === 'fulfilled' && res.value.ok) {
             // For homepage, a 200 OK is enough. For lists, check if the array is non-empty.
             if (res.value.url.includes('front_page')) {
               return res.value.json().then(data => (data && data.body ? [data] : [])).catch(() => []);
+            }
+            if (res.value.url.includes('syllabus_body')) {
+              return res.value.json().then(data => (data && data.syllabus_body ? [data] : [])).catch(() => []);
             }
             return res.value.json();
           }
@@ -398,6 +468,8 @@ export async function getCanvasCourses(accessToken: string): Promise<CanvasCours
         if (modulesResult.length > 0) availableContentTypes.push('Modules');
         if (filesResult.length > 0) availableContentTypes.push('Files');
         if (assignmentsResult.length > 0) availableContentTypes.push('Assignments');
+        if (syllabusResult.length > 0) availableContentTypes.push('Syllabus');
+        if (discussionsResult.length > 0) availableContentTypes.push('Discussions');
         
         return { ...course, availableContentTypes };
       })
@@ -661,6 +733,70 @@ export async function getCanvasCourseAnnouncements(courseId: number, accessToken
         error: error,
       },
       'Failed to get announcements from Canvas'
+    );
+    throw error;
+  }
+}
+
+export async function getCanvasCourseSyllabus(courseId: number, accessToken: string): Promise<CanvasSyllabus | null> {
+  try {
+    const response = await fetch(`${baseUrl}/courses/${courseId}?include[]=syllabus_body`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        return null;
+      }
+      throw new CanvasAPIError(`Failed to fetch syllabus from Canvas: ${response.statusText}`, response.status);
+    }
+
+    const courseData = await response.json();
+    // The syllabus is part of the course object, so we need to construct a valid URL manually.
+    const syllabusData = { ...courseData, html_url: `${baseUrl}/courses/${courseId}/syllabus` };
+    return canvasSyllabusSchema.parse(syllabusData);
+  } catch (error) {
+    logger.error({ error, courseId }, 'Failed to get course syllabus from Canvas');
+    throw error;
+  }
+}
+
+export async function getCanvasDiscussions(courseId: number, accessToken: string): Promise<CanvasDiscussion[]> {
+  let discussions: CanvasDiscussion[] = [];
+  let url = `${baseUrl}/courses/${courseId}/discussion_topics`;
+
+  try {
+    while (url) {
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(`Failed to fetch discussions from Canvas: ${response.statusText} - ${errorBody}`);
+      }
+
+      const data = await response.json();
+      discussions = discussions.concat(z.array(canvasDiscussionSchema).parse(data));
+
+      const linkHeader = response.headers.get('Link');
+      const nextLink = linkHeader?.split(',').find(s => s.includes('rel="next"'));
+      url = nextLink ? (nextLink.match(/<(.*)>/)?.[1] ?? '') : '';
+    }
+    return discussions;
+  } catch (error: any) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error(
+      {
+        message: 'Failed to get discussions from Canvas',
+        errorMessage: errorMessage,
+        error: error,
+      },
+      'Failed to get discussions from Canvas'
     );
     throw error;
   }
