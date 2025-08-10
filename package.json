@@ -12,7 +12,7 @@
     "dev:landing": "cd apps/landing-page && pnpm dev",
     "dev:web": "dotenv -e .env -- pnpm --filter @studyspot/web dev",
     "dev:assistant": "sh -c 'cd workers/assistant/.mastra/output && pnpm wrangler dev --local --persist-to .wrangler/state'",
-    "dev:assistant-remote": "sh -c 'cd workers/assistant/.mastra/output && wrangler dev --remote --persist-to .wrangler/state'",
+    "dev:assistant-remote": "sh -c 'cd workers/assistant/.mastra/output && pnpm wrangler dev --remote --persist-to .wrangler/state'",
     "dev:remote": "concurrently \"pnpm dev:web\" \"pnpm dev:assistant-remote\"",
     "dev:cloudflare": "pnpm build && concurrently \"cd apps/web && pnpm dev:wrangler\" \"pnpm dev:assistant\"",
     "build": "pnpm build:web && pnpm build:assistant",
@@ -38,6 +38,7 @@
     "concurrently": "^9.1.0",
     "dotenv-cli": "^8.0.0",
     "eslint": "^9.31.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wrangler": "^4.27.0"
   }
 }
