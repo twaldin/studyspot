@@ -1,6 +1,6 @@
 'use server';
 
-// Use the same ingestion API as the file upload form
+import { auth } from '@clerk/nextjs/server';
 import logger from '@/lib/logger';
 import { UTApi } from 'uploadthing/server';
 
@@ -30,6 +30,14 @@ export async function ingestCanvasPage(
   logger.info(logContext, 'Starting Canvas page ingestion');
 
   try {
+    // Get the server-side auth token
+    const { getToken } = await auth();
+    const token = await getToken();
+
+    if (!token) {
+      throw new Error('User is not authenticated.');
+    }
+
     // Convert the page content to a File object
     const file = new File([pageContent], fileName, { type: fileType });
 
@@ -37,6 +45,7 @@ export async function ingestCanvasPage(
     const response = await utapi.uploadFiles(file);
 
     if (response.error) {
+      logger.error({ ...logContext, uploadThingResponse: response }, 'File upload to UploadThing failed');
       throw new Error(`File upload to UploadThing failed: ${response.error.message}`);
     }
 
@@ -53,20 +62,30 @@ export async function ingestCanvasPage(
     logger.info({ ...logContext, fileKey: key, fileUrl: ufsUrl }, 'File uploaded to UploadThing successfully');
 
     // Use the same ingestion API as the file upload form
-    const ingestionResponse = await fetch('/api/documents/ingest-stream', {
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+    const ingestUrl = `${baseUrl}/api/documents/ingest-stream`;
+    logger.info({ ...logContext, url: ingestUrl }, 'Sending document ingestion request');
+
+    const ingestionResponse = await fetch(ingestUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
-        files: [{
-          fileKey: key,
-          fileName,
-          fileUrl: ufsUrl,
-          fileType,
-        }],
+        files: [
+          {
+            fileKey: key,
+            fileName,
+            fileUrl: ufsUrl,
+            fileType,
+          },
+        ],
         courseId,
         userId,
+        metadata: {
+          pageUrl,
+        },
       }),
     });
 
@@ -81,10 +100,15 @@ export async function ingestCanvasPage(
 
     logger.info(logContext, 'Canvas page ingestion completed successfully');
   } catch (error) {
-    logger.error({ ...logContext, error }, 'An error occurred during Canvas page ingestion');
+    const errorDetails =
+      error instanceof Error
+        ? { message: error.message, stack: error.stack, name: error.name }
+        : { error: String(error) };
+    logger.error({ ...logContext, error: errorDetails }, 'An error occurred during Canvas page ingestion');
     // If the ingestion fails, we should consider cleaning up the file from UploadThing
     // This part is left as a potential improvement, as the current ingestion service
     // already has some cleanup logic on failure.
     throw error;
   }
 }
+
