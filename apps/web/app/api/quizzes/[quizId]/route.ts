@@ -32,12 +32,12 @@ export async function GET(
         created_at,
         updated_at,
         edited_from,
-        difficulty_level,
         is_public,
         total_questions,
         courses!quizzes_course_id_fkey (
           title,
-          code
+          code,
+          icon
         ),
         quiz_questions(*)
       `,
@@ -99,7 +99,6 @@ export async function GET(
       created_at: quizData.created_at,
       updated_at: quizData.updated_at,
       edited_from: quizData.edited_from,
-      difficulty_level: quizData.difficulty_level,
       is_public: quizData.is_public,
       question_count: quizData.total_questions || questionsData?.length || 0,
       creator_name: creatorName,

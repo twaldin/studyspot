@@ -25,6 +25,8 @@ export interface FlashcardSetResource {
   title: string;
   description?: string;
   cardCount: number;
+  created_by?: string;
+  share_token?: string; // For shared resources
 }
 
 // Full quiz resource (after fetching details)
@@ -34,7 +36,8 @@ export interface QuizResource {
   title: string;
   description?: string;
   questionCount: number;
-  difficultyLevel?: string;
+  created_by?: string;
+  share_token?: string; // For shared resources
 }
 
 // Unified resource interface for chat display
@@ -55,6 +58,7 @@ export interface Chat {
   title: string;
   created_at: string;
   course_id: string;
+  user_id: string; // Added to support checking ownership
   chats: Message[];
 }
 

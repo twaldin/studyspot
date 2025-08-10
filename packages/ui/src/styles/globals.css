@@ -250,3 +250,14 @@ input[type="search"]::-webkit-search-results-decoration {
     @apply bg-background text-foreground;
   }
 }
+
+/* Reliable scrollbar hiding utility for all browsers */
+@layer utilities {
+  .scrollbar-hidden {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;     /* Firefox */
+  }
+  .scrollbar-hidden::-webkit-scrollbar {
+    display: none;            /* Chrome, Safari and Opera */
+  }
+}

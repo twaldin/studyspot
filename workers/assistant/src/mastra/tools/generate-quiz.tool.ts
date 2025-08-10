@@ -45,8 +45,6 @@ export const generateQuizTool = createTool({
       .describe('Specific topic or subject matter for the quiz questions'),
     questionCount: z.number().int().positive().max(50).optional().default(10)
       .describe('Number of questions to generate (max 50, default: 10)'),
-    difficultyLevel: z.enum(['easy', 'medium', 'hard']).optional().default('medium')
-      .describe('Difficulty level of the quiz questions based on course content complexity'),
     questions: z.array(z.object({
       questionText: z.string().min(1, 'Question text cannot be empty')
         .describe('The question text (clear, specific, and well-formatted)'),
@@ -70,7 +68,6 @@ export const generateQuizTool = createTool({
     title: z.string().describe('Title of the quiz'),
     description: z.string().describe('Description of the quiz'),
     questionCount: z.number().describe('Number of questions created'),
-    difficultyLevel: z.string().describe('Difficulty level of the quiz'),
     success: z.boolean().describe('Whether the quiz was created successfully'),
     error: z.string().optional().describe('Error message if creation failed'),
     // Resource display information for the frontend
@@ -80,8 +77,7 @@ export const generateQuizTool = createTool({
       title: z.string(),
       description: z.string(),
       metadata: z.object({
-        questionCount: z.number(),
-        difficultyLevel: z.string()
+        questionCount: z.number()
       })
     }).optional().describe('Resource information for frontend display')
   }),
@@ -93,7 +89,6 @@ export const generateQuizTool = createTool({
       userId: providedUserId,
       topic,
       questionCount,
-      difficultyLevel,
       questions 
     } = context;
     
@@ -108,7 +103,6 @@ export const generateQuizTool = createTool({
         title,
         description,
         questionCount: 0,
-        difficultyLevel,
         success: false,
         error: 'Course ID is required to generate quiz'
       };
@@ -121,13 +115,12 @@ export const generateQuizTool = createTool({
         title,
         description,
         questionCount: 0,
-        difficultyLevel,
         success: false,
         error: 'User ID is required to generate quiz'
       };
     }
     
-    console.log(`[GenerateQuizTool] Creating quiz "${title}" for course ${courseId}, user ${userId}, ${questions.length} questions, difficulty: ${difficultyLevel}`);
+    console.log(`[GenerateQuizTool] Creating quiz "${title}" for course ${courseId}, user ${userId}, ${questions.length} questions`);
 
     try {
       // Validate course access
@@ -139,8 +132,7 @@ export const generateQuizTool = createTool({
           title,
           description,
           questionCount: 0,
-          difficultyLevel,
-          success: false,
+            success: false,
           error: 'Course not found or access denied'
         };
       }
@@ -156,7 +148,6 @@ export const generateQuizTool = createTool({
         description,
         course_id: courseId,
         created_by: userId,
-        difficulty_level: difficultyLevel,
         is_public: false, // Default to private
         total_questions: questions.length,
         created_at: now,
@@ -171,8 +162,7 @@ export const generateQuizTool = createTool({
           title,
           description,
           questionCount: 0,
-          difficultyLevel,
-          success: false,
+            success: false,
           error: 'Failed to create quiz'
         };
       }
@@ -203,8 +193,7 @@ export const generateQuizTool = createTool({
           title,
           description,
           questionCount: 0,
-          difficultyLevel,
-          success: false,
+            success: false,
           error: 'Failed to create quiz questions'
         };
       }
@@ -219,7 +208,6 @@ export const generateQuizTool = createTool({
         title,
         description,
         questionCount: questions.length,
-        difficultyLevel,
         success: true,
         resourceInfo: {
           type: 'quiz' as const,
@@ -227,8 +215,7 @@ export const generateQuizTool = createTool({
           title,
           description,
           metadata: {
-            questionCount: questions.length,
-            difficultyLevel
+            questionCount: questions.length
           }
         }
       };
@@ -241,7 +228,6 @@ export const generateQuizTool = createTool({
         title,
         description,
         questionCount: 0,
-        difficultyLevel,
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error occurred'
       };

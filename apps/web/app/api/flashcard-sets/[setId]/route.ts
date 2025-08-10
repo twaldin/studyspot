@@ -37,7 +37,8 @@ export async function GET(
         edited_from,
         courses!flashcard_sets_course_id_fkey (
           title,
-          code
+          code,
+          icon
         ),
         flashcards(*)
       `,

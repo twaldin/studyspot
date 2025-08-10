@@ -128,8 +128,8 @@ export default function Home() {
         <h2 className="text-3xl font-crimson-text leading-none">
           What are we learning today?
         </h2>
-        <div className="w-full overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
-          <div className="flex gap-2">
+        <div className="w-fit">
+          <div className="flex flex-col gap-2 items-start">
           {isLoadingSuggestedQueries ? (
             <>
               <Skeleton className="h-8 w-32 rounded-full" />
@@ -141,7 +141,7 @@ export default function Home() {
               <Button
                 key={suggestion}
                 variant="outline"
-                className="whitespace-nowrap rounded-full"
+                className="rounded-full"
                 onClick={() => handleSuggestedQueryClick(suggestion)}
                 disabled={isCreatingChat}
               >
