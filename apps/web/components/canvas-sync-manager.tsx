@@ -13,9 +13,10 @@ import { useUser } from '@clerk/nextjs';
 
 interface CanvasSyncManagerProps {
   accessToken: string;
+  disabled?: boolean;
 }
 
-export function CanvasSyncManager({ accessToken }: CanvasSyncManagerProps) {
+export function CanvasSyncManager({ accessToken, disabled }: CanvasSyncManagerProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -41,15 +42,15 @@ export function CanvasSyncManager({ accessToken }: CanvasSyncManagerProps) {
         router.push('/courses');
         setIsDialogOpen(false);
       },
-      onError: () => {
-        toast.error('Failed to sync courses. Please try again.');
+      onError: (error: Error) => {
+        toast.error(error.message || 'Failed to sync courses. Please try again.');
       },
     });
   };
 
   return (
     <>
-      <Button onClick={() => setIsDialogOpen(true)} disabled={!accessToken}>
+      <Button onClick={() => setIsDialogOpen(true)} disabled={!accessToken || disabled}>
         Sync with Canvas
       </Button>
       {isDialogOpen && (
