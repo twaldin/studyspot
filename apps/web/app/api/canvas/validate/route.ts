@@ -10,14 +10,15 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { accessToken } = validateTokenSchema.parse(body);
 
-    const response = await fetch('https://canvas.instructure.com/api/v1/users/self', {
+    const response = await fetch('https://canvas.instructure.com/api/v1/users/self/profile', {
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
     });
 
     if (response.ok) {
-      return NextResponse.json({ valid: true });
+      const profile = await response.json();
+      return NextResponse.json({ valid: true, profile });
     } else {
       return NextResponse.json({ valid: false }, { status: response.status });
     }
