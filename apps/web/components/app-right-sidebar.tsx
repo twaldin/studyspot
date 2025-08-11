@@ -152,14 +152,7 @@ export function AppRightSidebar() {
     prevSelectedCourse.current = selectedCourse?.id;
   }, [selectedCourse, pathname]);
 
-  React.useEffect(() => {
-    toast("We've just rolled out some exciting updates.", {
-      id: "welcome-toast",
-      title: "StudySpot v0.1.0",
-      duration: Infinity,
-      icon: <PartyPopper className="h-4 w-4" />,
-    } as any);
-  }, []);
+  
 
 
   return (

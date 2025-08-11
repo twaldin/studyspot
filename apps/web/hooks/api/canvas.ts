@@ -19,7 +19,7 @@ export function useCanvasCourses(accessToken: string) {
   });
 }
 
-async function syncCanvasCourses(data: { courses: { course: CanvasCourse; contentTypes: string[] }[], accessToken: string }): Promise<any> {
+async function syncCanvasCourses(data: { courses: { course: CanvasCourse; contentTypes:string[] }[], accessToken: string }): Promise<any> {
   const response = await fetch('/api/canvas/sync', {
     method: 'POST',
     headers: {
@@ -29,7 +29,8 @@ async function syncCanvasCourses(data: { courses: { course: CanvasCourse; conten
   });
 
   if (!response.ok) {
-    throw new Error('Failed to sync courses');
+    const errorData = await response.json();
+    throw new Error(errorData.error || 'Failed to sync courses');
   }
 
   return response.json();
