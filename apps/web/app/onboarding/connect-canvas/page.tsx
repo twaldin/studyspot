@@ -15,13 +15,19 @@ import { Input } from "@studyspot/ui/components/input";
 import { Label } from "@studyspot/ui/components/label";
 import { CanvasSyncManager } from "@/components/canvas-sync-manager";
 import { Toaster, toast } from "react-hot-toast";
+import { useCanvas } from "@/contexts/canvas-context";
+import { useUserSchool } from "@/hooks/api/user";
 import { useDebounce } from "use-debounce";
 
 export default function ConnectCanvasPage() {
   const [accessToken, setAccessToken] = React.useState("");
   const [isValid, setIsValid] = React.useState<boolean | null>(null);
+  const [canvasProfile, setCanvasProfile] = React.useState<any | null>(null);
+  const [schoolsMatch, setSchoolsMatch] = React.useState<boolean | null>(null);
   const [debouncedAccessToken] = useDebounce(accessToken, 500);
   const router = useRouter();
+  const { data: userSchool } = useUserSchool();
+  const { setAccessToken: setCanvasToken } = useCanvas();
 
   const handleSkip = () => {
     router.push("/courses?onboarding=success");
@@ -30,6 +36,8 @@ export default function ConnectCanvasPage() {
   const validateToken = React.useCallback(async (token: string) => {
     if (!token) {
       setIsValid(null);
+      setCanvasProfile(null);
+      setSchoolsMatch(null);
       return;
     }
     const toastId = toast.loading("Validating token...");
@@ -40,18 +48,41 @@ export default function ConnectCanvasPage() {
         body: JSON.stringify({ accessToken: token }),
       });
       const data = await response.json();
+
       if (response.ok && data.valid) {
-        toast.success("Token is valid!", { id: toastId });
-        setIsValid(true);
+        setCanvasProfile(data.profile);
+
+        if (userSchool && data.profile && data.profile.primary_email) {
+          const canvasSchoolDomain = data.profile.primary_email.split('@')[1];
+          
+          if (userSchool.domain === canvasSchoolDomain) {
+            toast.success("Token is valid and your school matches!", { id: toastId });
+            setIsValid(true);
+            setSchoolsMatch(true);
+            setCanvasToken(token); // Set the token in the context
+          } else {
+            toast.error(`This token is for a different school. Please use a token from ${userSchool.name}.`, { id: toastId });
+            setIsValid(false);
+            setSchoolsMatch(false);
+          }
+        } else {
+          toast.error("Could not determine the school from your Canvas token.", { id: toastId });
+          setIsValid(false);
+          setSchoolsMatch(false);
+        }
       } else {
         toast.error("Token is invalid.", { id: toastId });
         setIsValid(false);
+        setCanvasProfile(null);
+        setSchoolsMatch(null);
       }
     } catch (error) {
       toast.error("Failed to validate token.", { id: toastId });
       setIsValid(false);
+      setCanvasProfile(null);
+      setSchoolsMatch(null);
     }
-  }, []);
+  }, [userSchool, setCanvasToken]);
 
   React.useEffect(() => {
     if (debouncedAccessToken) {
@@ -145,7 +176,7 @@ export default function ConnectCanvasPage() {
             <Button variant="secondary" onClick={handleSkip}>
               Skip for now
             </Button>
-            <CanvasSyncManager accessToken={accessToken} disabled={!isValid} />
+            <CanvasSyncManager accessToken={accessToken} disabled={!isValid || !schoolsMatch} />
           </CardFooter>
         </Card>
       </div>

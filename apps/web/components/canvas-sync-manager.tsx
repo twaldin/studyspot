@@ -4,7 +4,14 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@studyspot/ui/components/button';
-import { CanvasCourseSelectionDialog } from '@/components/canvas-course-selection-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@studyspot/ui/components/dialog";
+import { CanvasCourseSelectionView } from './canvas-course-selection-view';
 import { CanvasCourse } from '@/lib/services/canvas/canvas.service';
 import { toast } from 'react-hot-toast';
 import { queryKeys } from '@/hooks/api/base';
@@ -53,15 +60,21 @@ export function CanvasSyncManager({ accessToken, disabled }: CanvasSyncManagerPr
       <Button onClick={() => setIsDialogOpen(true)} disabled={!accessToken || disabled}>
         Sync with Canvas
       </Button>
-      {isDialogOpen && (
-        <CanvasCourseSelectionDialog
-          open={isDialogOpen}
-          onOpenChange={setIsDialogOpen}
-          onSync={handleSync}
-          isProcessing={syncMutation.isPending}
-          accessToken={accessToken}
-        />
-      )}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Select Canvas Courses</DialogTitle>
+            <DialogDescription>
+              Choose which courses and content types you want to sync with StudySpot.
+            </DialogDescription>
+          </DialogHeader>
+          <CanvasCourseSelectionView
+            onSync={handleSync}
+            isProcessing={syncMutation.isPending}
+            accessToken={accessToken}
+          />
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

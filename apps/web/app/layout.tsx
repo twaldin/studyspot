@@ -7,6 +7,7 @@ import { cn } from "@studyspot/ui/lib/utils";
 import { QueryProvider } from "@/lib/providers/query-provider";
 import { DeveloperModeProvider } from "@/contexts/developer-mode-context";
 import { ConditionalLayout } from "./conditional-layout";
+import { CanvasProvider } from "@/contexts/canvas-context";
 
 const crimsonText = Crimson_Text({
   weight: ["400", "600", "700"],
@@ -44,9 +45,11 @@ export default function RootLayout({
           >
             <ClerkThemeProvider>
               <DeveloperModeProvider>
-                <ConditionalLayout>
-                  {children}
-                </ConditionalLayout>
+                <CanvasProvider>
+                  <ConditionalLayout>
+                    {children}
+                  </ConditionalLayout>
+                </CanvasProvider>
               </DeveloperModeProvider>
             </ClerkThemeProvider>
           </ThemeProvider>
