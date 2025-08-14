@@ -23,6 +23,7 @@ import { usePathname } from "next/navigation";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { UserButton } from "@/components/user-button";
 import { DarkModeButton } from "@/components/dark-mode-button";
+import { CanvasSyncDialog } from "./canvas-sync-dialog";
 
 function CustomToaster() {
   const { toasts, handlers } = useToaster();
@@ -116,6 +117,7 @@ function CustomToaster() {
 export function AppRightSidebar() {
   const pathname = usePathname();
   const { user } = useUser();
+  const [isSyncDialogOpen, setIsSyncDialogOpen] = React.useState(false);
 
   // React Query hooks for course data
   const { data: allCourses = [] } = useCourses();
@@ -152,14 +154,7 @@ export function AppRightSidebar() {
     prevSelectedCourse.current = selectedCourse?.id;
   }, [selectedCourse, pathname]);
 
-  React.useEffect(() => {
-    toast("We've just rolled out some exciting updates.", {
-      id: "welcome-toast",
-      title: "StudySpot v0.1.0",
-      duration: Infinity,
-      icon: <PartyPopper className="h-4 w-4" />,
-    } as any);
-  }, []);
+  
 
 
   return (
@@ -183,11 +178,17 @@ export function AppRightSidebar() {
               />
             </div>
           </div>
+          <div className="flex justify-end">
+            <Button variant="outline" onClick={() => setIsSyncDialogOpen(true)}>
+              Sync with Canvas
+            </Button>
+          </div>
         </div>
         <div className="flex-1">
           {/* Placeholder for future content */}
         </div>
       </div>
+      <CanvasSyncDialog open={isSyncDialogOpen} onOpenChange={setIsSyncDialogOpen} />
       <CustomToaster />
     </>
   );

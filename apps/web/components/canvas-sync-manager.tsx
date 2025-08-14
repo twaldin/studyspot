@@ -4,7 +4,14 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@studyspot/ui/components/button';
-import { CanvasCourseSelectionDialog } from '@/components/canvas-course-selection-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@studyspot/ui/components/dialog";
+import { CanvasCourseSelectionView } from './canvas-course-selection-view';
 import { CanvasCourse } from '@/lib/services/canvas/canvas.service';
 import { toast } from 'react-hot-toast';
 import { queryKeys } from '@/hooks/api/base';
@@ -13,9 +20,10 @@ import { useUser } from '@clerk/nextjs';
 
 interface CanvasSyncManagerProps {
   accessToken: string;
+  disabled?: boolean;
 }
 
-export function CanvasSyncManager({ accessToken }: CanvasSyncManagerProps) {
+export function CanvasSyncManager({ accessToken, disabled }: CanvasSyncManagerProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -41,26 +49,32 @@ export function CanvasSyncManager({ accessToken }: CanvasSyncManagerProps) {
         router.push('/courses');
         setIsDialogOpen(false);
       },
-      onError: () => {
-        toast.error('Failed to sync courses. Please try again.');
+      onError: (error: Error) => {
+        toast.error(error.message || 'Failed to sync courses. Please try again.');
       },
     });
   };
 
   return (
     <>
-      <Button onClick={() => setIsDialogOpen(true)} disabled={!accessToken}>
+      <Button onClick={() => setIsDialogOpen(true)} disabled={!accessToken || disabled}>
         Sync with Canvas
       </Button>
-      {isDialogOpen && (
-        <CanvasCourseSelectionDialog
-          open={isDialogOpen}
-          onOpenChange={setIsDialogOpen}
-          onSync={handleSync}
-          isProcessing={syncMutation.isPending}
-          accessToken={accessToken}
-        />
-      )}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Select Canvas Courses</DialogTitle>
+            <DialogDescription>
+              Choose which courses and content types you want to sync with StudySpot.
+            </DialogDescription>
+          </DialogHeader>
+          <CanvasCourseSelectionView
+            onSync={handleSync}
+            isProcessing={syncMutation.isPending}
+            accessToken={accessToken}
+          />
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
