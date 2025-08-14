@@ -106,22 +106,21 @@ export function CanvasSyncDialog({ open, onOpenChange }: CanvasSyncDialogProps) 
   }, [debouncedAccessToken, validateToken]);
 
   const handleSync = (selectedCourses: { course: CanvasCourse; contentTypes: string[] }[]) => {
-    setStep("syncing");
+    onOpenChange(false);
+    const toastId = toast.loading('Starting sync...');
     syncMutation.mutate({ courses: selectedCourses, accessToken: finalAccessToken }, {
       onSuccess: async () => {
-        toast.success('Courses synced successfully! Updating your data...');
+        toast.success('Courses synced successfully! Updating your data...', { id: toastId });
         await user?.reload();
         await queryClient.invalidateQueries({ queryKey: queryKeys.user.all });
         await queryClient.invalidateQueries({ queryKey: queryKeys.courses.all });
         await queryClient.refetchQueries({ queryKey: queryKeys.user.all, exact: true });
         await queryClient.refetchQueries({ queryKey: queryKeys.courses.all, exact: true });
         toast.success('Sync complete!');
-        onOpenChange(false);
         setStep("enterToken");
       },
       onError: (error: Error) => {
-        toast.error(error.message || 'Failed to sync courses. Please try again.');
-        setStep("selectCourses");
+        toast.error(error.message || 'Failed to sync courses. Please try again.', { id: toastId });
       },
     });
   };
@@ -155,7 +154,7 @@ export function CanvasSyncDialog({ open, onOpenChange }: CanvasSyncDialogProps) 
         {step === "selectCourses" && (
           <CanvasCourseSelectionView
             onSync={handleSync}
-            isProcessing={step === "syncing"}
+            isProcessing={syncMutation.isPending}
             accessToken={finalAccessToken}
           />
         )}
