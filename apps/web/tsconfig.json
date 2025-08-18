@@ -11,6 +11,7 @@
     "strict": false,
     "noEmit": true,
     "incremental": true,
+    "composite": true,
     "module": "esnext",
     "esModuleInterop": true,
     "moduleResolution": "bundler",
