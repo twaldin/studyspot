@@ -44,7 +44,7 @@ const HeroContent = () => {
     },
   };
 
-  const badgeText = "🎉 Coming to UW Madison Fall 2025!";
+  const badgeText = "🎉 Coming to Purdue Fall 2025!";
 
   const badgeTextContainer = {
     hidden: { opacity: 1 },
@@ -182,4 +182,4 @@ const HeroContent = () => {
   );
 };
 
-export default HeroContent; 
+export default HeroContent;
