@@ -3,6 +3,33 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  
+  --primary: #F3F4F0;
+  --primary-text: #000000;
+  --primary-text-light: #868684;
+  --white: #FFFFFF;
+
+  /* panels and buttons */
+  --primary-100: #DDDEDA; /* bg */
+  --primary-100-text: #5F5F5E; /* text */
+  --primary-100-outline: #B1B2AE; /* outline */
+
+  --primary-200: #C7C8C4;
+  --primary-200-text: #5A5A58;
+  --primary-200-outline: #8B8C89;
+
+  /* special */
+  --yellow: #FFDD01;
+  --yellow-text: #362E00;
+  --yellow-outline: #D1B501;
+
+  --blue: #3A10E5;
+  --blue-text: #FFFFFF;
+  --blue-outline: #2E0DB7;
+
+  --red: #FF4400;
+  
+  --font-gabarito: 'Gabarito', sans-serif;
 }
 
 @theme inline {
@@ -20,7 +47,17 @@
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--primary);
+  color: var(--primary-text);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+@utility btn-base {
+  @apply px-3 py-1.5 rounded-lg border cursor-pointer;
+  @apply hover:brightness-95;
+  @apply active:translate-y-0.5
+}
+
+@utility panel-base {
+  @apply px-4 py-2 rounded-2xl border shadow-[0_4px_20px_0_rgba(0,0,0,0.05)];
 }
