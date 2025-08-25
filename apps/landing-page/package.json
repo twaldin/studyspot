@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "wrangler dev",
-    "build": "npx @opennextjs/cloudflare@latest build",
+    "build": "next build",
     "build:next": "next build",
     "build:cloudflare": "npx @opennextjs/cloudflare@latest build",
     "dev:wrangler": "wrangler dev --port 3001",
