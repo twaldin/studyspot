@@ -28,11 +28,12 @@ const HeroScreenshot = () => {
             <div className="container mx-auto px-4 mt-12">
                 <div className="mx-auto w-fit rounded-4xl border-2 border-[var(--primary-100)] p-4">
                     <Image
-                        src="/landing-page/landing-hero-screenshot.png"
+                        src="/heroimg.png"
                         alt="StudySpot application screenshot"
                         width={1100}
                         height={625}
                         className="rounded-2xl border border-[rgba(0,0,0,0.25)] shadow-[0px_0px_30px_15px_rgba(0,0,0,0.025)] mx-auto"
+                        priority
                     />
                 </div>
             </div>
