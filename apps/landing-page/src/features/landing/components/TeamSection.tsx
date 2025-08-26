@@ -59,8 +59,8 @@ const TeamSection = () => {
 	};
 
 	return (
-		<section id="team" className="text-center pt-32 pb-20 md:pt-36 md:pb-32">
-			<div className="container mx-auto px-4">
+		<section id="team" className="text-center pt-20 pb-16 md:pt-36 md:pb-32 px-4">
+			<div className="container mx-auto">
 				<motion.div
 					initial="hidden"
 					whileInView="visible"
@@ -78,7 +78,7 @@ const TeamSection = () => {
 					</motion.div>
 
 					<motion.h1
-						className="text-5xl md:text-7xl font-bold text-[var(--primary-text)] mb-6 leading-[1.1] tracking-tight font-[family-name:var(--font-gabarito)]"
+						className="text-3xl sm:text-4xl md:text-7xl font-bold text-[var(--primary-text)] mb-6 leading-tight tracking-tight font-[family-name:var(--font-gabarito)]"
 						variants={sentence}
 					>
 						{line1.split(" ").map((word, index, arr) => (
@@ -104,14 +104,14 @@ const TeamSection = () => {
 
 					<motion.p
 						variants={fadeInUp}
-						className="text-lg md:text-xl text-[var(--primary-text-light)] mb-20 max-w-md mx-auto"
+						className="text-base md:text-xl text-[var(--primary-text-light)] mb-12 md:mb-20 max-w-md mx-auto"
 					>
 						we&apos;re a team of like-minded students with a shared need for better AI study tools
 					</motion.p>
 
 					<div className="flex justify-center">
 						<motion.div
-							className="grid grid-cols-1 md:grid-cols-4 gap-y-8 md:gap-x-4"
+							className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 max-w-2xl"
 							variants={{
 								visible: {
 									transition: {
@@ -121,7 +121,7 @@ const TeamSection = () => {
 							}}
 						>
 							{teamMembers.map((member) => (
-								<motion.div key={member.name} variants={fadeInUp} className="flex flex-col items-start w-48">
+								<motion.div key={member.name} variants={fadeInUp} className="flex flex-col items-center w-48 mx-auto">
 									{member.image ? (
 										<Image
 											src={member.image}

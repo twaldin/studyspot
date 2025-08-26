@@ -32,16 +32,16 @@ const JustAskSection = () => {
   const line = "just ask studyspot";
   
   return (
-    <section id="just-ask" className="py-20">
-      <div className="flex flex-row justify-center gap-8 items-stretch">
-        <div className="flex-1 bg-[rgba(0,0,0,0.07)] rounded-2xl">
+    <section id="just-ask" className="py-12 md:py-20 px-4">
+      <div className="flex flex-col lg:flex-row justify-center gap-4 lg:gap-8 items-stretch max-w-7xl mx-auto">
+        <div className="hidden lg:block flex-1 bg-[rgba(0,0,0,0.07)] rounded-2xl">
           {/* Left div content can go here if needed */}
         </div>
-        <div className="w-full max-w-2xl shrink-0">
+        <div className="w-full max-w-2xl mx-auto lg:shrink-0">
           <div className="text-center">
             <p className="text-xl text-[var(--primary-text-light)] -mb-1 mt-4">there&apos;s a better way</p>
             <motion.h2
-              className="text-4xl md:text-6xl font-bold text-[var(--primary-text)] leading-tight font-[family-name:var(--font-gabarito)] mb-4 flex items-center justify-center relative left-3"
+              className="text-3xl sm:text-4xl md:text-6xl font-bold text-[var(--primary-text)] leading-tight font-[family-name:var(--font-gabarito)] mb-4 flex flex-wrap items-center justify-center"
               variants={sentence}
             >
               {line.split(" ").map((word, index, arr) => (
@@ -78,7 +78,7 @@ const JustAskSection = () => {
             />
           </div>
         </div>
-        <div className="flex-1 bg-[rgba(0,0,0,0.07)] rounded-2xl">
+        <div className="hidden lg:block flex-1 bg-[rgba(0,0,0,0.07)] rounded-2xl">
           {/* Right div content can go here if needed */}
         </div>
       </div>

@@ -36,9 +36,9 @@ const Navbar: React.FC<NavbarProps> = ({ activeSection, onNavClick }) => {
   };
 
   return (
-    <nav className="bg-transparent py-6 px-4 md:px-8 fixed top-0 left-0 right-0 z-50">
+    <nav className="bg-[var(--primary)] py-4 md:py-6 px-4 md:px-8 fixed top-0 left-0 right-0 z-50">
       <div className="container mx-auto flex justify-between items-center">
-        <StudySpotLogo className="h-14 text-[var(--primary-text)]" />
+        <StudySpotLogo className="h-12 md:h-14 text-[var(--primary-text)]" />
         <div className="hidden md:flex panel-primary-100 border-[rgba(0,0,0,0.07)] rounded-3xl p-2">
           <Button 
             className={getButtonClasses('overview')}
