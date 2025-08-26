@@ -90,8 +90,8 @@ const ContactSection = () => {
             variants={fadeInUp}
             className="text-lg md:text-xl text-[var(--primary-text-light)] max-w-md mx-auto"
           >
-            <a href="mailto:reedgrenager@gmail.com" className="hover:text-[var(--primary-text)] transition-colors">
-              reedgrenager@gmail.com
+            <a href="mailto:timothy@waldin.net" className="hover:text-[var(--primary-text)] transition-colors">
+              timothy@waldin.net
             </a>
           </motion.p>
         </motion.div>
@@ -100,4 +100,4 @@ const ContactSection = () => {
   );
 };
 
-export default ContactSection; 
+export default ContactSection;

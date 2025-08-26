@@ -84,8 +84,8 @@ const HeroContent = () => {
   };
 
   return (
-    <section id="overview" className="text-center pt-32 md:pt-36">
-      <div className="container mx-auto px-4">
+    <section id="overview" className="text-center pt-24 md:pt-36 px-4">
+      <div className="container mx-auto">
         <div className="h-8 md:h-9 mb-3">
           <motion.div
             className="text-sm md:text-base text-[var(--primary-100-text)] border-2 rounded-full inline-block border-[var(--primary-100)] overflow-hidden"
@@ -111,7 +111,7 @@ const HeroContent = () => {
           </motion.div>
         </div>
         <motion.h1
-          className="text-5xl md:text-7xl font-bold text-[var(--primary-text)] mb-6 leading-none md:leading-20 tracking-tight font-[family-name:var(--font-gabarito)]"
+          className="text-4xl sm:text-5xl md:text-7xl font-bold text-[var(--primary-text)] mb-6 leading-tight md:leading-20 tracking-tight font-[family-name:var(--font-gabarito)]"
           variants={sentence}
           initial="hidden"
           whileInView="visible"
