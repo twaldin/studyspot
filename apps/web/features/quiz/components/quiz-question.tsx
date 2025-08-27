@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Check, ChevronLeft, ChevronRight, X } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import {
   OptionLabel,
   QuestionAnswerState,
@@ -29,12 +29,14 @@ interface QuizQuestionProps {
   userAnswers?: Map<string, 'A' | 'B' | 'C' | 'D'>; // For review mode
   canNavigatePrevious?: boolean;
   canNavigateNext?: boolean;
+  answerShuffleMap?: Map<string, OptionLabel[]>; // Persistent shuffle mapping
+  onShuffleGenerated?: (questionId: string, shuffledOrder: OptionLabel[]) => void; // Callback to store shuffle
 }
 
 interface ShuffledOption {
   originalLabel: OptionLabel;
   text: string;
-  displayIndex: number;
+  displayLabel: OptionLabel; // The letter to display for this option
 }
 
 export function QuizQuestion({
@@ -52,6 +54,8 @@ export function QuizQuestion({
   userAnswers,
   canNavigatePrevious = false,
   canNavigateNext = false,
+  answerShuffleMap,
+  onShuffleGenerated,
 }: QuizQuestionProps) {
   // Shuffle answers while maintaining correct answer tracking
   const shuffledOptions = useMemo<ShuffledOption[]>(() => {
@@ -62,39 +66,72 @@ export function QuizQuestion({
       { originalLabel: "D" as OptionLabel, text: question.option_d },
     ].filter(opt => opt.text); // Remove empty options
     
-    // Don't shuffle in review mode to maintain consistency
-    if (quizMode === 'review' || answerState.hasAnswered) {
+    // Check if we have a stored shuffle for this question
+    const storedShuffle = answerShuffleMap?.get(question.id);
+    
+    if (storedShuffle) {
+      // Use the stored shuffle order
+      const orderedOptions: ShuffledOption[] = [];
+      storedShuffle.forEach((origLabel, idx) => {
+        const option = baseOptions.find(opt => opt.originalLabel === origLabel);
+        if (option) {
+          orderedOptions.push({
+            ...option,
+            displayLabel: String.fromCharCode(65 + idx) as OptionLabel
+          });
+        }
+      });
+      return orderedOptions;
+    }
+    
+    // Don't shuffle in review mode
+    if (quizMode === 'review') {
       return baseOptions.map((opt, idx) => ({
         ...opt,
-        displayIndex: idx
+        displayLabel: String.fromCharCode(65 + idx) as OptionLabel
       }));
     }
     
-    // Create a deterministic shuffle based on question ID
-    // This ensures the same question always has the same shuffle pattern
-    const seed = question.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    // Create a truly random shuffle for each new question view
     const shuffled = [...baseOptions];
     
-    // Fisher-Yates shuffle with seeded randomness
+    // Fisher-Yates shuffle with true randomness
     for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(((seed * (i + 1)) % 1000) / 1000 * (i + 1));
+      const j = Math.floor(Math.random() * (i + 1));
       [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
     
+    // Assign display labels based on final shuffled position
     return shuffled.map((opt, idx) => ({
       ...opt,
-      displayIndex: idx
+      displayLabel: String.fromCharCode(65 + idx) as OptionLabel
     }));
-  }, [question.id, question.option_a, question.option_b, question.option_c, question.option_d, quizMode, answerState.hasAnswered]);
+  }, [question.id, question.option_a, question.option_b, question.option_c, question.option_d, 
+      quizMode, answerShuffleMap]);
+
+  // Use effect to store the shuffle order when it's generated
+  useEffect(() => {
+    if (onShuffleGenerated && !answerShuffleMap?.has(question.id) && quizMode !== 'review' && !answerState.hasAnswered) {
+      const shuffleOrder = shuffledOptions.map(opt => opt.originalLabel);
+      onShuffleGenerated(question.id, shuffleOrder);
+    }
+  }, [question.id, quizMode, answerState.hasAnswered, onShuffleGenerated, answerShuffleMap, shuffledOptions]);
 
   // Filter options when user answered incorrectly - only show selected and correct answers
+  // Reorder them: correct answer on left, wrong answer on right
   const visibleOptions = useMemo(() => {
     if (answerState.hasAnswered && !answerState.isCorrect) {
-      // Only show the selected wrong answer and the correct answer
-      return shuffledOptions.filter(option => 
-        option.originalLabel === answerState.selectedAnswer || 
-        option.originalLabel === question.correct_answer
-      );
+      // Find the correct answer and the user's wrong answer
+      const correctOption = shuffledOptions.find(opt => opt.originalLabel === question.correct_answer);
+      const wrongOption = shuffledOptions.find(opt => opt.originalLabel === answerState.selectedAnswer);
+      
+      // Return them in the desired order: correct first (left), wrong second (right)
+      // Keep their original display labels
+      const filtered = [];
+      if (correctOption) filtered.push(correctOption);
+      if (wrongOption && wrongOption !== correctOption) filtered.push(wrongOption);
+      
+      return filtered;
     }
     return shuffledOptions;
   }, [shuffledOptions, answerState, question.correct_answer]);
@@ -163,18 +200,18 @@ export function QuizQuestion({
       )}
     >
       {/* Question Card - Takes available space */}
-      <Card className="w-full h-full bg-card shadow-lg rounded-xl overflow-hidden flex flex-col">
+      <Card className="w-full h-full bg-card shadow-lg rounded-xl overflow-visible flex flex-col relative z-0">
         <CardContent 
-          className="h-full flex flex-col overflow-hidden min-h-0"
+          className="h-full flex flex-col overflow-visible min-h-0 relative z-1"
           style={{
             padding: 'clamp(1rem, 3vw, 1.5rem)'
           }}
         >
           {/* Question Text - Fixed height portion */}
-          <div className="flex-shrink-0 mb-4 text-center">
+          <div className="flex-shrink-0 mb-4 text-center relative z-30">
             <QuizContent
               content={question.question_text}
-              className="font-semibold text-gray-900 dark:text-gray-100"
+              className="font-semibold text-gray-900 dark:text-gray-100 relative z-30"
               style={{
                 fontSize: 'clamp(1rem, 2.5vw, 1.5rem)',
                 lineHeight: '1.4'
@@ -183,11 +220,11 @@ export function QuizQuestion({
           </div>
 
           {/* Answer Options Grid - Flexible height portion */}
-          <div className="flex-1 min-h-0 overflow-hidden">
+          <div className="flex-1 min-h-0 overflow-visible relative z-2">
             <div 
               className={cn(
-                "h-full grid gap-2 md:gap-3",
-                visibleOptions.length === 2 && "grid-cols-1 md:grid-cols-2",
+                "h-full grid gap-2 md:gap-3 relative z-10",
+                visibleOptions.length === 2 && "grid-cols-2", // Always 2 columns for incorrect answer view
                 visibleOptions.length === 3 && "grid-cols-1",
                 visibleOptions.length === 4 && "grid-cols-1 md:grid-cols-2",
                 visibleOptions.length > 4 && "grid-cols-1"
@@ -199,32 +236,32 @@ export function QuizQuestion({
                               "minmax(80px, 1fr)"
               }}
             >
-              {visibleOptions.map((option) => {
+              {visibleOptions.map((option, index) => {
                 const state = getOptionState(option.originalLabel);
                 const canClick = !disabled && !answerState.hasAnswered && quizMode !== 'review';
 
                 return (
                   <motion.div 
-                    key={option.originalLabel} 
-                    className="min-h-0"
+                    key={`${question.id}-${option.originalLabel}`} // Include question ID to reset animations
+                    className="min-h-0 relative z-20"
                     layout
-                    initial={{ opacity: 1, scale: 1 }}
+                    initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ 
                       opacity: 1,
                       scale: 1
                     }}
-                    transition={{ duration: 0.3, ease: "easeInOut" }}
+                    transition={{ duration: 0.2, ease: "easeOut" }}
                   >
                     <Card
                       className={cn(
-                        "h-full border-2 transition-all duration-300 cursor-pointer",
+                        "h-full border-2 transition-all duration-300 cursor-pointer relative z-30",
                         getOptionClassName(state),
                         canClick && "hover:shadow-md hover:scale-[1.02]",
                       )}
                       onClick={() => canClick && onAnswerSelect(option.originalLabel)}
                     >
                       <CardContent 
-                        className="h-full flex items-center"
+                        className="h-full flex items-center relative z-40"
                         style={{
                           padding: 'clamp(0.75rem, 2vw, 1rem)'
                         }}
@@ -237,21 +274,21 @@ export function QuizQuestion({
                         >
                           {/* Option Label - Display the visual label (A, B, C, D) */}
                           <div 
-                            className="flex-shrink-0 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center font-bold"
+                            className="flex-shrink-0 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center font-bold relative z-50"
                             style={{
                               width: 'clamp(2rem, 5vw, 2.5rem)',
                               height: 'clamp(2rem, 5vw, 2.5rem)',
                               fontSize: 'clamp(0.875rem, 2vw, 1.125rem)'
                             }}
                           >
-                            {String.fromCharCode(65 + option.displayIndex)}
+                            <span className="relative z-50">{option.displayLabel}</span>
                           </div>
 
                           {/* Option Text */}
-                          <div className="flex-1 min-w-0">
+                          <div className="flex-1 min-w-0 relative z-50">
                             <QuizContent
                               content={option.text}
-                              className="text-gray-900 dark:text-gray-100 font-medium line-clamp-3"
+                              className="text-gray-900 dark:text-gray-100 font-medium line-clamp-3 relative z-50"
                               style={{
                                 fontSize: 'clamp(0.875rem, 2vw, 1.125rem)',
                                 lineHeight: '1.3'
@@ -261,8 +298,10 @@ export function QuizQuestion({
 
                           {/* State Icon */}
                           {getOptionIcon(option.originalLabel, state) && (
-                            <div className="flex-shrink-0">
-                              {getOptionIcon(option.originalLabel, state)}
+                            <div className="flex-shrink-0 relative z-50">
+                              <div className="relative z-50">
+                                {getOptionIcon(option.originalLabel, state)}
+                              </div>
                             </div>
                           )}
                         </div>
@@ -276,10 +315,10 @@ export function QuizQuestion({
           </div>
 
           {/* Feedback Section */}
-          <div className="flex-shrink-0 mt-4">
+          <div className="flex-shrink-0 mt-4 relative z-30">
             {!answerState.hasAnswered && (
               <div 
-                className="text-center text-gray-500 dark:text-gray-400"
+                className="text-center text-gray-500 dark:text-gray-400 relative z-40"
                 style={{
                   fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)'
                 }}
@@ -293,13 +332,13 @@ export function QuizQuestion({
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="rounded-lg border"
+                className="rounded-lg border relative z-20"
                 style={{
                   padding: 'clamp(0.75rem, 2vw, 1rem)'
                 }}
               >
                 {answerState.isCorrect ? (
-                  <div className="flex items-center gap-2 text-green-700 dark:text-green-300">
+                  <div className="flex items-center gap-2 text-green-700 dark:text-green-300 relative z-40">
                     <Check className="h-5 w-5" />
                     <span 
                       className="font-medium"
@@ -311,7 +350,7 @@ export function QuizQuestion({
                     </span>
                   </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-3 relative z-40">
                     <div className="flex items-center gap-2 text-red-700 dark:text-red-300">
                       <X className="h-5 w-5" />
                       <span 
@@ -320,7 +359,7 @@ export function QuizQuestion({
                           fontSize: 'clamp(0.875rem, 2vw, 1rem)'
                         }}
                       >
-                        Incorrect. The correct answer is {String.fromCharCode(65 + shuffledOptions.findIndex(opt => opt.originalLabel === question.correct_answer))}.
+                        Incorrect. The correct answer is {shuffledOptions.find(opt => opt.originalLabel === question.correct_answer)?.displayLabel}.
                       </span>
                     </div>
 
@@ -332,7 +371,7 @@ export function QuizQuestion({
                           fontSize: 'clamp(0.75rem, 1.75vw, 0.875rem)'
                         }}
                       >
-                        <QuizContent content={question.explanation} />
+                        <QuizContent content={question.explanation} className="relative z-40" />
                       </div>
                     )}
 
@@ -343,7 +382,7 @@ export function QuizQuestion({
                           onClick={onNext}
                           variant="outline"
                           size="sm"
-                          className="gap-2"
+                          className="gap-2 relative z-40"
                           style={{
                             fontSize: 'clamp(0.75rem, 1.75vw, 0.875rem)'
                           }}
