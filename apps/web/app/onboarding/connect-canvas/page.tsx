@@ -26,8 +26,18 @@ export default function ConnectCanvasPage() {
   const [schoolsMatch, setSchoolsMatch] = React.useState<boolean | null>(null);
   const [debouncedAccessToken] = useDebounce(accessToken, 500);
   const router = useRouter();
-  const { data: userSchool } = useUserSchool();
+  const { data: userSchool, isLoading: isLoadingSchool } = useUserSchool();
   const { setAccessToken: setCanvasToken } = useCanvas();
+
+  // Redirect if school doesn't have Canvas integration
+  React.useEffect(() => {
+    if (!isLoadingSchool && userSchool) {
+      // Treat null as false for canvas_integration
+      if (userSchool.canvas_integration !== true) {
+        router.push("/courses?onboarding=success");
+      }
+    }
+  }, [userSchool, isLoadingSchool, router]);
 
   const handleSkip = () => {
     router.push("/courses?onboarding=success");
@@ -89,6 +99,20 @@ export default function ConnectCanvasPage() {
       validateToken(debouncedAccessToken);
     }
   }, [debouncedAccessToken, validateToken]);
+
+  // Show loading state while checking Canvas integration
+  if (isLoadingSchool) {
+    return (
+      <div className="flex min-h-svh w-full items-center justify-center">
+        <div className="text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
+
+  // Don't render if school doesn't have Canvas integration (will redirect)
+  if (userSchool && userSchool.canvas_integration !== true) {
+    return null;
+  }
 
   return (
     <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">

@@ -20,4 +20,5 @@ export interface UserSchool {
   state: string | null;
   domain: string | null;
   logo_url: string | null;
+  canvas_integration: boolean | null;
 }
