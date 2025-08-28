@@ -119,8 +119,13 @@ export default function SelectSchoolPage() {
           "School selected and onboarding updated successfully",
         );
 
-        // Navigate to canvas onboarding page
-        router.push("/onboarding/connect-canvas");
+        // Navigate based on Canvas integration availability
+        // Treat null as false for canvas_integration
+        if (school.canvas_integration === true) {
+          router.push("/onboarding/connect-canvas");
+        } else {
+          router.push("/courses?onboarding=success");
+        }
       } else {
         logger.warn(
           {
