@@ -21,7 +21,7 @@ import dynamic from "next/dynamic";
 const Flashcard = dynamic(
   () => import("@/features/flashcards/components/flashcard").then(mod => ({ default: mod.Flashcard })),
   {
-    loading: () => <div className="animate-pulse bg-muted rounded-lg h-64 flex items-center justify-center">Loading...</div>,
+    loading: () => <div></div>,
     ssr: false
   }
 );
