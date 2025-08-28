@@ -97,6 +97,7 @@ export interface Database {
           state: string | null;
           domain: string | null;
           logo_url: string | null;
+          canvas_integration: boolean | null;
           created_at: string;
           updated_at: string;
         };
@@ -107,6 +108,7 @@ export interface Database {
           state?: string | null;
           domain?: string | null;
           logo_url?: string | null;
+          canvas_integration?: boolean | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -117,6 +119,7 @@ export interface Database {
           state?: string | null;
           domain?: string | null;
           logo_url?: string | null;
+          canvas_integration?: boolean | null;
           created_at?: string;
           updated_at?: string;
         };
