@@ -73,6 +73,7 @@ export interface StudyState {
   shuffledQuestions?: QuizQuestion[];
   currentAnswerState: QuestionAnswerState;
   quizMode: QuizMode;
+  answerShuffleMap?: Map<string, OptionLabel[]>; // Maps question ID to shuffled display order
 }
 
 // Edit mode types
