@@ -10,7 +10,7 @@ import dynamic from "next/dynamic";
 const QuizQuestion = dynamic(
   () => import("@/features/quiz/components/quiz-question").then(mod => ({ default: mod.QuizQuestion })),
   {
-    loading: () => <div className="animate-pulse bg-muted rounded-lg h-48 flex items-center justify-center">Loading question...</div>,
+    loading: () => <div></div>,
     ssr: false
   }
 );
@@ -18,7 +18,7 @@ const QuizQuestion = dynamic(
 const QuizControls = dynamic(
   () => import("@/features/quiz/components/quiz-controls").then(mod => ({ default: mod.QuizControls })),
   {
-    loading: () => <div className="animate-pulse bg-muted rounded-lg h-16 flex items-center justify-center">Loading controls...</div>,
+    loading: () => <div> </div>,
     ssr: false
   }
 );
@@ -26,10 +26,11 @@ const QuizControls = dynamic(
 const QuizEditMode = dynamic(
   () => import("@/features/quiz/components/quiz-edit-mode").then(mod => ({ default: mod.QuizEditMode })),
   {
-    loading: () => <div className="animate-pulse bg-muted rounded-lg h-32 flex items-center justify-center">Loading editor...</div>,
+    loading: () => <div></div>,
     ssr: false
   }
 );
+
 import {
   OptionLabel,
   QuizMode,
@@ -99,6 +100,18 @@ export default function QuizPage() {
   };
 
   // Study handlers
+  const handleShuffleGenerated = (questionId: string, shuffledOrder: OptionLabel[]) => {
+    setStudyState((currentState) => {
+      if (!currentState) return currentState;
+      const newShuffleMap = new Map(currentState.answerShuffleMap || new Map());
+      newShuffleMap.set(questionId, shuffledOrder);
+      return {
+        ...currentState,
+        answerShuffleMap: newShuffleMap,
+      };
+    });
+  };
+
   const handleAnswerSelect = (answer: OptionLabel) => {
     if (!studyState) return;
 
@@ -261,7 +274,7 @@ export default function QuizPage() {
   }
 
   // Error state
-  if (error || !quiz && !isLoading) {
+  if (!isLoading && !quiz) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center space-y-4">
@@ -386,6 +399,8 @@ export default function QuizPage() {
               studyState,
             )}
             canNavigateNext={quizService.canNavigateNextInReview(studyState)}
+            answerShuffleMap={studyState.answerShuffleMap}
+            onShuffleGenerated={handleShuffleGenerated}
           />
 
           {/* Review Mode Navigation Arrows - positioned at quiz area edges */}
@@ -402,7 +417,7 @@ export default function QuizPage() {
                   <ChevronLeft className="h-5 w-5" />
                 </Button>
               )}
-              
+
               {/* Right Arrow */}
               {quizService.canNavigateNextInReview(studyState) && (
                 <Button
