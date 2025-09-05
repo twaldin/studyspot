@@ -50,6 +50,7 @@ export function CreateCourseDialog({
   const [courseIcon, setCourseIcon] = useState<CourseIconName | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadedFileUrl, setUploadedFileUrl] = useState<string | null>(null);
+  const [uploadedFileKey, setUploadedFileKey] = useState<string | null>(null);
   const [showSyllabusUpload, setShowSyllabusUpload] = useState(false);
   const [isExtracting, setIsExtracting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -73,6 +74,7 @@ export function CreateCourseDialog({
   const handleFileSelect = async (file: File | null) => {
     setSelectedFile(file);
     setUploadedFileUrl(null);
+    setUploadedFileKey(null);
 
     if (file) {
       // Start extraction process immediately when file is selected
@@ -86,8 +88,10 @@ export function CreateCourseDialog({
         );
 
         if (uploadResult && uploadResult.length > 0) {
-          const fileUrl = uploadResult[0].url;
+          const fileUrl = uploadResult[0].ufsUrl;
+          const fileKey = uploadResult[0].key;
           setUploadedFileUrl(fileUrl);
+          setUploadedFileKey(fileKey);
 
           // Extract course info
           const response = await fetch("/api/courses/extract", {
@@ -266,6 +270,7 @@ export function CreateCourseDialog({
     setCourseIcon(null);
     setSelectedFile(null);
     setUploadedFileUrl(null);
+    setUploadedFileKey(null);
     setExtractionResult(null);
     setIsExtracting(false);
     setShowSyllabusUpload(false);
@@ -302,14 +307,11 @@ export function CreateCourseDialog({
         });
 
         // Step 3: If a syllabus was uploaded, trigger document ingestion
-        if (selectedFile && uploadedFileUrl) {
-          // Get the file key from the URL (it's the last part after /f/)
-          const fileKey = uploadedFileUrl.split("/f/").pop() || "";
-
+        if (selectedFile && uploadedFileUrl && uploadedFileKey) {
           // Trigger document ingestion via the Mastra workflow
           // This happens asynchronously with progress tracking
           const files = [{
-            fileKey,
+            fileKey: uploadedFileKey,
             fileName: selectedFile.name,
             fileUrl: uploadedFileUrl,
             fileType: selectedFile.type || "application/pdf",

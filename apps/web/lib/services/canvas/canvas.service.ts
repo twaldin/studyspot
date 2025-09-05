@@ -4,12 +4,11 @@ import { ICourse } from '@/features/courses/course.model';
 import logger from '@/lib/logger';
 import { z } from 'zod';
 import { createCourse as createCourseInDb } from '@/features/courses/operations';
-import { ingestCanvasPage } from './canvas-ingestion.service';
+import { ingestCanvasPage, ingestCanvasFile } from './canvas-ingestion.service';
 import { createServiceRoleClient } from '../database/supabase.service';
 import { CanvasAPIError } from './canvas.error';
 import { UTApi } from "uploadthing/server";
 import { courseCodeGeneratorService } from '../ai/course-code-generator.service';
-// Use the same ingestion API as the file upload form
 
 const utapi = new UTApi();
 
@@ -66,11 +65,18 @@ const canvasSyllabusSchema = z.object({
   html_url: z.string(),
 });
 
+const canvasPageSchema = z.object({
+  title: z.string(),
+  body: z.string().nullable(),
+  html_url: z.string(),
+});
+
 const canvasDiscussionSchema = z.object({
   id: z.number(),
   title: z.string(),
   message: z.string().nullable(),
   html_url: z.string(),
+  attachments: z.array(canvasFileSchema).optional(),
 });
 
 export type CanvasCourse = z.infer<typeof canvasCourseSchema> & {
@@ -164,6 +170,7 @@ async function ingestContentForCourse(
         } else {
           logger.warn({ courseId: dbCourse.id, pageTitle: homepage.title }, "Skipping empty homepage.");
         }
+        await _ingestFilesFromHtmlContent(homepage.body, userId, dbCourse.id, accessToken);
       }
     } catch (ingestionError: any) {
       logger.error(
@@ -187,6 +194,7 @@ async function ingestContentForCourse(
           } else {
             logger.warn({ courseId: dbCourse.id, announcementTitle: announcement.title }, "Skipping empty announcement after HTML stripping.");
           }
+          await _ingestFilesFromHtmlContent(announcement.message, userId, dbCourse.id, accessToken);
         } else {
           logger.warn({ courseId: dbCourse.id, announcementTitle: announcement.title }, "Skipping empty announcement.");
         }
@@ -208,11 +216,15 @@ async function ingestContentForCourse(
       for (const item of courseModule.items) {
         if (item.type === 'Page' && item.url) {
           try {
-            const content = await extractTextFromPage(item.url, accessToken);
-            if (content) {
-              await ingestCanvasPage(userId, dbCourse.id, item.title, content, item.url);
-              logger.info({ courseId: dbCourse.id, pageTitle: item.title }, "Successfully ingested page.");
-            } else {
+            const page = await getCanvasPage(item.url, accessToken);
+            if (page && page.body) {
+              const content = page.body.replace(/<[^>]*>?/gm, '').trim();
+              if (content) {
+                await ingestCanvasPage(userId, dbCourse.id, item.title, content, item.url);
+                logger.info({ courseId: dbCourse.id, pageTitle: item.title }, "Successfully ingested page.");
+              }
+              await _ingestFilesFromHtmlContent(page.body, userId, dbCourse.id, accessToken);
+            } else if (page) {
               logger.warn({ courseId: dbCourse.id, pageTitle: item.title }, "Skipping empty page.");
             }
           } catch (ingestionError: any) {
@@ -233,42 +245,8 @@ async function ingestContentForCourse(
             
             const fileMetadata = canvasFileSchema.parse(await fileMetadataResponse.json());
 
-            const fileContentResponse = await fetch(fileMetadata.url, {
-              headers: { Authorization: `Bearer ${accessToken}` },
-            });
-            if (!fileContentResponse.ok) throw new Error(`Failed to download file from Canvas: ${fileContentResponse.statusText}`);
-
-            const fileContent = await fileContentResponse.blob();
-
-            const uploadedFileResponse = await utapi.uploadFiles(new File([fileContent], fileMetadata.display_name, { type: fileMetadata['content-type'] }));
-            if (uploadedFileResponse.error) throw new Error('File upload via UTApi failed', { cause: uploadedFileResponse.error });
-
-            const { key, ufsUrl } = uploadedFileResponse.data;
-
-            // Use the same ingestion API as the file upload form
-            const ingestionResponse = await fetch('/api/documents/ingest-stream', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                files: [{
-                  fileKey: key,
-                  fileName: fileMetadata.display_name,
-                  fileUrl: ufsUrl,
-                  fileType: fileMetadata['content-type'],
-                }],
-                courseId: dbCourse.id,
-                userId,
-              }),
-            });
-
-            if (!ingestionResponse.ok) {
-              const errorText = await ingestionResponse.text();
-              throw new Error(`Document ingestion failed: ${errorText}`);
-            }
-
-            logger.info({ courseId: dbCourse.id, fileName: fileMetadata.display_name }, "Successfully ingested file.");
+            await ingestCanvasFile(userId, dbCourse.id, fileMetadata.display_name, fileMetadata.url, fileMetadata['content-type'], item.url);
+            logger.info({ courseId: dbCourse.id, fileName: fileMetadata.display_name }, "Successfully ingested file from module.");
 
           } catch (ingestionError: any) {
             logger.error(
@@ -288,41 +266,7 @@ async function ingestContentForCourse(
     const files = await getFilesForCourse(canvasCourseId, accessToken);
     for (const file of files) {
       try {
-        const fileContentResponse = await fetch(file.url, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-        if (!fileContentResponse.ok) throw new Error(`Failed to download file from Canvas: ${fileContentResponse.statusText}`);
-
-        const fileContent = await fileContentResponse.blob();
-
-        const uploadedFileResponse = await utapi.uploadFiles(new File([fileContent], file.display_name, { type: file['content-type'] }));
-        if (uploadedFileResponse.error) throw new Error('File upload via UTApi failed', { cause: uploadedFileResponse.error });
-
-        const { key, ufsUrl } = uploadedFileResponse.data;
-
-        // Use the same ingestion API as the file upload form
-        const ingestionResponse = await fetch('/api/documents/ingest-stream', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            files: [{
-              fileKey: key,
-              fileName: file.display_name,
-              fileUrl: ufsUrl,
-              fileType: file['content-type'],
-            }],
-            courseId: dbCourse.id,
-            userId,
-          }),
-        });
-
-        if (!ingestionResponse.ok) {
-          const errorText = await ingestionResponse.text();
-          throw new Error(`Document ingestion failed: ${errorText}`);
-        }
-
+        await ingestCanvasFile(userId, dbCourse.id, file.display_name, file.url, file['content-type'], file.url);
         logger.info({ courseId: dbCourse.id, fileName: file.display_name }, "Successfully ingested file.");
       } catch (ingestionError: any) {
         logger.error(
@@ -348,6 +292,7 @@ async function ingestContentForCourse(
           } else {
             logger.warn({ courseId: dbCourse.id, assignmentName: assignment.name }, "Skipping empty assignment after HTML stripping.");
           }
+          await _ingestFilesFromHtmlContent(assignment.description, userId, dbCourse.id, accessToken);
         } else {
           logger.warn({ courseId: dbCourse.id, assignmentName: assignment.name }, "Skipping empty assignment.");
         }
@@ -374,6 +319,7 @@ async function ingestContentForCourse(
         } else {
           logger.warn({ courseId: dbCourse.id }, "Skipping empty syllabus.");
         }
+        await _ingestFilesFromHtmlContent(syllabus.syllabus_body, userId, dbCourse.id, accessToken);
       }
     } catch (ingestionError: any) {
       logger.error(
@@ -397,8 +343,16 @@ async function ingestContentForCourse(
           } else {
             logger.warn({ courseId: dbCourse.id, discussionTitle: discussion.title }, "Skipping empty discussion after HTML stripping.");
           }
+          await _ingestFilesFromHtmlContent(discussion.message, userId, dbCourse.id, accessToken);
         } else {
           logger.warn({ courseId: dbCourse.id, discussionTitle: discussion.title }, "Skipping empty discussion.");
+        }
+
+        if (discussion.attachments) {
+          for (const attachment of discussion.attachments) {
+            await ingestCanvasFile(userId, dbCourse.id, attachment.display_name, attachment.url, attachment['content-type'], attachment.url);
+            logger.info({ courseId: dbCourse.id, fileName: attachment.display_name }, "Successfully ingested discussion attachment.");
+          }
         }
       } catch (ingestionError: any) {
         logger.error(
@@ -409,6 +363,56 @@ async function ingestContentForCourse(
           "Failed to ingest discussion, continuing with next item."
         );
       }
+    }
+  }
+}
+
+async function getCanvasPage(pageUrl: string, accessToken: string): Promise<z.infer<typeof canvasPageSchema> | null> {
+  try {
+      const response = await fetch(pageUrl, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (!response.ok) {
+          throw new Error(`Failed to fetch page from Canvas: ${response.statusText}`);
+      }
+      const pageData = await response.json();
+      return canvasPageSchema.parse(pageData);
+  } catch (error) {
+      logger.error({ error, pageUrl }, "Failed to get Canvas page");
+      return null;
+  }
+}
+
+async function _ingestFilesFromHtmlContent(
+  htmlContent: string,
+  userId: string,
+  courseId: string,
+  accessToken: string
+) {
+  if (!htmlContent) return;
+
+  const fileUrlRegex = /https:\/\/[^/]+\/courses\/\d+\/files\/(\d+)/g;
+  const matches = htmlContent.matchAll(fileUrlRegex);
+
+  for (const match of matches) {
+    const fileId = match[1];
+    try {
+      const fileMetadataResponse = await fetch(`${baseUrl}/files/${fileId}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      if (!fileMetadataResponse.ok) {
+        logger.warn({ fileId }, "Failed to fetch file metadata from Canvas API");
+        continue;
+      }
+
+      const fileMetadata = canvasFileSchema.parse(await fileMetadataResponse.json());
+
+      await ingestCanvasFile(userId, courseId, fileMetadata.display_name, fileMetadata.url, fileMetadata['content-type'], fileMetadata.url);
+      logger.info({ courseId, fileName: fileMetadata.display_name }, "Successfully ingested file from HTML content.");
+
+    } catch (error) {
+      logger.error({ fileId, error }, "Failed to ingest file from HTML content.");
     }
   }
 }
@@ -765,7 +769,7 @@ export async function getCanvasCourseSyllabus(courseId: number, accessToken: str
 
 export async function getCanvasDiscussions(courseId: number, accessToken: string): Promise<CanvasDiscussion[]> {
   let discussions: CanvasDiscussion[] = [];
-  let url = `${baseUrl}/courses/${courseId}/discussion_topics`;
+  let url = `${baseUrl}/courses/${courseId}/discussion_topics?include[]=attachments`;
 
   try {
     while (url) {
