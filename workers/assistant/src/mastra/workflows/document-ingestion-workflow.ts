@@ -132,6 +132,7 @@ const extractContentStep = createStep({
 
     const parser = new LlamaParse({
       apiKey: llamaApiKey,
+      resultType: "markdown", // Always parse to markdown
     });
 
     // Create a File object from buffer

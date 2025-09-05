@@ -1,5 +1,3 @@
-"use client";
-
 import { useUploadThing } from "../uploadthing";
 import toast from "react-hot-toast";
 import { useDocumentProcessing } from "@/hooks/use-document-processing";
@@ -145,7 +143,7 @@ export function FileUploadDialog(
       const files = uploadedFiles.map((file) => ({
         fileKey: file.key,
         fileName: file.name,
-        fileUrl: file.url,
+        fileUrl: file.ufsUrl, // Use the recommended ufsUrl
         fileType: file.serverData?.fileType || file.type,
       }));
 
@@ -609,4 +607,3 @@ export function FileUploadDialog(
     </Dialog>
   );
 }
-
