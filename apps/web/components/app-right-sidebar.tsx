@@ -18,6 +18,7 @@ import {
   useJoinedCourses,
   useSelectedCourse,
 } from "@/hooks/api/courses";
+import { useUserSchool } from "@/hooks/api/user";
 import { JoinedCourseList } from "@/features/courses/components/joined-course-list";
 import { usePathname } from "next/navigation";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -123,6 +124,7 @@ export function AppRightSidebar() {
   const { data: allCourses = [] } = useCourses();
   const { data: joinedCourseIds = [] } = useJoinedCourses();
   const { data: selectedCourse } = useSelectedCourse();
+  const { data: userSchool } = useUserSchool();
 
   // Filter courses to only show joined ones
   const joinedCourses = allCourses.filter((course) =>
@@ -154,7 +156,7 @@ export function AppRightSidebar() {
     prevSelectedCourse.current = selectedCourse?.id;
   }, [selectedCourse, pathname]);
 
-  
+
 
 
   return (
@@ -178,11 +180,14 @@ export function AppRightSidebar() {
               />
             </div>
           </div>
-          <div className="flex justify-end">
-            <Button variant="outline" onClick={() => setIsSyncDialogOpen(true)}>
-              Sync with Canvas
-            </Button>
-          </div>
+          {/* Only show Canvas sync button if school has Canvas integration */}
+          {userSchool?.canvas_integration === true && (
+            <div className="flex justify-end">
+              <Button variant="outline" onClick={() => setIsSyncDialogOpen(true)}>
+                Sync with Canvas
+              </Button>
+            </div>
+          )}
         </div>
         <div className="flex-1">
           {/* Placeholder for future content */}

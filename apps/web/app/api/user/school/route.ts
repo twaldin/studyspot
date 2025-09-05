@@ -11,7 +11,7 @@ export async function GET(request: Request) {
 
     const { data: school, error } = await supabase
       .from('schools')
-      .select('id, name, city, state, domain, logo_url')
+      .select('id, name, city, state, domain, logo_url, canvas_integration')
       .eq('id', auth.selectedSchool)
       .single();
 

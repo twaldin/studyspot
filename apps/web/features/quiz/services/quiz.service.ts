@@ -65,6 +65,7 @@ export class QuizService {
       shuffledQuestions,
       currentAnswerState,
       quizMode,
+      answerShuffleMap: new Map(), // Initialize empty shuffle map
     };
   }
 
@@ -175,6 +176,7 @@ export class QuizService {
       ...currentState,
       progress: newProgress,
       currentAnswerState: newAnswerState,
+      // Preserve answerShuffleMap
     };
   }
 
@@ -213,6 +215,7 @@ export class QuizService {
       ...currentState,
       progress: newProgress,
       currentAnswerState: newAnswerState,
+      // Preserve answerShuffleMap
     };
   }
 
@@ -252,6 +255,7 @@ export class QuizService {
       ...currentState,
       progress: newProgress,
       currentAnswerState: newAnswerState,
+      // Preserve answerShuffleMap
     };
   }
 
@@ -493,12 +497,15 @@ export class QuizService {
   ): StudyState {
     switch (newMode) {
       case 'retake':
-        // Reset everything like initial state
-        return this.initializeStudyState(originalQuestions, currentState.settings, 'retake');
+        // Reset everything like initial state but keep a new shuffle map
+        return {
+          ...this.initializeStudyState(originalQuestions, currentState.settings, 'retake'),
+          answerShuffleMap: new Map(), // Start with fresh shuffle
+        };
         
       case 'review':
-        // Keep progress but allow navigation through all questions in original order
-        // Preserve the order the user experienced during the quiz
+        // Keep progress but allow navigation through all questions
+        // PRESERVE the shuffle map so answers stay in same positions
         return {
           ...currentState,
           quizMode: 'review',
@@ -506,19 +513,20 @@ export class QuizService {
             ...currentState.currentAnswerState,
             showFeedback: false,
             hasAnswered: false,
-          }
-          // Note: we keep the existing shuffledQuestions to preserve the order user experienced
+          },
+          // Keep the answerShuffleMap to preserve answer positions
         };
         
       case 'practice':
-        // Continue infinite practice mode
+        // Continue infinite practice mode with preserved shuffle
         return {
           ...currentState,
           quizMode: 'practice',
           progress: {
             ...currentState.progress,
             isComplete: false, // Allow infinite practice
-          }
+          },
+          // Keep the answerShuffleMap for consistency
         };
         
       default:
