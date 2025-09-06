@@ -172,7 +172,7 @@ const HeroContent = () => {
             variants={fadeInUp}
           >
             <p className="text-md text-[var(--primary-text-light)]">For free early access,</p>
-            <CtaButton href="#signup">
+            <CtaButton href="https://app.study-spot.com">
               Get Started
             </CtaButton>
           </motion.div>
