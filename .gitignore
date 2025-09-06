@@ -55,6 +55,9 @@ next-env.d.ts
 # claude development files
 CLAUDE.local.md
 
+# neovim marks file (personal development)
+.lasso-marks-tracker
+
 # Application-specific ignores
 apps/*/.next/
 apps/*/node_modules/

@@ -18,6 +18,11 @@ openNextDebug = "true"
 WRANGLER_BUILD_CONDITIONS = ""
 WRANGLER_BUILD_PLATFORM = "node"
 
+# Custom domain routing
+routes = [
+  { pattern = "study-spot.com/*", custom_domain = true }
+]
+
 # Note: This is a static landing page, so minimal environment variables needed
 # Any secrets should be set via CLI:
 # wrangler secret put SECRET_NAME
