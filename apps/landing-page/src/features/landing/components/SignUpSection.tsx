@@ -50,7 +50,7 @@ const SignUpSection = () => {
                 </motion.h2>
                 <DownArrow className="w-8 h-11 mx-auto my-8 text-[var(--primary-200)]" />
                 <div className="flex justify-center items-center">
-                    <CtaButton href="https://app.study-spot.com/sign-up">
+                    <CtaButton href="https://app.study-spot.com/">
                         Get Started
                     </CtaButton>
                 </div>
