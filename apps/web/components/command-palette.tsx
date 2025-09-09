@@ -35,7 +35,6 @@ import {
 import { useSidebar } from "@/components/ui/sidebar"
 import { FileUploadDialog } from "@/components/file-upload-dialog"
 import { CreateCourseDialog } from "@/components/create-course-dialog"
-import { NewPostDialog } from "./new-post-dialog"
 import { useIsDeveloper } from "@/hooks/api/user"
 import { useDeveloperMode } from "@/contexts/developer-mode-context"
 import { useSelectedCourse, useSuggestedQueries } from "@/hooks/api/courses"
@@ -55,7 +54,6 @@ export function CommandPalette() {
   const [fileUploadDialogOpen, setFileUploadDialogOpen] = React.useState(false)
   const [createCourseDialogOpen, setCreateCourseDialogOpen] =
     React.useState(false)
-  const [newPostDialogOpen, setNewPostDialogOpen] = React.useState(false)
   const { toggleSidebar } = useSidebar()
   const { theme, setTheme } = useTheme()
   const router = useRouter()
@@ -77,9 +75,6 @@ export function CommandPalette() {
     setCreateCourseDialogOpen(true)
   }, [])
 
-  const openNewPostDialog = React.useCallback(() => {
-    setNewPostDialogOpen(true)
-  }, [])
 
   const spawnToast = React.useCallback(
     (type: "success" | "error" | "loading" | "default") => {
@@ -222,13 +217,6 @@ export function CommandPalette() {
         group: "Suggestions",
       },
       {
-        id: "new-post",
-        label: "New Post",
-        icon: MessagesSquare,
-        action: openNewPostDialog,
-        group: "Suggestions",
-      },
-      {
         id: "go-to-onboarding",
         label: "Go to Onboarding",
         icon: Compass,
@@ -296,7 +284,7 @@ export function CommandPalette() {
         group: "Settings",
       },
     ],
-    [router, openFileUploadDialog, spawnToast, toggleSidebar, toggleTheme, openCreateCourseDialog, openNewPostDialog, isDeveloperModeEnabled, toggleDeveloperMode, regenerateSuggestedQueries],
+    [router, openFileUploadDialog, spawnToast, toggleSidebar, toggleTheme, openCreateCourseDialog, isDeveloperModeEnabled, toggleDeveloperMode, regenerateSuggestedQueries],
   )
 
   React.useEffect(() => {
@@ -416,10 +404,6 @@ export function CommandPalette() {
       <CreateCourseDialog
         open={createCourseDialogOpen}
         onOpenChange={setCreateCourseDialogOpen}
-      />
-      <NewPostDialog
-        open={newPostDialogOpen}
-        onOpenChange={setNewPostDialogOpen}
       />
     </>
   )

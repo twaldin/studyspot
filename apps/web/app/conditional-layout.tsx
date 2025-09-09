@@ -15,11 +15,7 @@ import { ChatNavigationProvider } from "@/features/chat/ChatNavigationContext";
 import { PendingChatProvider } from "@/features/chat/PendingChatContext";
 
 // Define routes that should NOT have the sidebar layout
-const NO_SIDEBAR_ROUTES = [
-  '/sign-in',
-  '/sign-up',
-  '/onboarding',
-];
+const NO_SIDEBAR_ROUTES = ["/sign-in", "/sign-up", "/onboarding", "/post", "/terms"];
 
 import type { ReactNode } from 'react';
 

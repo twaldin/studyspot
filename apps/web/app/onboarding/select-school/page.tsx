@@ -18,6 +18,8 @@ import { useSchools } from "@/hooks/api/";
 import { useUser } from "@clerk/nextjs";
 import logger from "@/lib/logger";
 import { useUpdateOnboarding } from "@/hooks/api/";
+import { Checkbox } from "@studyspot/ui/components/checkbox";
+import { Label } from "@studyspot/ui/components/label";
 import type { School } from "@/features/auth/types";
 
 export default function SelectSchoolPage() {
@@ -27,6 +29,7 @@ export default function SelectSchoolPage() {
   const [searchTerm, setSearchTerm] = React.useState("");
   const [activeIndex, setActiveIndex] = React.useState(-1);
   const [isProcessing, setIsProcessing] = React.useState(false);
+  const [termsAccepted, setTermsAccepted] = React.useState(false);
   const router = useRouter();
   const { user } = useUser();
   const listContainerRef = React.useRef<HTMLDivElement>(null);
@@ -218,26 +221,50 @@ export default function SelectSchoolPage() {
                     </div>
                   )
                   : (
-                    <p className="p-4 text-center text-sm text-muted-foreground">
-                      No school found.
-                    </p>
+                    <div className="p-4 text-center text-sm text-muted-foreground">
+                      <p>No school found.</p>
+                      {searchTerm && (
+                        <p className="mt-2">
+                          Can't find your school?{" "}
+                          <Button
+                            variant="link"
+                            size="sm"
+                            className="h-auto p-0"
+                          >
+                            Make a Request
+                          </Button>
+                        </p>
+                      )}
+                    </div>
                   )}
               </div>
             </div>
-            <div className="space-y-1 text-center text-sm">
-              <p className="text-muted-foreground">
-                Can't find your school?
-              </p>
-              <Button variant="link" size="sm" className="h-auto p-0">
-                Make a Request
-              </Button>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="terms"
+                checked={termsAccepted}
+                onCheckedChange={(checked) =>
+                  setTermsAccepted(checked as boolean)}
+              />
+              <Label
+                htmlFor="terms"
+                className="text-sm font-normal"
+              >
+                <span>
+                  I read and agree to the {" "}
+                  <a href="/terms" className="underline" target="_blank" rel="noopener noreferrer">
+                    terms and conditions
+                  </a>
+                  .
+                </span>
+              </Label>
             </div>
           </CardContent>
           <CardFooter>
             <Button
               variant="primary"
               className="w-full"
-              disabled={!selectedSchoolId || isProcessing}
+              disabled={!selectedSchoolId || !termsAccepted || isProcessing}
               onClick={() => {
                 const selectedSchool = filteredSchools.find((school) =>
                   school.id === selectedSchoolId

@@ -102,6 +102,9 @@ export function UserButton({ variant = "right-sidebar", className }: UserButtonP
           <DropdownMenuItem onClick={handleRemoveSchool}>
             Change Schools
           </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => window.open('/terms', '_blank')}>
+            Terms and Conditions
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleSignOut}>
             Sign Out
@@ -126,6 +129,9 @@ export function UserButton({ variant = "right-sidebar", className }: UserButtonP
         </DropdownMenuItem>
         <DropdownMenuItem onClick={handleRemoveSchool}>
           Change Schools
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => window.open('/terms', '_blank')}>
+          Terms and Conditions
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleSignOut}>
