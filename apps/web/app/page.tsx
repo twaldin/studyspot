@@ -19,13 +19,6 @@ const FileUploadDialog = dynamicImport(
   }
 );
 
-const NewPostDialog = dynamicImport(
-  () => import("@/components/new-post-dialog").then(mod => ({ default: mod.NewPostDialog })),
-  {
-    loading: () => null, // No loading state for dialogs
-    ssr: false
-  }
-);
 import { ChatInputBar } from "@/components/chat-input-bar";
 import { useRouter } from "next/navigation";
 import { useSuggestedQueries, useSelectedCourse } from "@/hooks/api/courses";
@@ -41,7 +34,6 @@ export default function Home() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
-  const [isNewPostDialogOpen, setIsNewPostDialogOpen] = useState(false);
   const [isCreatingChat, setIsCreatingChat] = useState(false);
   const router = useRouter();
   const { data: suggestedQueries = [], isLoading: isLoadingSuggestedQueries } = useSuggestedQueries(selectedCourse?.id);
@@ -171,10 +163,6 @@ export default function Home() {
               orientation="vertical"
               className="data-[orientation=vertical]:h-4"
             />
-            <Button variant="ghost" onClick={() => setIsNewPostDialogOpen(true)}>
-              <MessagesSquare className="w-4 h-4" />
-              New Post
-            </Button>
           </div>
           <Link href="/content" className="hidden @md:block">
             <Button variant="secondary">
@@ -196,10 +184,6 @@ export default function Home() {
       <FileUploadDialog
         open={isUploadDialogOpen}
         onOpenChange={setIsUploadDialogOpen}
-      />
-      <NewPostDialog
-        open={isNewPostDialogOpen}
-        onOpenChange={setIsNewPostDialogOpen}
       />
     </div>
   );

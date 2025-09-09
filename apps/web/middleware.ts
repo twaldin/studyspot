@@ -12,7 +12,6 @@ const isProtectedRoute = createRouteMatcher([
   "/chat(.*)",
   "/flashcards(.*)",
   "/quiz(.*)",
-  "/post(.*)",
 ]);
 
 const isOnboardingRoute = createRouteMatcher(["/onboarding(.*)"]);
