@@ -30,6 +30,11 @@ UPLOADTHING_CALLBACK_URL = "https://studyspot-web.timothy-869.workers.dev/api/up
 # Note: NEXT_PUBLIC_* variables are also loaded from .env.production during build
 # But we need them here for server-side rendering
 
+# Custom domain routing
+routes = [
+  { pattern = "app.study-spot.com/*", custom_domain = true }
+]
+
 # Service binding to assistant worker
 [[services]]
 binding = "ASSISTANT_SERVICE"
