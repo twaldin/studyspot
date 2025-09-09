@@ -337,7 +337,7 @@ export default function QuizPage() {
           <h1
             className={cn(
               "font-bold font-crimson-text text-foreground",
-              isFullscreen ? "text-3xl" : "text-2xl",
+              isFullscreen ? "text-2xl md:text-3xl" : "text-xl md:text-2xl",
             )}
           >
             {quiz.title}
@@ -346,18 +346,18 @@ export default function QuizPage() {
 
         {/* Course and Meta Info */}
         <div className="space-y-2">
-          <p className="text-lg text-muted-foreground">
+          <p className="text-base md:text-lg text-muted-foreground">
             {quiz.description}
           </p>
 
           {/* Show "edited from" info if this is an edit */}
           {quiz.edited_from && quiz.original_title && (
-            <p className="text-sm text-muted-foreground italic">
+            <p className="text-xs md:text-sm text-muted-foreground italic">
               (edited from '{quiz.original_title}')
             </p>
           )}
 
-          <div className="flex items-center gap-6 text-sm text-muted-foreground">
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-6 text-xs md:text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
               {(() => {
                 const CourseIcon = getCourseIcon((quiz.courses as any)?.icon);
@@ -412,9 +412,9 @@ export default function QuizPage() {
                   onClick={handlePreviousQuestion}
                   variant="ghost"
                   size="icon"
-                  className="absolute left-0 top-1/2 cursor-pointer -translate-y-1/2 -translate-x-full ml-4 rounded-full bg-white hover:bg-gray-100/80 dark:bg-black dark:hover:bg-card shadow-lg"
+                  className="absolute left-0 top-1/2 cursor-pointer -translate-y-1/2 -translate-x-1/2 md:-translate-x-full ml-2 md:ml-4 rounded-full bg-white hover:bg-gray-100/80 dark:bg-black dark:hover:bg-card shadow-lg"
                 >
-                  <ChevronLeft className="h-5 w-5" />
+                  <ChevronLeft className="h-4 w-4 md:h-5 md:w-5" />
                 </Button>
               )}
 
@@ -424,9 +424,9 @@ export default function QuizPage() {
                   onClick={handleNextQuestion}
                   variant="ghost"
                   size="icon"
-                  className="absolute right-0 top-1/2 cursor-pointer -translate-y-1/2 translate-x-full mr-4 rounded-full bg-white hover:bg-gray-100/80 dark:bg-black dark:hover:bg-card shadow-lg"
+                  className="absolute right-0 top-1/2 cursor-pointer -translate-y-1/2 translate-x-1/2 md:translate-x-full mr-2 md:mr-4 rounded-full bg-white hover:bg-gray-100/80 dark:bg-black dark:hover:bg-card shadow-lg"
                 >
-                  <ChevronRight className="h-5 w-5" />
+                  <ChevronRight className="h-4 w-4 md:h-5 md:w-5" />
                 </Button>
               )}
             </>
@@ -465,12 +465,12 @@ export default function QuizPage() {
         {/* Bottom Controls */}
         <div
           className={cn(
-            "flex items-center justify-between bg-card rounded-lg shadow-sm",
-            isFullscreen ? "p-6 mx-8" : "p-4",
+            "flex items-center justify-between flex-wrap bg-card rounded-lg shadow-sm",
+            isFullscreen ? "p-4 md:p-6 mx-4 md:mx-8" : "p-2 md:p-4",
           )}
         >
           {/* Left Controls */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 md:gap-2">
             <Button
               onClick={handleRandomize}
               variant="ghost"
@@ -517,7 +517,7 @@ export default function QuizPage() {
           </div>
 
           {/* Right Controls */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 md:gap-2">
             {studyState.quizMode === "review" && (
               <Button
                 onClick={() => handleQuizModeSelect("retake")}
@@ -551,7 +551,7 @@ export default function QuizPage() {
           className="bg-background"
           style={{ height: "calc(100vh - 4rem)" }}
         >
-          <div className="max-w-4xl mx-auto p-6 h-full overflow-hidden">
+          <div className="max-w-4xl mx-auto p-4 md:p-6 h-full overflow-hidden">
             {renderContent()}
           </div>
         </div>
@@ -560,7 +560,7 @@ export default function QuizPage() {
       {/* Fullscreen Layout */}
       {isFullscreen && (
         <div className="fixed inset-0 z-50 bg-background animate-in fade-in-0 duration-300">
-          <div className="max-w-[90vw] mx-auto p-8 h-full overflow-hidden">
+          <div className="max-w-[95vw] md:max-w-[90vw] mx-auto p-4 md:p-8 h-full overflow-hidden">
             {renderContent()}
           </div>
         </div>
