@@ -29,7 +29,7 @@ export interface PersistentStreamOptions {
 
 /**
  * PersistentStreamClient - Handles connection to persistent streams with catch-up functionality
- * 
+ *
  * Features:
  * - Automatic detection of existing vs new streams
  * - Catch-up events for clients joining mid-stream
@@ -38,7 +38,7 @@ export interface PersistentStreamOptions {
  */
 export class PersistentStreamClient {
   private static instance: PersistentStreamClient;
-  
+
   public static getInstance(): PersistentStreamClient {
     if (!PersistentStreamClient.instance) {
       PersistentStreamClient.instance = new PersistentStreamClient();
@@ -53,7 +53,7 @@ export class PersistentStreamClient {
    */
   async connectToStream(options: PersistentStreamOptions): Promise<void> {
     const { chatId, messageContent, conversationHistory, courseId, context } = options;
-    
+
     logger.info({ chatId, messageContent, courseId }, 'Connecting to persistent stream');
 
     try {
@@ -80,7 +80,7 @@ export class PersistentStreamClient {
 
       // Process the streaming response with catch-up awareness
       await this.processStreamingResponse(response, options);
-      
+
     } catch (error) {
       logger.error({ chatId, error: error instanceof Error ? error.message : error }, 'Persistent streaming failed');
       throw error;
@@ -92,7 +92,7 @@ export class PersistentStreamClient {
    */
   async subscribeToExistingStream(streamId: string, options: PersistentStreamOptions): Promise<void> {
     const { chatId } = options;
-    
+
     logger.info({ chatId, streamId }, 'Subscribing to existing persistent stream');
 
     try {
@@ -114,7 +114,7 @@ export class PersistentStreamClient {
 
       // Process the streaming response with catch-up awareness
       await this.processStreamingResponse(response, options);
-      
+
     } catch (error) {
       logger.error({ chatId, streamId, error: error instanceof Error ? error.message : error }, 'Stream subscription failed');
       throw error;
@@ -126,7 +126,7 @@ export class PersistentStreamClient {
    */
   private async sendStreamRequest(requestBody: any): Promise<Response> {
     const apiUrl = process.env.NEXT_PUBLIC_ASSISTANT_API_URL || process.env.NEXT_PUBLIC_ASSISTANT_WORKER_URL;
-    
+
     logger.info("Using persistent stream API at", apiUrl);
 
     const response = await fetch(`${apiUrl}/chat/stream`, {
@@ -170,7 +170,7 @@ export class PersistentStreamClient {
             chunkCount,
             fullResponseLength: fullResponse.length,
           }, "Persistent streaming completed successfully");
-          
+
           // Clear streaming states when done
           if (context.setIsTextStreaming) {
             context.setIsTextStreaming(false);
@@ -230,13 +230,13 @@ export class PersistentStreamClient {
               // Handle regular streaming events (same as before)
               if (data.chunk) {
                 fullResponse += data.chunk;
-                
+
                 // Don't process thinking content during catch-up
                 if (!isCatchingUp) {
                   // Use existing thinking content filtering from ChatStreamingService
                   const { chatStreamingService } = await import('./chat-streaming.service');
                   const { filtered: displayContent, hasActiveThinking } = (chatStreamingService as any).filterThinkingContent(fullResponse);
-                  
+
                   // Handle streaming state based on thinking detection
                   if (context.setIsTextStreaming) {
                     if (hasActiveThinking) {
@@ -251,36 +251,36 @@ export class PersistentStreamClient {
                       }
                     }
                   }
-                  
+
                   this.updateAssistantMessage(context.setMessages, displayContent);
-                  
+
                   // Update streaming context for navigation persistence
                   if (context.chatId && context.updateStreamingMessage) {
                     context.updateStreamingMessage(context.chatId, displayContent);
                   }
                 }
-                
+
               } else if (data.toolActivity !== undefined && context.setToolActivity && !isCatchingUp) {
                 // Update tool activity for enhanced thinking indicator (excluding catch-up)
                 context.setToolActivity(data.toolActivity);
                 logger.info(`Tool activity updated: ${data.toolActivity}`);
-                
+
                 // Also store in streaming manager for persistence across navigation
                 if (context.chatId) {
                   const { streamingManager } = await import('./streaming-manager.service');
                   streamingManager.setToolActivity(context.chatId, data.toolActivity);
                 }
-                
+
               } else if (data.done) {
                 logger.info({
                   finalResponseLength: fullResponse.length,
                   linkedResourceRefs: data.linkedResources?.length || 0
                 }, "Received done signal from persistent stream");
-                
+
                 // Convert simple refs to full resources (same as before)
                 const { chatStreamingService } = await import('./chat-streaming.service');
                 linkedResources = await chatStreamingService.convertRefsToResources(data.linkedResources || []);
-                
+
                 // Use filtered content for final message
                 const { filtered: finalDisplayContent } = (chatStreamingService as any).filterThinkingContent(fullResponse);
                 this.updateAssistantMessage(context.setMessages, finalDisplayContent);
@@ -302,10 +302,10 @@ export class PersistentStreamClient {
                 if (context.setIsTextStreaming) {
                   context.setIsTextStreaming(false);
                 }
-                
+
                 // Mark as not replying since stream is done
                 context.setIsReplying(false);
-                
+
                 // CRITICAL: Update React Query cache with complete conversation
                 if (context.chatId && context.updateChatCache) {
                   // Start with conversation history (previous messages) - preserve full linkedResources
@@ -317,7 +317,7 @@ export class PersistentStreamClient {
                     // Also store the raw refs for database compatibility (used by chat-state.service.ts)
                     linked_resources: msg.linkedResources?.map(r => ({ type: r.type || 'document', id: r.id })).filter(r => r.id) || []
                   }));
-                  
+
                   // Add the current user message (which triggered this streaming)
                   cacheMessages.push({
                     role: 'user',
@@ -325,7 +325,7 @@ export class PersistentStreamClient {
                     linkedResources: [],
                     linked_resources: []
                   });
-                  
+
                   // Add the final assistant message with FULL linkedResources (not just refs)
                   cacheMessages.push({
                     role: 'assistant',
@@ -333,17 +333,17 @@ export class PersistentStreamClient {
                     linkedResources: linkedResources || [], // Store full resource objects
                     linked_resources: linkedResources?.map(r => ({ type: r.type || 'document', id: r.id })).filter(r => r.id) || [] // Store refs for database compatibility
                   });
-                  
+
                   context.updateChatCache({ chatId: context.chatId, messages: cacheMessages });
                   logger.info({ chatId: context.chatId, messageCount: cacheMessages.length, linkedResourcesCount: linkedResources?.length || 0 }, 'Updated React Query cache with complete conversation including full linkedResources');
                 }
-                
+
                 // CRITICAL: Clean up both StreamingManager AND PendingChatContext
                 if (context.chatId) {
                   // Clean up StreamingManager
                   const { streamingManager } = await import('./streaming-manager.service');
                   streamingManager.notifyStreamCompleted(context.chatId);
-                  
+
                   // Clean up PendingChatContext (this controls sidebar loading states)
                   if (context.setStreamingStatus && context.selectedCourse) {
                     const chatTitle = context.selectedCourse.name || 'Chat';
@@ -352,7 +352,7 @@ export class PersistentStreamClient {
                   }
                 }
                 break;
-                
+
               } else if (data.error) {
                 throw new Error(data.error);
               }
@@ -368,10 +368,10 @@ export class PersistentStreamClient {
     } finally {
       reader.releaseLock();
       logger.info({ chatId: context.chatId }, '[PersistentStreamClient] Streaming completed, cleaning up states');
-      
+
       // Set isReplying to false when streaming is complete
       context.setIsReplying(false);
-      
+
       // Clear streaming states
       if (context.setIsTextStreaming) {
         context.setIsTextStreaming(false);
@@ -379,14 +379,14 @@ export class PersistentStreamClient {
       if (context.setToolActivity) {
         context.setToolActivity(null);
       }
-      
+
       // CRITICAL: Final cleanup for any streams that didn't complete normally
       // This is a safety net in case the stream didn't reach the done event
       if (context.chatId) {
         // Import StreamingManager and notify completion
         const { streamingManager } = await import('./streaming-manager.service');
         streamingManager.notifyStreamCompleted(context.chatId);
-        
+
         // Also ensure PendingChatContext is cleaned up
         if (context.setStreamingStatus && context.selectedCourse) {
           const chatTitle = context.selectedCourse.name || 'Chat';
@@ -436,16 +436,16 @@ export class PersistentStreamClient {
   async getStreamStatus(streamId?: string): Promise<any> {
     try {
       const apiUrl = process.env.NEXT_PUBLIC_ASSISTANT_API_URL;
-      const url = streamId 
+      const url = streamId
         ? `${apiUrl}/chat/stream/status?streamId=${streamId}`
         : `${apiUrl}/chat/stream/status`;
-        
+
       const response = await fetch(url);
-      
+
       if (!response.ok) {
         throw new Error(`Stream status API error! status: ${response.status}`);
       }
-      
+
       return await response.json();
     } catch (error) {
       logger.error({ streamId, error }, 'Failed to get stream status');
