@@ -99,6 +99,9 @@ export function UserButton({ variant = "right-sidebar", className }: UserButtonP
           <DropdownMenuItem onClick={handleManageAccount}>
             Manage Account
           </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => router.push('/subscriptions')}>
+            Subscription
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={handleRemoveSchool}>
             Change Schools
           </DropdownMenuItem>
@@ -126,6 +129,9 @@ export function UserButton({ variant = "right-sidebar", className }: UserButtonP
       <DropdownMenuContent align="end" className="w-48">
         <DropdownMenuItem onClick={handleManageAccount}>
           Manage Account
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => router.push('/subscriptions')}>
+          Subscription
         </DropdownMenuItem>
         <DropdownMenuItem onClick={handleRemoveSchool}>
           Change Schools
