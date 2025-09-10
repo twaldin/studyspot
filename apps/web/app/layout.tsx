@@ -16,8 +16,8 @@ const crimsonText = Crimson_Text({
 });
 
 export const metadata: Metadata = {
-  title: "StudySpot UI",
-  description: "StudySpot UI Testing Environment",
+  title: "StudySpot",
+  description: "StudySpot",
   icons: {
     icon: "/favicon.ico",
     shortcut: "/favicon.ico",
