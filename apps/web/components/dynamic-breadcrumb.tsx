@@ -91,6 +91,14 @@ export function DynamicBreadcrumb() {
       };
     }
 
+    // Subscriptions page: /subscriptions
+    if (pathname === "/subscriptions") {
+      return {
+        featureName: "Billing",
+        featureHref: "/subscriptions",
+      };
+    }
+
     return null;
   };
 
