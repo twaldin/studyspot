@@ -245,8 +245,8 @@ export const LinkedResourceCard: React.FC<LinkedResourceCardProps> = (
               </div>
 
               {/* Content */}
-              <div className="flex-1 min-w-0">
-                <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+              <div className="flex-1 min-w-0 w-full">
+                <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 break-words">
                   {flashcardResource.title}
                 </h3>
 
@@ -256,7 +256,7 @@ export const LinkedResourceCard: React.FC<LinkedResourceCardProps> = (
                   </p>
                 )}
 
-                <div className="flex items-center gap-2 mt-2">
+                <div className="flex items-center flex-wrap gap-2 mt-2">
                   <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
                     {flashcardResource.cardCount} cards
                   </span>
@@ -300,8 +300,8 @@ export const LinkedResourceCard: React.FC<LinkedResourceCardProps> = (
               </div>
 
               {/* Content */}
-              <div className="flex-1 min-w-0">
-                <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+              <div className="flex-1 min-w-0 w-full">
+                <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 break-words">
                   {quizResource.title}
                 </h3>
 
@@ -311,7 +311,7 @@ export const LinkedResourceCard: React.FC<LinkedResourceCardProps> = (
                   </p>
                 )}
 
-                <div className="flex items-center gap-2 mt-2">
+                <div className="flex items-center flex-wrap gap-2 mt-2">
                   <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
                     {quizResource.questionCount} questions
                   </span>

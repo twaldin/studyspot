@@ -120,8 +120,8 @@ export default function Home() {
         <h2 className="text-3xl font-crimson-text leading-none">
           What are we learning today?
         </h2>
-        <div className="w-fit">
-          <div className="flex flex-col gap-2 items-start">
+        <div className="w-full">
+          <div className="flex flex-col gap-2 items-start pl-1">
           {isLoadingSuggestedQueries ? (
             <>
               <Skeleton className="h-8 w-32 rounded-full" />
@@ -133,12 +133,12 @@ export default function Home() {
               <Button
                 key={suggestion}
                 variant="outline"
-                className="rounded-full"
+                className="rounded-full w-full md:w-auto"
                 onClick={() => handleSuggestedQueryClick(suggestion)}
                 disabled={isCreatingChat}
               >
-                <Zap className="w-4 h-4 mr-1" />
-                {suggestion}
+                <Zap className="w-4 h-4 mr-1 flex-shrink-0" />
+                <span className="truncate">{suggestion}</span>
               </Button>
             ))
           )}

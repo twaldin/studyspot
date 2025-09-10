@@ -223,10 +223,10 @@ export function QuizQuestion({
           <div className="flex-1 min-h-0 overflow-visible relative z-2">
             <div 
               className={cn(
-                "h-full grid gap-2 md:gap-3 relative z-10",
+                "h-full grid gap-3 relative z-10",
                 visibleOptions.length === 2 && "grid-cols-2", // Always 2 columns for incorrect answer view
                 visibleOptions.length === 3 && "grid-cols-1",
-                visibleOptions.length === 4 && "grid-cols-1 md:grid-cols-2",
+                visibleOptions.length === 4 && "grid-cols-2",
                 visibleOptions.length > 4 && "grid-cols-1"
               )}
               style={{
@@ -317,8 +317,8 @@ export function QuizQuestion({
           {/* Feedback Section */}
           <div className="flex-shrink-0 mt-4 relative z-30">
             {!answerState.hasAnswered && (
-              <div 
-                className="text-center text-gray-500 dark:text-gray-400 relative z-40"
+              <div
+                className="text-center text-gray-500 dark:text-gray-400 relative z-40 hidden sm:block"
                 style={{
                   fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)'
                 }}

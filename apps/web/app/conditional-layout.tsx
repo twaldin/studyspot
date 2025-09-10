@@ -39,19 +39,21 @@ function AppHeader() {
   if (isMobile) {
     return (
       <header className="flex h-16 items-center justify-between gap-4 px-6">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setOpenMobile(true)}
-          className="cursor-pointer -ml-1"
-        >
-          <Menu className="h-6 w-6" />
-        </Button>
-        <h1 className="text-lg font-semibold">
-          {isChatPage ? chat?.title || "Chat" : <DynamicBreadcrumb />}
-        </h1>
+        <div className="flex items-center gap-4 min-w-0">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setOpenMobile(true)}
+            className="cursor-pointer -ml-1 flex-shrink-0"
+          >
+            <Menu className="h-6 w-6" />
+          </Button>
+          <h1 className="text-lg font-normal truncate">
+            {isChatPage ? chat?.title || "Chat" : <DynamicBreadcrumb />}
+          </h1>
+        </div>
         {/* Placeholder for potential actions */}
-        <div className="w-6" />
+        <div className="w-6 flex-shrink-0" />
       </header>
     );
   }

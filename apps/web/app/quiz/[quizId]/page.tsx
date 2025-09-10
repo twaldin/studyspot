@@ -346,7 +346,7 @@ export default function QuizPage() {
 
         {/* Course and Meta Info */}
         <div className="space-y-2">
-          <p className="text-base md:text-lg text-muted-foreground">
+          <p className="text-base md:text-lg text-muted-foreground hidden sm:block">
             {quiz.description}
           </p>
 

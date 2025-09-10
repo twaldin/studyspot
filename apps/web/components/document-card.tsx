@@ -232,7 +232,7 @@ export function DocumentCard({ url, file, fileType }: DocumentCardProps) {
       >
         <Card className="h-full relative overflow-hidden transition-colors hover:bg-accent py-3">
           <CardHeader className="pb-6 relative z-10">
-            <CardTitle className="text-sm leading-tight">
+            <CardTitle className="text-sm leading-tight break-words">
               {(file.file_name || "Untitled Document").substring(
                 0,
                 (file.file_name || "Untitled Document").lastIndexOf("."),

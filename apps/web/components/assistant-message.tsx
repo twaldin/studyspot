@@ -262,7 +262,7 @@ const AssistantMessage: React.FC<AssistantMessageProps> = ({
     <div className="mx-2.75 flex justify-start">
       <div className="py-0 max-w-xl relative">
         <div
-          className="markdown-content leading-[1.8] select-text [&>*:last-child]:mb-0"
+          className="markdown-content leading-[1.8] select-text [&>*:last-child]:mb-0 break-words"
           dangerouslySetInnerHTML={createMarkup()}
         />
 
@@ -357,17 +357,15 @@ const AssistantMessage: React.FC<AssistantMessageProps> = ({
                       className="overflow-hidden"
                     >
                       <div
-                        className={`grid gap-3 ${linkedResources.length === 1
-                            ? "grid-cols-1"
-                            : "grid-cols-2"
-                          }`}
+                        className="w-full flex flex-wrap gap-3"
                       >
                         {linkedResources.map((resource) => (
-                          <LinkedResourceCard
-                            key={`${resource.type}-${resource.id}`}
-                            resource={resource}
-                            useShareUrls={isPublicShare}
-                          />
+                          <div key={`${resource.type}-${resource.id}`} className="w-full sm:w-[calc(50%-0.375rem)] flex-grow min-w-0">
+                            <LinkedResourceCard
+                              resource={resource}
+                              useShareUrls={isPublicShare}
+                            />
+                          </div>
                         ))}
                       </div>
                     </motion.div>
