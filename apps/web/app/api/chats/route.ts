@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { validateAuth, validateAuthWithSchool } from "@/features/auth/operations";
 import { chatService } from '@/features/chat/services/chat.service';
 import { getSelectedCourseForUser } from '@/lib/clerk';
+import { checkUsageLimit, incrementUsage } from '@/lib/services/subscription/subscription.service';
+import { SUBSCRIPTION_FEATURES } from '@/lib/types/subscription.types';
 
 export async function GET(request: Request) {
   try {
@@ -45,11 +47,31 @@ export async function POST(request: Request) {
       );
     }
 
+    // Check subscription limits for chat creation
+    const chatLimit = await checkUsageLimit(SUBSCRIPTION_FEATURES.CHATS_50_PER_WEEK.id);
+    const unlimitedChats = await checkUsageLimit(SUBSCRIPTION_FEATURES.UNLIMITED_CHATS.id);
+    
+    if (!unlimitedChats.hasAccess && !chatLimit.hasAccess) {
+      return NextResponse.json(
+        { 
+          message: 'You have reached your weekly chat limit. Please upgrade to continue.',
+          limit: chatLimit.limit,
+          remaining: 0
+        },
+        { status: 403 }
+      );
+    }
+
     const result = await chatService.createChat(
       { title, initialMessages },
       auth.userId,
       selectedCourseId
     );
+    
+    // Increment usage for free users
+    if (!unlimitedChats.hasAccess) {
+      await incrementUsage(auth.userId, SUBSCRIPTION_FEATURES.CHATS_50_PER_WEEK.id);
+    }
     
     return NextResponse.json(result.chat, { status: 201 });
   } catch (error) {

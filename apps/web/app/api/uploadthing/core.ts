@@ -6,6 +6,8 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 import { headers } from "next/headers";
 import { createServiceRoleClient } from "@/lib/services/database/supabase.service";
 import { validateFilesForUpload, UploadSecurityService, type UploadFile } from "@/lib/services/file";
+import { checkUsageLimit, incrementUsage } from "@/lib/services/subscription/subscription.service";
+import { SUBSCRIPTION_FEATURES } from "@/lib/types/subscription.types";
 
 const f = createUploadthing();
 
@@ -47,6 +49,29 @@ export const ourFileRouter = {
       
       console.log("[UPLOADTHING] Authenticated userId:", userId);
       console.log("[UPLOADTHING] CourseId:", courseId);
+
+      // Check subscription limits for file upload
+      const uploadLimit = await checkUsageLimit(
+        SUBSCRIPTION_FEATURES.UPLOAD_10_FILES_PER_COURSE_PER_DAY.id,
+        courseId
+      );
+      const unlimitedUpload = await checkUsageLimit(SUBSCRIPTION_FEATURES.UNLIMITED_FILE_UPLOAD.id);
+      
+      if (!unlimitedUpload.hasAccess && !uploadLimit.hasAccess) {
+        console.error("[UPLOADTHING] User has reached upload limit for course:", courseId);
+        throw new UploadThingError(
+          `Daily upload limit reached (${uploadLimit.limit} files per course per day). Please upgrade to Pro for unlimited uploads.`
+        );
+      }
+      
+      // Check if the number of files being uploaded would exceed the limit
+      if (!unlimitedUpload.hasAccess && uploadLimit.remaining !== undefined) {
+        if (files.length > uploadLimit.remaining) {
+          throw new UploadThingError(
+            `You can only upload ${uploadLimit.remaining} more file(s) today for this course. Please upgrade to Pro for unlimited uploads.`
+          );
+        }
+      }
       
       // Debug: Check what environment variables are available
       console.log("[UPLOADTHING] Environment check:", {
@@ -127,6 +152,17 @@ export const ourFileRouter = {
         // Document ingestion is handled by the Mastra workflow via SSE streaming
         // This provides real-time progress updates during the entire processing pipeline
         // The client connects to the assistant worker's /documents/ingest-stream endpoint
+
+        // Increment usage for free users after successful upload
+        const unlimitedUpload = await checkUsageLimit(SUBSCRIPTION_FEATURES.UNLIMITED_FILE_UPLOAD.id);
+        if (!unlimitedUpload.hasAccess) {
+          await incrementUsage(
+            userId,
+            SUBSCRIPTION_FEATURES.UPLOAD_10_FILES_PER_COURSE_PER_DAY.id,
+            courseId
+          );
+          console.log("[UPLOADTHING] Incremented upload usage for user:", userId);
+        }
 
         const result = {
           uploadedBy: userId,

@@ -707,4 +707,33 @@ export class SupabaseService {
       };
     }
   }
+
+  /**
+   * Get user metadata from Clerk via the main app's API
+   * This is used for subscription checking
+   */
+  static async getUserMetadata(userId: string): Promise<any> {
+    try {
+      // Call the main app's API to get user metadata
+      const appUrl = this.env?.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      const response = await fetch(`${appUrl}/api/user/metadata`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId })
+      });
+
+      if (!response.ok) {
+        console.error(`[SupabaseService] Failed to fetch user metadata: ${response.status}`);
+        return null;
+      }
+
+      const data = await response.json();
+      return data.metadata;
+    } catch (error) {
+      console.error(`[SupabaseService] Error fetching user metadata:`, error);
+      return null;
+    }
+  }
 }

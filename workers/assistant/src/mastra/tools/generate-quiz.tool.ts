@@ -1,6 +1,7 @@
 import { createTool } from '@mastra/core';
 import { z } from 'zod';
 import { SupabaseService } from '../../services/supabase.service.js';
+import { SubscriptionChecker } from '../../services/subscription-checker.service.js';
 import { randomUUID } from 'crypto';
 
 // Global store for created quizzes (per session)
@@ -119,6 +120,20 @@ export const generateQuizTool = createTool({
         error: 'User ID is required to generate quiz'
       };
     }
+
+    // Check subscription limits before generating
+    const subscriptionCheck = await SubscriptionChecker.canGenerateContent(userId);
+    if (!subscriptionCheck.canGenerate) {
+      console.warn(`[GenerateQuizTool] User ${userId} has reached their generation limit`);
+      return {
+        quizId: '',
+        title,
+        description,
+        questionCount: 0,
+        success: false,
+        error: subscriptionCheck.reason || 'You have reached your daily generation limit. Please upgrade to Pro for unlimited quiz generation.'
+      };
+    }
     
     console.log(`[GenerateQuizTool] Creating quiz "${title}" for course ${courseId}, user ${userId}, ${questions.length} questions`);
 
@@ -202,6 +217,9 @@ export const generateQuizTool = createTool({
 
       // Store the created quiz ID in the global store (using courseId as the key)
       addQuizToStore(courseId, quizId);
+
+      // Increment usage counter for free users
+      await SubscriptionChecker.incrementContentGeneration(userId);
 
       return {
         quizId,

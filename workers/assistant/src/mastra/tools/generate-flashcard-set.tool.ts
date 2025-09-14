@@ -1,6 +1,7 @@
 import { createTool } from '@mastra/core';
 import { z } from 'zod';
 import { SupabaseService } from '../../services/supabase.service.js';
+import { SubscriptionChecker } from '../../services/subscription-checker.service.js';
 import { randomUUID } from 'crypto';
 
 // Global store for created flashcard sets (per session)
@@ -104,6 +105,20 @@ export const generateFlashcardSetTool = createTool({
         error: 'User ID is required to generate flashcards'
       };
     }
+
+    // Check subscription limits before generating
+    const subscriptionCheck = await SubscriptionChecker.canGenerateContent(userId);
+    if (!subscriptionCheck.canGenerate) {
+      console.warn(`[GenerateFlashcardSetTool] User ${userId} has reached their generation limit`);
+      return {
+        setId: '',
+        title,
+        description,
+        cardCount: 0,
+        success: false,
+        error: subscriptionCheck.reason || 'You have reached your daily generation limit. Please upgrade to Pro for unlimited flashcard generation.'
+      };
+    }
     
     console.log(`[GenerateFlashcardSetTool] Creating flashcard set "${title}" for course ${courseId}, user ${userId}, ${flashcards.length} cards`);
 
@@ -178,6 +193,9 @@ export const generateFlashcardSetTool = createTool({
 
       // Store the created flashcard set ID in the global store (using courseId as the key)
       addFlashcardSetToStore(courseId, setId);
+
+      // Increment usage counter for free users
+      await SubscriptionChecker.incrementContentGeneration(userId);
 
       return {
         setId,
