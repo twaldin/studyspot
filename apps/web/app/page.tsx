@@ -129,18 +129,20 @@ export default function Home() {
               <Skeleton className="h-8 w-24 rounded-full" />
             </>
           ) : (
-            suggestedQueries.map((suggestion) => (
-              <Button
-                key={suggestion}
-                variant="outline"
-                className="rounded-full w-full md:w-auto"
-                onClick={() => handleSuggestedQueryClick(suggestion)}
-                disabled={isCreatingChat}
-              >
-                <Zap className="w-4 h-4 mr-1 flex-shrink-0" />
-                <span className="truncate">{suggestion}</span>
-              </Button>
-            ))
+            <div className="flex w-full gap-2 overflow-x-auto pb-2 [-ms-overflow-style:'none'] [scrollbar-width:'none'] [&::-webkit-scrollbar]:hidden">
+              {suggestedQueries.map((suggestion) => (
+                <Button
+                  key={suggestion}
+                  variant="outline"
+                  className="rounded-full whitespace-nowrap"
+                  onClick={() => handleSuggestedQueryClick(suggestion)}
+                  disabled={isCreatingChat}
+                >
+                  <Zap className="w-4 h-4 mr-1 flex-shrink-0" />
+                  <span>{suggestion}</span>
+                </Button>
+              ))}
+            </div>
           )}
         </div>
         </div>
