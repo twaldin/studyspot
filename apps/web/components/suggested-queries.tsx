@@ -27,15 +27,15 @@ export function SuggestedQueries({ onQuerySelect }: SuggestedQueriesProps) {
   }
 
   return (
-    <div className="flex gap-2 overflow-x-auto pb-2 [-ms-overflow-style:'none'] [scrollbar-width:'none'] [&::-webkit-scrollbar]:hidden">
+    <div className="flex flex-wrap gap-2 pb-2">
       {suggestedQueries.map((query, index) => (
         <Button
           key={index}
           variant="outline"
           onClick={() => onQuerySelect(query)}
-          className="rounded-full whitespace-nowrap"
+          className="!h-auto !whitespace-normal rounded-full !block text-left px-4 py-2"
         >
-          <span className="truncate">{query}</span>
+          {query}
         </Button>
       ))}
     </div>

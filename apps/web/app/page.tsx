@@ -153,7 +153,7 @@ export default function Home() {
         </div>
 
         {/* Buttons and desktop link from 'chore/mobile-fixes' branch */}
-        <div className="flex @md:justify-between items-center">
+        <div className="flex justify-center @md:justify-between items-center">
           <div className="flex items-center">
             <Button variant="ghost" onClick={() => setIsUploadDialogOpen(true)}>
               <Upload className="w-4 h-4" />
@@ -163,6 +163,11 @@ export default function Home() {
               orientation="vertical"
               className="data-[orientation=vertical]:h-4"
             />
+             <Link href="/content" className="@md:hidden">
+              <Button variant="ghost">
+                All Course Content
+              </Button>
+            </Link>
           </div>
           <Link href="/content" className="hidden @md:block">
             <Button variant="secondary">
@@ -172,14 +177,6 @@ export default function Home() {
           </Link>
         </div>
       </div>
-
-      {/* Mobile-only floating link from 'chore/mobile-fixes' branch */}
-      <Link href="/content" className="fixed bottom-6 right-6 @md:hidden">
-        <Button variant="secondary">
-          All Course Content
-          <ArrowRight className="w-4 h-4" />
-        </Button>
-      </Link>
 
       <FileUploadDialog
         open={isUploadDialogOpen}

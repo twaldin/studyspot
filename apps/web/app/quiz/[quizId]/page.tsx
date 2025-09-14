@@ -50,6 +50,7 @@ import {
   Infinity,
   Loader2,
   Maximize,
+  Minimize,
   RotateCcw,
   Share,
   Shuffle,
@@ -535,7 +536,11 @@ export default function QuizPage() {
               size="icon"
               className="cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             >
-              <Maximize className="h-4 w-4" />
+              {isFullscreen ? (
+                <Minimize className="h-4 w-4" />
+              ) : (
+                <Maximize className="h-4 w-4" />
+              )}
             </Button>
           </div>
         </div>
