@@ -21,7 +21,7 @@ import { useChat } from '@/hooks/api/chats';
 import { useParams } from 'next/navigation';
 
 // Define routes that should NOT have the sidebar layout
-const NO_SIDEBAR_ROUTES = ["/sign-in", "/sign-up", "/onboarding", "/post", "/terms"];
+const NO_SIDEBAR_ROUTES = ["/sign-in", "/sign-up", "/onboarding", "/post", "/terms", "/privacypolicy"];
 
 import type { ReactNode } from 'react';
 
