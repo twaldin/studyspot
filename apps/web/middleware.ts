@@ -21,12 +21,25 @@ const isPublicShareRoute = createRouteMatcher([
   "/quiz/(.*)/share/(.*)",
 ]);
 
+const isQuizRoute = createRouteMatcher(["/quiz/(.*)"]);
+
 export default clerkMiddleware(async (auth, req) => {
   try {
-    // Log for debugging in Cloudflare Workers
+    // Log for debugging in Cloudflare 
     if (process.env.openNextDebug === "true") {
       console.log("[MIDDLEWARE] Request URL:", req.url);
       console.log("[MIDDLEWARE] Request pathname:", req.nextUrl.pathname);
+    }
+
+    // Mobile redirect for quiz pages
+    const { pathname, searchParams } = req.nextUrl;
+    if (isQuizRoute(req) && !pathname.endsWith("/start") && !pathname.includes("/share") && searchParams.get('start') !== 'true') {
+      const userAgent = req.headers.get("user-agent") || "";
+      const isMobile = /Mobi|Android|iPhone/i.test(userAgent);
+      if (isMobile) {
+        const newPath = pathname.endsWith('/') ? `${pathname}start` : `${pathname}/start`;
+        return NextResponse.redirect(new URL(newPath, req.url));
+      }
     }
 
     // Allow public share routes without authentication

@@ -126,3 +126,9 @@ html,
 body {
   overscroll-behavior: none;
 }
+
+@media (max-width: 768px) {
+  .mobile-line-clamp-5 {
+    -webkit-line-clamp: 5;
+  }
+}

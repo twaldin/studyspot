@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useQuiz } from "@/hooks/api/quizzes";
 import { quizService } from "@/features/quiz/services/quiz.service";
 import dynamic from "next/dynamic";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // Dynamically import heavy quiz components to reduce initial bundle size
 const QuizQuestion = dynamic(
@@ -69,6 +70,10 @@ import { getCourseIcon } from "@/lib/utils/course-icons";
 export default function QuizPage() {
   const params = useParams();
   const quizId = params.quizId as string;
+  const router = useRouter();
+  const isMobile = useIsMobile();
+  const searchParams = useSearchParams();
+  const hasStarted = searchParams.get('start') === 'true';
 
   const { data: quiz, isLoading, error } = useQuiz(quizId);
   const { fireCorrectAnswer, fireQuizComplete } = useConfetti();
@@ -333,54 +338,56 @@ export default function QuizPage() {
   const renderContent = () => (
     <div className="flex flex-col h-full">
       {/* Header Section - Fixed at top */}
-      <div className="flex-shrink-0 space-y-3 mb-4">
-        <div className="flex items-center gap-3">
-          <h1
-            className={cn(
-              "font-bold font-crimson-text text-foreground",
-              isFullscreen ? "text-2xl md:text-3xl" : "text-xl md:text-2xl",
-            )}
-          >
-            {quiz.title}
-          </h1>
-        </div>
+      {!isMobile && (
+        <div className="flex-shrink-0 space-y-3 mb-4">
+          <div className="flex items-center gap-3">
+            <h1
+              className={cn(
+                "font-bold font-crimson-text text-foreground",
+                isFullscreen ? "text-2xl md:text-3xl" : "text-xl md:text-2xl",
+              )}
+            >
+              {quiz.title}
+            </h1>
+          </div>
 
-        {/* Course and Meta Info */}
-        <div className="space-y-2">
-          <p className="text-base md:text-lg text-muted-foreground hidden sm:block">
-            {quiz.description}
-          </p>
-
-          {/* Show "edited from" info if this is an edit */}
-          {quiz.edited_from && quiz.original_title && (
-            <p className="text-xs md:text-sm text-muted-foreground italic">
-              (edited from '{quiz.original_title}')
+          {/* Course and Meta Info */}
+          <div className="space-y-2">
+            <p className="text-base md:text-lg text-muted-foreground hidden sm:block">
+              {quiz.description}
             </p>
-          )}
 
-          <div className="flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-6 text-xs md:text-sm text-muted-foreground">
-            <div className="flex items-center gap-2">
-              {(() => {
-                const CourseIcon = getCourseIcon((quiz.courses as any)?.icon);
-                return <CourseIcon className="h-4 w-4" />;
-              })()}
-              <span>
-                {quiz.course_code} - {quiz.course_name}
-              </span>
-            </div>
+            {/* Show "edited from" info if this is an edit */}
+            {quiz.edited_from && quiz.original_title && (
+              <p className="text-xs md:text-sm text-muted-foreground italic">
+                (edited from '{quiz.original_title}')
+              </p>
+            )}
 
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              <span>Created {timeAgo} by {quiz.creator_name}</span>
-            </div>
+            <div className="flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-6 text-xs md:text-sm text-muted-foreground">
+              <div className="flex items-center gap-2">
+                {(() => {
+                  const CourseIcon = getCourseIcon((quiz.courses as any)?.icon);
+                  return <CourseIcon className="h-4 w-4" />;
+                })()}
+                <span>
+                  {quiz.course_code} - {quiz.course_name}
+                </span>
+              </div>
 
-            <div className="flex items-center gap-2">
-              <Target className="h-4 w-4" />
-              <span>{quiz.question_count} questions</span>
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                <span>Created {timeAgo} by {quiz.creator_name}</span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Target className="h-4 w-4" />
+                <span>{quiz.question_count} questions</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Main Quiz Area - Takes remaining space */}
       <div className="flex-1 flex items-center justify-center min-h-0">
