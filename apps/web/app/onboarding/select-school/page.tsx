@@ -20,7 +20,9 @@ import logger from "@/lib/logger";
 import { useUpdateOnboarding } from "@/hooks/api/";
 import { Checkbox } from "@studyspot/ui/components/checkbox";
 import { Label } from "@studyspot/ui/components/label";
+import { RequestSchoolDialog } from "@/components/request-school-dialog";
 import type { School } from "@/features/auth/types";
+import { Toaster } from "react-hot-toast";
 
 export default function SelectSchoolPage() {
   const [selectedSchoolId, setSelectedSchoolId] = React.useState<string | null>(
@@ -30,6 +32,10 @@ export default function SelectSchoolPage() {
   const [activeIndex, setActiveIndex] = React.useState(-1);
   const [isProcessing, setIsProcessing] = React.useState(false);
   const [termsAccepted, setTermsAccepted] = React.useState(false);
+  const [
+    isRequestSchoolDialogOpen,
+    setIsRequestSchoolDialogOpen,
+  ] = React.useState(false);
   const router = useRouter();
   const { user } = useUser();
   const listContainerRef = React.useRef<HTMLDivElement>(null);
@@ -230,6 +236,7 @@ export default function SelectSchoolPage() {
                             variant="link"
                             size="sm"
                             className="h-auto p-0"
+                            onClick={() => setIsRequestSchoolDialogOpen(true)}
                           >
                             Make a Request
                           </Button>
@@ -251,8 +258,13 @@ export default function SelectSchoolPage() {
                 className="text-sm font-normal"
               >
                 <span>
-                  I read and agree to the {" "}
-                  <a href="/terms" className="underline" target="_blank" rel="noopener noreferrer">
+                  I read and agree to the{" "}
+                  <a
+                    href="/terms"
+                    className="underline"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     terms and conditions
                   </a>
                   .
@@ -278,6 +290,11 @@ export default function SelectSchoolPage() {
             </Button>
           </CardFooter>
         </Card>
+        <RequestSchoolDialog
+          open={isRequestSchoolDialogOpen}
+          onOpenChange={setIsRequestSchoolDialogOpen}
+        />
+        <Toaster />
       </div>
     </div>
   );
