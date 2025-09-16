@@ -1,4 +1,4 @@
-import { getQuizForPublic } from "@/features/quiz/operations";
+import { getQuizForPublic } from "@/features/quiz/quiz-operations";
 import { PublicQuizViewer } from "@/components/public-quiz-viewer";
 import { notFound } from "next/navigation";
 
