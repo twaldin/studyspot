@@ -1,5 +1,7 @@
 # StudySpot
 
+<img src=".github/social-card.png" alt="studyspot" width="100%" />
+
 **The AI Study Assistant That Transforms College Learning**
 
 StudySpot is an intelligent study platform that revolutionizes how college students learn by creating collaborative course knowledge bases powered by advanced AI. Built on Cloudflare's global edge network, students upload course materials to shared databases, enabling our AI to deliver precise, contextual answers about exams, assignments, and course content—far more accurate than generic AI tools.
