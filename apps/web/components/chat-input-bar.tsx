@@ -90,7 +90,7 @@ export const ChatInputBar = React.forwardRef<HTMLTextAreaElement, ChatInputBarPr
             type="submit"
             variant="default"
             size="sm"
-            className="absolute bottom-2 right-2"
+            className="absolute bottom-2 right-2 whitespace-nowrap"
             disabled={isSubmitting || !form.watch("message")?.trim()}
           >
             <MoveRight className="size-6" />

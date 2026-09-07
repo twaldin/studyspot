@@ -648,7 +648,7 @@ export function ChatPageContent(
   const showForkButton = !isPublicView && chat && !isOwnChat;
 
   return (
-    <div className="mx-auto w-full max-w-3xl h-full flex flex-col p-6 pt-0">
+    <div className="mx-auto w-full max-w-3xl h-full flex flex-col p-6">
       {error && (
         <div className="bg-destructive/15 text-destructive px-4 py-2 rounded-md text-sm">
           {error}

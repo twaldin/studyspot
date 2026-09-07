@@ -121,3 +121,14 @@ input[type="search"]::-webkit-search-results-decoration {
     @apply border-l-4 border-border pl-4 my-4 italic;
   }
 }
+
+html,
+body {
+  overscroll-behavior: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-line-clamp-5 {
+    -webkit-line-clamp: 5;
+  }
+}

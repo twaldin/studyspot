@@ -100,8 +100,17 @@ const TermsAndConditions: React.FC = () => {
 
       <Section title="8. Privacy">
         <p>
-          Your privacy matters to us. Please review our Privacy Policy for
-          information on how we collect, use, and protect your personal data.
+          Your privacy matters to us. Please review our{" "}
+          <a
+            href="/privacypolicy"
+            className="text-blue-600"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Privacy Policy
+          </a>{" "}
+          for information on how we collect, use, and protect your personal
+          data.
         </p>
       </Section>
 

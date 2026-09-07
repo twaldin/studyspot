@@ -78,54 +78,44 @@ export function QuizCompletionDialog({
               {correctCount} out of {totalCount} questions correct
             </div>
           </div>
-
-          {/* Action Options */}
-          <div className="space-y-3">
-            <Button
-              variant="outline"
-              className="w-full justify-start gap-3"
-              onClick={handleReview}
-            >
-              <Eye className="h-4 w-4" />
-              Review Answers
-              <span className="ml-auto text-xs text-muted-foreground">
-                See what you got right and wrong
-              </span>
-            </Button>
-
-            <Button
-              variant="outline"
-              className="w-full justify-start gap-3"
-              onClick={handleRetake}
-            >
-              <RotateCcw className="h-4 w-4" />
-              Retake Quiz
-              <span className="ml-auto text-xs text-muted-foreground">
-                Start fresh with the same questions
-              </span>
-            </Button>
-
-            <Button
-              variant="outline"
-              className="w-full justify-start gap-3"
-              onClick={handlePractice}
-            >
-              <Play className="h-4 w-4" />
-              Continue Practice
-              <span className="ml-auto text-xs text-muted-foreground">
-                Keep going with infinite practice
-              </span>
-            </Button>
-          </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex flex-col sm:flex-row sm:justify-between gap-2">
+          <Button
+            variant="outline"
+            className="w-full sm:w-auto"
+            onClick={handleReview}
+          >
+            <Eye className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Review</span>
+            <span className="sm:hidden">Review Answers</span>
+          </Button>
+          <div className="flex w-full sm:w-auto gap-2">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={handleRetake}
+            >
+              <RotateCcw className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Retake</span>
+              <span className="sm:hidden">Retake Quiz</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={handlePractice}
+            >
+              <Play className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Practice</span>
+              <span className="sm:hidden">Continue Practice</span>
+            </Button>
+          </div>
           <Button 
             variant="secondary" 
             onClick={() => onOpenChange(false)} 
-            className="w-full"
+            className="w-full sm:w-auto"
           >
-            Close
+            Done
           </Button>
         </DialogFooter>
       </DialogContent>

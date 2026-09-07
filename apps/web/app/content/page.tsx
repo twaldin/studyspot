@@ -231,7 +231,7 @@ export default function ContentPage() {
       case 'my-content':
         return 'My content';
       case 'shared':
-        return 'Shared by me';
+        return 'My Shared';
       default:
         return 'Search course content';
     }
@@ -321,7 +321,7 @@ export default function ContentPage() {
         <TabsList className="w-fit">
           <TabsTrigger value="course" className="gap-2">
             <BookOpen className="w-4 h-4" />
-            Course Content
+            Course<span className="hidden sm:inline-block">&nbsp;Content</span>
           </TabsTrigger>
           <TabsTrigger value="my-content" className="gap-2">
             <User className="w-4 h-4" />
@@ -329,7 +329,7 @@ export default function ContentPage() {
           </TabsTrigger>
           <TabsTrigger value="shared" className="gap-2">
             <Share className="w-4 h-4" />
-            Shared by Me
+            My Shared
           </TabsTrigger>
         </TabsList>
 

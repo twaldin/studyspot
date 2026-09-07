@@ -120,8 +120,8 @@ export default function Home() {
         <h2 className="text-3xl font-crimson-text leading-none">
           What are we learning today?
         </h2>
-        <div className="w-fit">
-          <div className="flex flex-col gap-2 items-start">
+        <div className="w-full">
+          <div className="flex flex-col gap-2 items-start pl-1">
           {isLoadingSuggestedQueries ? (
             <>
               <Skeleton className="h-8 w-32 rounded-full" />
@@ -129,18 +129,20 @@ export default function Home() {
               <Skeleton className="h-8 w-24 rounded-full" />
             </>
           ) : (
-            suggestedQueries.map((suggestion) => (
-              <Button
-                key={suggestion}
-                variant="outline"
-                className="rounded-full"
-                onClick={() => handleSuggestedQueryClick(suggestion)}
-                disabled={isCreatingChat}
-              >
-                <Zap className="w-4 h-4 mr-1" />
-                {suggestion}
-              </Button>
-            ))
+            <div className="flex w-full gap-2 overflow-x-auto pb-2 [-ms-overflow-style:'none'] [scrollbar-width:'none'] [&::-webkit-scrollbar]:hidden">
+              {suggestedQueries.map((suggestion) => (
+                <Button
+                  key={suggestion}
+                  variant="outline"
+                  className="rounded-full whitespace-nowrap"
+                  onClick={() => handleSuggestedQueryClick(suggestion)}
+                  disabled={isCreatingChat}
+                >
+                  <Zap className="w-4 h-4 mr-1 flex-shrink-0" />
+                  <span>{suggestion}</span>
+                </Button>
+              ))}
+            </div>
           )}
         </div>
         </div>
@@ -153,7 +155,7 @@ export default function Home() {
         </div>
 
         {/* Buttons and desktop link from 'chore/mobile-fixes' branch */}
-        <div className="flex @md:justify-between items-center">
+        <div className="flex justify-center @md:justify-between items-center">
           <div className="flex items-center">
             <Button variant="ghost" onClick={() => setIsUploadDialogOpen(true)}>
               <Upload className="w-4 h-4" />
@@ -163,6 +165,11 @@ export default function Home() {
               orientation="vertical"
               className="data-[orientation=vertical]:h-4"
             />
+             <Link href="/content" className="@md:hidden">
+              <Button variant="ghost">
+                All Course Content
+              </Button>
+            </Link>
           </div>
           <Link href="/content" className="hidden @md:block">
             <Button variant="secondary">
@@ -172,14 +179,6 @@ export default function Home() {
           </Link>
         </div>
       </div>
-
-      {/* Mobile-only floating link from 'chore/mobile-fixes' branch */}
-      <Link href="/content" className="fixed bottom-6 right-6 @md:hidden">
-        <Button variant="secondary">
-          All Course Content
-          <ArrowRight className="w-4 h-4" />
-        </Button>
-      </Link>
 
       <FileUploadDialog
         open={isUploadDialogOpen}

@@ -14,10 +14,10 @@ export function SuggestedQueries({ onQuerySelect }: SuggestedQueriesProps) {
 
   if (isLoading) {
     return (
-      <div className="flex flex-wrap gap-2">
-        <Skeleton className="h-8 w-32" />
-        <Skeleton className="h-8 w-40" />
-        <Skeleton className="h-8 w-24" />
+      <div className="flex gap-2 overflow-x-auto pb-2 [-ms-overflow-style:'none'] [scrollbar-width:'none'] [&::-webkit-scrollbar]:hidden">
+        <Skeleton className="h-8 w-32 rounded-full" />
+        <Skeleton className="h-8 w-40 rounded-full" />
+        <Skeleton className="h-8 w-24 rounded-full" />
       </div>
     );
   }
@@ -27,13 +27,13 @@ export function SuggestedQueries({ onQuerySelect }: SuggestedQueriesProps) {
   }
 
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex gap-2 overflow-x-auto pb-2 [-ms-overflow-style:'none'] [scrollbar-width:'none'] [&::-webkit-scrollbar]:hidden">
       {suggestedQueries.map((query, index) => (
         <Button
           key={index}
           variant="outline"
           onClick={() => onQuerySelect(query)}
-          className="rounded-full"
+          className="rounded-full whitespace-nowrap"
         >
           {query}
         </Button>
