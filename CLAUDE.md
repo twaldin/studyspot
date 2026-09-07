@@ -34,7 +34,7 @@ This is a **pnpm workspace monorepo** with a distributed Cloudflare Workers arch
 
 - **Purpose**: Marketing/landing page for StudySpot
 - **Tech Stack**: Next.js 15, TailwindCSS
-- **Features**: Static landing page
+- **Features**: Marketing content with client-side navigation and animation
 - **Deployment**: Cloudflare Workers via OpenNext.js
 
 ### Shared Packages
@@ -379,7 +379,7 @@ CLOUDFLARE_API_EMAIL=                   # Email read by the Mastra deployer
 - **Cloudflare Workers Secrets**: Use `wrangler secret put` for all sensitive data
 - **Development Environment**: Use `.dev.vars` files for local Wrangler development
 - **Production Separation**: Keep secrets out of committed configuration and generated build artifacts
-- **Build Handling**: Inspect `build.sh` and generated configuration; hiding selected env files is not a guarantee against credential leakage
+- **Build Handling**: Review the [build-script caveats](#root-level-commands) and generated configuration before use
 
 ### Database Architecture & Integration
 
@@ -456,7 +456,7 @@ The following are design conventions to prefer, not claims that the frozen tree 
 
 ### File Naming & Organization Conventions
 
-- **Operations**: `*-operations.ts` - Database operations and pure business logic functions
+- **Operations**: `*-operations.ts` - Database operations and business logic functions
 - **Services**: `*.service.ts` - Complex stateful business logic (use sparingly, prefer operations)
 - **Types**: `*.types.ts` - TypeScript interface definitions
 - **Components**: `*.tsx` - React components with PascalCase naming
@@ -488,7 +488,7 @@ The following are design conventions to prefer, not claims that the frozen tree 
 - **Manual Testing**: Primary approach using Mastra Playground and direct interaction
 - **Mastra Playground**: Built-in testing via assistant worker's Mastra playground at development URL
 - **RAG Workflow Testing**: Test vector search, document retrieval, and response generation
-- **Persistent Streaming Testing**: Verify stream continuity across client disconnections
+- **Persistent Streaming Testing**: In an authorized runtime, exercise catch-up after reconnect and unavailable-stream behavior after isolate loss; do not assume disconnect survival
 - **Cross-Browser Testing**: Browser automation such as Playwright; an MCP server is optional
 
 ### Quality Evaluation Process
